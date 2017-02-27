@@ -1,0 +1,15 @@
+language: go
+sudo: false
+go:
+  - 1.8
+before_install:
+  - go get github.com/mattn/goveralls
+  - go get golang.org/x/tools/cmd/cover
+os:
+  - linux
+script:
+  - go build -race
+  - go test -v 
+  - go vet 
+  - go build
+  - $HOME/gopath/bin/goveralls -service=travis-ci
