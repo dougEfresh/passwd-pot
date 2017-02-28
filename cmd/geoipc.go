@@ -20,17 +20,17 @@ func DefaultGeoClient() *GeoClient {
 	}
 }
 
-func (c *GeoClient) GetLocationForIP(ip string) (Geo, error) {
+func (c *GeoClient) GetLocationForIP(ip string) (*Geo, error) {
 	res, err := http.Get(c.Url + "/" + ip)
 	if err != nil {
-		return Geo{}, err
+		return &Geo{}, err
 	}
 
 	var loc Geo
 	decoder := json.NewDecoder(res.Body)
 	if err := decoder.Decode(&loc); err != nil {
-		return Geo{}, err
+		return &Geo{}, err
 	}
 	loc.LastUpdate = time.Now()
-	return loc, nil
+	return &loc, nil
 }

@@ -7,19 +7,24 @@ import (
 
 //SSHAudit data
 type SshEventGeo struct {
-	ID            int64     `db:"id"`
-	Time          time.Time `db:"dt"`
-	User          string    `db:"username"`
-	Passwd        string    `db:"passwd"`
-	RemoteAddr    string    `db:"remote_addr"`
-	RemotePort    int       `db:"remote_port"`
-	RemoteName    string    `db:"remote_name"`
-	RemoteVersion string    `db:"remote_version"`
-	Longitude     float64   `db:"remote_longitude"`
-	Latitude      float64   `db:"remote_latitude"`
-	Country       string    `db:"country_code"`
-	City          string    `db:"city"`
-	MetroCode     uint      `db:"metro_code"`
+	ID              int64     `db:"id"`
+	Time            time.Time `db:"dt"`
+	User            string    `db:"username"`
+	Passwd          string    `db:"passwd"`
+	RemoteAddr      string    `db:"remote_addr"`
+	RemotePort      int       `db:"remote_port"`
+	RemoteName      string    `db:"remote_name"`
+	RemoteVersion   string    `db:"remote_version"`
+	RemoteCountry   string    `db:"remote_country"`
+	RemoteCity      string    `db:"remote_city"`
+	OriginAddr      string    `db:"origin_addr"`
+	OriginCountry   string    `db:"origin_country"`
+	OriginCity      string    `db:"origin_city"`
+	RemoteLatitude  float64   `db:"remote_latitude"`
+	RemoteLongitude float64   `db:"remote_longitude"`
+	OriginLatitude  float64   `db:"origin_latitude"`
+	OriginLongitude float64   `db:"origin_longitude"`
+	MetroCode uint `db:"metro_code"`
 }
 
 type Geo struct {

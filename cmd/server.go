@@ -26,7 +26,7 @@ import (
 )
 
 type Server struct {
-	auditClient *AuditClient
+	auditClient AuditRecorder
 }
 
 // serverCmd represents the server command
@@ -38,7 +38,7 @@ var serverCmd = &cobra.Command{
 
 		defaultAuditClient := &AuditClient{
 			db: loadDSN(cmd.Flag("dsn").Value.String()),
-			geoClient: GeoClientTransporter(&mockGeoClient{}),
+			geoClient: GeoClientTransporter(geoClient),
 		}
 
 		s := &Server{

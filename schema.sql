@@ -35,11 +35,16 @@ SELECT a.id,
        a.remote_addr,
        a.remote_name,
        a.remote_version,
+       a.remote_port,
+       coalesce(b.country_code, '')  as remote_country,
+       coalesce(b.city, '') as remote_city,
        a.origin_addr,
+       coalesce(c.country_code, '') as origin_country,
+       coalesce(c.city, '')  as origin_city,
        coalesce(b.latitude,0) as remote_latitude,
        coalesce(b.longitude,0) as remote_longitude,
-       coalesce(c.latitude) as origin_latitude,
-       coalesce(c.longitude) as origin_longitude
+       coalesce(c.latitude, 0) as origin_latitude,
+       coalesce(c.longitude, 0) as origin_longitude
        FROM event a
        LEFT JOIN geo b on a.remote_geo_id = b.id
        LEFT JOIN geo c on a.origin_geo_id = c.id;

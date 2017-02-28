@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"database/sql"
-	"encoding/json"
 	log "github.com/Sirupsen/logrus"
 	"github.com/dougEfresh/dbr"
 	"time"
@@ -25,18 +24,7 @@ import (
 type mockGeoClient struct {
 }
 
-func (c *mockGeoClient) GetLocationForIP(ip string) (*Geo, error) {
-	log.Infof("Looking up Geo Location for %s", ip)
-	resp := []byte("{\"ip\":\"203.116.142.113\",\"country_code\":\"CA\",\"country_name\":\"Singapore\",\"region_code\":\"01\",\"region_name\":\"Central Singapore Community Development Council\",\"city\":\"Singapore\",\"zip_code\":\"\",\"time_zone\":\"Asia/Singapore\",\"latitude\":1.2855,\"longitude\":103.8565,\"metro_code\":0}")
-	var geo = &Geo{}
-	err := json.Unmarshal(resp, geo)
-	geo.Ip = ip
-	geo.LastUpdate = time.Now()
-	return geo, err
-}
-
-//var geoClient = GeoClientTransporter(DefaultGeoClient())
-var geoClient = GeoClientTransporter(&mockGeoClient{})
+var geoClient = GeoClientTransporter(DefaultGeoClient())
 
 func insertGeo(geo *Geo, session *dbr.Session) (int64, error) {
 	var id int64
@@ -106,27 +94,4 @@ func (ac *AuditClient) resolveIp(ip string) (*Geo, error) {
 	}
 	log.Debugf("%+v", *geo)
 	return geo, nil
-}
-
-func (ac *AuditClient) ResolveGeoEvent(event *SshEvent) {
-	sess := ac.db.NewSession(nil)
-	geo, err := ac.resolveIp(event.RemoteAddr)
-	if err != nil {
-		log.Errorf("Error geting location for RemoteAddr %+v %s", event, err)
-		return
-	}
-	updateBuilder := sess.Update("event").Set("remote_geo_id", geo.ID).Where("id = ?", event.ID)
-	if _, err = updateBuilder.Exec(); err != nil {
-		log.Errorf("Error updating remote_addr_geo_id for id %d %s", event.ID, err)
-	}
-
-	geo, err = ac.resolveIp(event.OriginAddr)
-	if err !=nil {
-		log.Errorf("Errro getting location for origin %+v %s", event, err)
-		return
-	}
-	updateBuilder = sess.Update("event").Set("origin_geo_id", geo.ID).Where("id = ?", event.ID)
-	if _, err = updateBuilder.Exec(); err != nil {
-		log.Errorf("Error updating origin for id %d %s", event.ID, err)
-	}
 }

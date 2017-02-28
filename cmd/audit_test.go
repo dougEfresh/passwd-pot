@@ -4,7 +4,24 @@ import (
 	"github.com/dougEfresh/dbr"
 	"testing"
 	"time"
+	"encoding/json"
 )
+
+var localGeo = make(map[string]string)
+
+func init() {
+	localGeo["1.2.3.4"] = `{"ip":"1.2.3.4","country_code":"CA","country_name":"Singapore","region_code":"01","region_name":"Central Singapore Community Development Council","city":"Singapore","zip_code":"","time_zone":"Asia/Singapore","latitude":1.1,"longitude":101.00,"metro_code":0}`
+	localGeo["127.0.0.1"] = `{"ip":"127.0.0.1","country_code":"US","country_name":"USA","region_code":"05","region_name":"America","city":"New York","zip_code":"","time_zone":"Asia/Singapore","latitude":2.2,"longitude":102.00,"metro_code":0}`
+}
+
+func (c *mockGeoClient) GetLocationForIP(ip string) (*Geo, error) {
+	resp := []byte(localGeo[ip])
+	var geo = &Geo{}
+	err := json.Unmarshal(resp, geo)
+	geo.Ip = ip
+	geo.LastUpdate = time.Now()
+	return geo, err
+}
 
 const dsn string = "postgres://ssh_audit:ssh_audit@localhost/ssh_audit"
 
@@ -74,4 +91,69 @@ func TestLookup(t *testing.T) {
 	}
 
 	testAuditClient.ResolveGeoEvent(&event)
+	geoEvent := testAuditClient.Get(event.ID)
+
+	if geoEvent == nil {
+		t.Fatalf("Could not find id %d", event.ID)
+	}
+
+	if geoEvent.RemoteAddr != event.RemoteAddr {
+		t.Fatalf("%s != %s", geoEvent.RemoteAddr, event.RemoteAddr)
+	}
+
+	if geoEvent.RemotePort != event.RemotePort {
+		t.Fatalf("%d != %d", geoEvent.RemotePort, event.RemotePort)
+	}
+
+	if geoEvent.RemoteName != event.RemoteName {
+		t.Fatalf("%s != %s", geoEvent.RemoteName, event.RemoteName)
+	}
+
+	if geoEvent.RemoteVersion != event.RemoteVersion {
+		t.Fatalf("%s != %s", geoEvent.RemoteVersion, event.RemoteVersion)
+	}
+
+	if geoEvent.User != event.User {
+		t.Fatalf("%s != %s", geoEvent.User, event.User)
+	}
+
+	if geoEvent.Passwd != event.Passwd {
+		t.Fatalf("%s != %s", geoEvent.Passwd, event.Passwd)
+	}
+
+	if geoEvent.RemoteCountry != "CA" {
+		t.Fatalf("%s != CA", geoEvent.RemoteCountry)
+	}
+
+	if geoEvent.RemoteCity != "Singapore" {
+		t.Fatalf("%s != Singapore", geoEvent.RemoteCountry)
+	}
+
+	if geoEvent.OriginAddr != "127.0.0.1" {
+		t.Fatalf("%s != 127.0.0.1", geoEvent.OriginAddr)
+	}
+
+	if geoEvent.OriginCountry != "US" {
+		t.Fatalf("%s != US", geoEvent.OriginCountry)
+	}
+
+	if geoEvent.OriginCity != "New York" {
+		t.Fatalf("%s != New York", geoEvent.OriginCity)
+	}
+
+	if geoEvent.RemoteLatitude != 1.1 {
+		t.Fatalf("%s != 1.1", geoEvent.RemoteLatitude)
+	}
+
+	if geoEvent.RemoteLongitude != 101.00 {
+		t.Fatalf("%s != 101.00", geoEvent.RemoteLongitude)
+	}
+
+	if geoEvent.OriginLatitude != 2.2 {
+		t.Fatalf("%s != 2.2", geoEvent.OriginLatitude)
+	}
+
+	if geoEvent.OriginLongitude != 102.00 {
+		t.Fatalf("%s != 102.00", geoEvent.OriginLongitude)
+	}
 }
