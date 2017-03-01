@@ -42,7 +42,7 @@ func TestServerRequest(t *testing.T) {
 	}
 
 	var event SshEvent
-	b , err := ioutil.ReadAll(res.Body)
+	b, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		t.Fatalf("Error reading body %s", err)
 	}
@@ -80,13 +80,12 @@ func TestServerRequestWithOrigin(t *testing.T) {
 		"application/json",
 		strings.NewReader(requestBodyOrigin))
 
-
 	if err != nil {
 		t.Error(err)
 	}
 
 	var event SshEvent
-	b , _ := ioutil.ReadAll(res.Body)
+	b, _ := ioutil.ReadAll(res.Body)
 	err = json.Unmarshal(b, &event)
 	if err != nil {
 		t.Fatalf("%s", err)

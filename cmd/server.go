@@ -15,14 +15,14 @@
 package cmd
 
 import (
+	"encoding/json"
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
-	"net/http"
-	"time"
 	"io/ioutil"
-	"encoding/json"
+	"net/http"
 	"strings"
+	"time"
 )
 
 type Server struct {
@@ -30,9 +30,8 @@ type Server struct {
 }
 
 const (
-	auditEventUrl =  "/api/v0.1/audit"
+	auditEventUrl = "/api/v0.1/audit"
 )
-
 
 func Handlers(s *Server) *mux.Router {
 	router := mux.NewRouter()
@@ -50,7 +49,7 @@ var serverCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		defaultAuditClient := &AuditClient{
-			db: loadDSN(cmd.Flag("dsn").Value.String()),
+			db:        loadDSN(cmd.Flag("dsn").Value.String()),
 			geoClient: GeoClientTransporter(geoClient),
 		}
 
@@ -76,7 +75,7 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 		log.Error(err)
 		return
 	}
-	if  err = json.Unmarshal(b, &event) ; err != nil {
+	if err = json.Unmarshal(b, &event); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		log.Errorf("Error reading %s", err)
 		return
@@ -99,7 +98,6 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-type", "application/json")
 	w.Write(j)
 }
-
 
 func list(w http.ResponseWriter, r *http.Request) {
 }

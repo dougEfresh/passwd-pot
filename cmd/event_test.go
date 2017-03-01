@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"testing"
 	"encoding/json"
+	"testing"
 	"time"
 )
 
@@ -13,7 +13,7 @@ func TestUnMarshalEvent(t *testing.T) {
 		t.Fatalf("Cannot deserialize event %s \n%s", err, requestBodyOrigin)
 	}
 
-	if event.Time.Time.UnixNano()/ int64(time.Millisecond) != 1487973301661 {
+	if event.Time.Time.UnixNano()/int64(time.Millisecond) != 1487973301661 {
 		t.Fatalf("%s != 1487973301661", event.Time.Time)
 	}
 
@@ -45,41 +45,41 @@ func TestMarshalEvent(t *testing.T) {
 		t.Fatalf("Error %s", err)
 	}
 
-	 switch i := kv["time"].(type) {
-	 case float64:
-		 if i != float64(1487973301661) {
-			 t.Fatalf("Error %d != 1487973301661", kv["time"])
-		 }
-	 default:
-		 t.Fatal("Unknown type")
-	 }
+	switch i := kv["time"].(type) {
+	case float64:
+		if i != float64(1487973301661) {
+			t.Fatalf("Error %d != 1487973301661", kv["time"])
+		}
+	default:
+		t.Fatal("Unknown type")
+	}
 }
 
 func TestEventEquals(t *testing.T) {
 	g := Geo{
-		ID:0,
-		Ip: testEvent.RemoteAddr,
-		CountryCode:"US",
-		City:"Mexico",
-		RegionName:"A galaxy far far away",
-		RegionCode: "666",
-		TimeZone:"GMT",
-		Latitude:1,
-		Longitude:2,
-		MetroCode:69,
+		ID:          0,
+		Ip:          testEvent.RemoteAddr,
+		CountryCode: "US",
+		City:        "Mexico",
+		RegionName:  "A galaxy far far away",
+		RegionCode:  "666",
+		TimeZone:    "GMT",
+		Latitude:    1,
+		Longitude:   2,
+		MetroCode:   69,
 	}
 
 	another := Geo{
-		ID:0,
-		Ip: testEvent.RemoteAddr,
-		CountryCode:"US",
-		City:"New York",
-		RegionName:"A galaxy far far away",
-		RegionCode: "777",
-		TimeZone:"GMT",
-		Latitude:1,
-		Longitude:2,
-		MetroCode:69,
+		ID:          0,
+		Ip:          testEvent.RemoteAddr,
+		CountryCode: "US",
+		City:        "New York",
+		RegionName:  "A galaxy far far away",
+		RegionCode:  "777",
+		TimeZone:    "GMT",
+		Latitude:    1,
+		Longitude:   2,
+		MetroCode:   69,
 	}
 
 	if !g.equals(&g) {

@@ -16,12 +16,12 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	log "github.com/Sirupsen/logrus"
+	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	_ "github.com/lib/pq"
 	"gopkg.in/dougEfresh/dbr.v2"
+	"os"
 )
 
 var cfgFile string
@@ -30,7 +30,7 @@ var debug bool
 var RootCmd = &cobra.Command{
 	Use:   "ssh-audit",
 	Short: "",
-	Long: "",
+	Long:  "",
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
@@ -75,7 +75,7 @@ func initConfig() {
 	}
 }
 
-func loadDSN(dsn string) (*dbr.Connection) {
+func loadDSN(dsn string) *dbr.Connection {
 	db, err := dbr.Open("postgres", dsn, dbEventLogger)
 
 	if err != nil {

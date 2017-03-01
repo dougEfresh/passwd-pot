@@ -12,7 +12,7 @@ type AuditRecorder interface {
 }
 
 type AuditClient struct {
-	db *dbr.Connection
+	db        *dbr.Connection
 	geoClient GeoClientTransporter
 }
 
@@ -20,8 +20,8 @@ func (ac *AuditClient) RecordEvent(event *SshEvent) error {
 	log.Infof("Processing event %+v", event)
 	sess := ac.db.NewSession(nil)
 	var ids []int64
-	_ , err := sess.InsertInto("event").
-		Columns("dt","username","passwd","remote_addr","remote_port","remote_name","remote_version","origin_addr").
+	_, err := sess.InsertInto("event").
+		Columns("dt", "username", "passwd", "remote_addr", "remote_port", "remote_name", "remote_version", "origin_addr").
 		Record(event).
 		Returning(&ids, "id")
 
@@ -45,7 +45,7 @@ func (ac *AuditClient) ResolveGeoEvent(event *SshEvent) error {
 	}
 
 	geo, err = ac.resolveIp(event.OriginAddr)
-	if err !=nil {
+	if err != nil {
 		log.Errorf("Errro getting location for origin %+v %s", event, err)
 		return err
 	}
@@ -57,15 +57,14 @@ func (ac *AuditClient) ResolveGeoEvent(event *SshEvent) error {
 	return nil
 }
 
-
 func (ac *AuditClient) Get(id int64) *SshEventGeo {
 	sess := ac.db.NewSession(nil)
 	var event SshEventGeo
-	if _ , err := sess.Select("*").
+	if _, err := sess.Select("*").
 		From("vw_event").
 		Where("id = ?", id).
-		Load(&event) ; err != nil {
-		log.Errorf("Error getting event id %d %s", id, err )
+		Load(&event); err != nil {
+		log.Errorf("Error getting event id %d %s", id, err)
 		return nil
 	}
 	return &event

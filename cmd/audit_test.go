@@ -1,10 +1,10 @@
 package cmd
 
 import (
+	"encoding/json"
 	"gopkg.in/dougEfresh/dbr.v2"
 	"testing"
 	"time"
-	"encoding/json"
 )
 
 var localGeo = make(map[string]string)
@@ -50,7 +50,7 @@ var testEvent = SshEvent{
 	RemoteName:    "blah",
 	User:          "admin",
 	Passwd:        "1234",
-	Time:         JsonTime{Time: now},
+	Time:          JsonTime{Time: now},
 	OriginAddr:    "127.0.0.1",
 }
 
@@ -85,7 +85,7 @@ func TestLookup(t *testing.T) {
 	TestRecordEvent(t)
 	err := createEvent(&testEvent)
 	if err != nil {
-		t.Fatalf("Error creting event %s", err )
+		t.Fatalf("Error creting event %s", err)
 	}
 
 	if testEvent.ID <= 0 {

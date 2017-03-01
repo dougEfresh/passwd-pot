@@ -4,11 +4,11 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	"time"
 	log "github.com/Sirupsen/logrus"
+	"time"
 
-	"strconv"
 	"errors"
+	"strconv"
 )
 
 //Custom Serializer
@@ -18,12 +18,12 @@ type JsonTime struct {
 
 // Time is in epoch ms
 func (jt *JsonTime) UnmarshalJSON(data []byte) (err error) {
-	ts, err := strconv.ParseInt(string(data),10, 64)
+	ts, err := strconv.ParseInt(string(data), 10, 64)
 	if err != nil {
 		return errors.New("could not decode time " + string(data))
 	}
 	log.Infof("time %d", ts)
-	jt.Time = time.Unix(ts/1000,(ts%1000)*1000000).UTC()
+	jt.Time = time.Unix(ts/1000, (ts%1000)*1000000).UTC()
 	return nil
 }
 
