@@ -1,22 +1,21 @@
 language: go
-sudo: true
+sudo: false
 go:
   - 1.8
 
 services:
-  - docker
+  - postgresql
 
 before_install:
-  - docker pull postgres
-  - docker run  -v $PWD/schema:/docker-entrypoint-initdb.d/ -e POSTGRES_USER=ssh_audit -e POSTGRES_PASSWORD=ssh_audit -d -p 5432:5432 postgres
   - go get github.com/mattn/goveralls
   - go get golang.org/x/tools/cmd/cover
+  - psql -U postgres < schema/schema.sql
 
 os:
   - linux
 
 script:
   - go build -race
-  - go -v test ./... 
+  - go test -v ./... 
   - go vet 
   - $HOME/gopath/bin/goveralls -service=travis-ci
