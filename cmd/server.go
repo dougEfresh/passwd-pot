@@ -60,11 +60,11 @@ var serverCmd = &cobra.Command{
 		}
 		srv := &http.Server{
 			Handler:      handlers(s),
-			Addr:         "127.0.0.1:8080",
+			Addr:         bindAddr,
 			WriteTimeout: 3 * time.Second,
 			ReadTimeout:  3 * time.Second,
 		}
-		log.Println("Listing on port 8080")
+		log.Infof("Listing on %s", bindAddr)
 		log.Fatal(srv.ListenAndServe())
 	},
 }

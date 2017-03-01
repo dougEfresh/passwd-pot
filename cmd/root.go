@@ -26,6 +26,7 @@ import (
 )
 
 var cfgFile string
+var bindAddr string
 var debug bool
 
 // RootCmd for ssh pot
@@ -48,6 +49,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ssh-audit-geo.yaml)")
 	RootCmd.PersistentFlags().String("dsn", "", "DSN database url")
+	RootCmd.PersistentFlags().StringVar(&bindAddr, "bind", "127.0.0.1:8080", "bind to this address:port")
 	RootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable Debug")
 
 	// Log as JSON instead of the default ASCII formatter.
