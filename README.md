@@ -1,6 +1,6 @@
 # Ssh Password Honey Pot
  
- A Experiment at the moment...
+Just an experiment at the moment... more to come soon
  
 [![Build Status](https://travis-ci.org/dougEfresh/ssh-password-pot.svg?branch=master)](https://travis-ci.org/dougEfresh/ssh-password-pot)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dougEfresh/ssh-password-pot)](https://goreportcard.com/report/github.com/dougEfresh/ssh-password-pot)
