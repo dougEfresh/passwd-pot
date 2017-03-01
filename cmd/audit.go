@@ -16,20 +16,21 @@ type AuditClient struct {
 	geoClient GeoClientTransporter
 }
 
+
+
 func (ac *AuditClient) RecordEvent(event *SshEvent) error {
 	log.Infof("Processing event %+v", event)
-	var id int64
 	sess := ac.db.NewSession(nil)
-	err := sess.QueryRow(`INSERT INTO event(dt,username,passwd,remote_addr,remote_port,remote_name,remote_version,origin_addr)
-	                            VALUES
-	                           ($1,$2,$3,$4,$5,$6,$7,$8)
-	                            RETURNING id`,
-		event.getTime(), event.User, event.Passwd, event.RemoteAddr, event.RemotePort, event.RemoteName, event.RemoteVersion, event.OriginAddr).
-		Scan(&id)
+	var ids []int64
+	_ , err := sess.InsertInto("event").
+		Columns("dt","username","passwd","remote_addr","remote_port","remote_name","remote_version","origin_addr").
+		Record(event).
+		Returning(&ids, "id")
+
 	if err != nil {
 		return err
 	}
-	event.ID = id
+	event.ID = ids[0]
 	return nil
 }
 

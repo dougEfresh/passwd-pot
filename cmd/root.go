@@ -76,7 +76,7 @@ func initConfig() {
 }
 
 func loadDSN(dsn string) (*dbr.Connection) {
-	db, err := dbr.Open("postgres", dsn, nil)
+	db, err := dbr.Open("postgres", dsn, dbEventLogger)
 
 	if err != nil {
 		panic(err)

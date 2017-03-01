@@ -1,9 +1,24 @@
 package cmd
 
 import (
-	"github.com/dougEfresh/dbr"
+	"encoding/binary"
 	"time"
+	"database/sql/driver"
 )
+
+type JsonTime time.Time
+
+func (jt JsonTime) Unmarshal(data []byte, v interface{}) error {
+	t := int64(binary.BigEndian.Uint64(data))
+	time.Unix(t/1000, (t%1000)*1000000)
+	v = &t
+	return nil
+}
+
+// Value implements the driver Valuer interface.
+func (jt JsonTime) Value() (driver.Value, error) {
+	return time.Time(jt), nil
+}
 
 //SSHAudit data
 type SshEventGeo struct {
@@ -24,7 +39,7 @@ type SshEventGeo struct {
 	RemoteLongitude float64   `db:"remote_longitude"`
 	OriginLatitude  float64   `db:"origin_latitude"`
 	OriginLongitude float64   `db:"origin_longitude"`
-	MetroCode uint `db:"metro_code"`
+	MetroCode       uint      `db:"metro_code"`
 }
 
 type Geo struct {
@@ -42,21 +57,15 @@ type Geo struct {
 }
 
 type SshEvent struct {
-	ID              int64
-	Epoch           int64  `db:"-" json:"time"`
-	User            string `db:"username"`
-	Passwd          string
-	RemoteAddr      string
-	RemoteAddrGeoId dbr.NullInt64 `db:"remote_geo_id" json:"-"`
-	RemotePort      int
-	RemoteName      string
-	RemoteVersion   string
-	OriginAddr      string
-	OriginGeoId     dbr.NullInt64 `db:"origin_geo_id" json:"-"`
-}
-
-func (e *SshEvent) getTime() time.Time {
-	return time.Unix(e.Epoch/1000, (e.Epoch%1000)*1000000)
+	ID            int64    `db:"id" json:"id"`
+	Time          JsonTime `db:"dt" json:"time"`
+	User          string   `db:"username"`
+	Passwd        string   `db:"passwd"`
+	RemoteAddr    string   `db:"remote_addr"`
+	RemotePort    int      `db:"remote_port"`
+	RemoteName    string   `db:"remote_name"`
+	RemoteVersion string   `db:"remote_version"`
+	OriginAddr    string   `db:"origin_addr"`
 }
 
 func (g *Geo) equals(another *Geo) bool {

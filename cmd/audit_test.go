@@ -40,7 +40,7 @@ func clearDb(db *dbr.Connection, t *testing.T) {
 	}
 }
 
-var now = time.Now().UnixNano() / 1000000
+var now = time.Now()
 var event = SshEvent{
 	RemoteAddr:    "1.2.3.4",
 	RemotePort:    3432,
@@ -48,7 +48,7 @@ var event = SshEvent{
 	RemoteName:    "blah",
 	User:          "admin",
 	Passwd:        "1234",
-	Epoch:         now,
+	Time:         JsonTime(now),
 	OriginAddr:    "127.0.0.1",
 }
 
@@ -70,7 +70,7 @@ func TestRecordEvent(t *testing.T) {
 	clearDb(testAuditClient.db, t)
 	err := createEvent(&event)
 	if err != nil {
-		t.Fatalf("Error creting event %s", err )
+		t.Fatalf("Error creting event %s", err)
 	}
 
 	if event.ID <= 0 {
