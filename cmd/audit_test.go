@@ -16,7 +16,7 @@ func init() {
 	localGeo["10.0.0.1"] = `{"ip":"10.0.0.1","country_code":"ZX","country_name":"USA","region_code":"05","region_name":"America","city":"New York","zip_code":"","time_zone":"Asia/Singapore","latitude":2.2,"longitude":102.00,"metro_code":0}`
 }
 
-func (c *mockGeoClient) GetLocationForIP(ip string) (*Geo, error) {
+func (c *mockGeoClient) getLocationForAddr(ip string) (*Geo, error) {
 	resp := []byte(localGeo[ip])
 	var geo = &Geo{}
 	err := json.Unmarshal(resp, geo)
@@ -56,7 +56,7 @@ var testEvent = SSHEvent{
 
 func createEvent(event *SSHEvent) error {
 	sess := testAuditClient.db.NewSession(nil)
-	err := testAuditClient.RecordEvent(event)
+	err := testAuditClient.recordEvent(event)
 	if err != nil {
 		return err
 	}
@@ -92,8 +92,8 @@ func TestLookup(t *testing.T) {
 		t.Fatalf("Event id should be > 0 %+v", &testEvent)
 	}
 
-	testAuditClient.ResolveGeoEvent(&testEvent)
-	geoEvent := testAuditClient.Get(testEvent.ID)
+	testAuditClient.resolveGeoEvent(&testEvent)
+	geoEvent := testAuditClient.get(testEvent.ID)
 
 	if geoEvent == nil {
 		t.Fatalf("Could not find id %d", testEvent.ID)

@@ -17,6 +17,8 @@ package cmd
 import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
+	//DB driver
+	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/dougEfresh/dbr.v2"

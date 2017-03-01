@@ -58,7 +58,7 @@ func TestServerRequest(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	eventGeo := testAuditClient.Get(event.ID)
+	eventGeo := testAuditClient.get(event.ID)
 	if eventGeo == nil {
 		t.Fatalf("Not not find id %d", event.ID)
 	}
@@ -97,7 +97,7 @@ func TestServerRequestWithOrigin(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	eventGeo := testAuditClient.Get(event.ID)
+	eventGeo := testAuditClient.get(event.ID)
 	if eventGeo == nil {
 		t.Fatalf("Not not find id %d", event.ID)
 	}

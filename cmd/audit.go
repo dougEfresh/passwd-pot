@@ -16,7 +16,7 @@ type auditClient struct {
 	geoClient geoClientTransporter
 }
 
-func (ac *auditClient) RecordEvent(event *SSHEvent) error {
+func (ac *auditClient) recordEvent(event *SSHEvent) error {
 	log.Infof("Processing event %+v", event)
 	sess := ac.db.NewSession(nil)
 	var ids []int64
@@ -32,7 +32,7 @@ func (ac *auditClient) RecordEvent(event *SSHEvent) error {
 	return nil
 }
 
-func (ac *auditClient) ResolveGeoEvent(event *SSHEvent) error {
+func (ac *auditClient) resolveGeoEvent(event *SSHEvent) error {
 	sess := ac.db.NewSession(nil)
 	geo, err := ac.resolveAddr(event.RemoteAddr)
 	if err != nil {
@@ -57,7 +57,7 @@ func (ac *auditClient) ResolveGeoEvent(event *SSHEvent) error {
 	return nil
 }
 
-func (ac *auditClient) Get(id int64) *SSHEventGeo {
+func (ac *auditClient) get(id int64) *SSHEventGeo {
 	sess := ac.db.NewSession(nil)
 	var event SSHEventGeo
 	if _, err := sess.Select("*").

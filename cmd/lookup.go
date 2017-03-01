@@ -57,8 +57,8 @@ func (ac *auditClient) resolveAddr(addr string) (*Geo, error) {
 	}
 	if err == sql.ErrNoRows || rowCount == 0 {
 		log.Infof("No rows returned for %s", addr)
-		geo, err = ac.geoClient.GetLocationForIP(addr)
-		if geo, err = ac.geoClient.GetLocationForIP(addr); err != nil {
+		geo, err = ac.geoClient.getLocationForAddr(addr)
+		if geo, err = ac.geoClient.getLocationForAddr(addr); err != nil {
 			log.Errorf("Error looking up IP: %s  %s", addr, err)
 			return nil, err
 		}
@@ -70,7 +70,7 @@ func (ac *auditClient) resolveAddr(addr string) (*Geo, error) {
 	}
 	if geo.LastUpdate.Before(expire) {
 		var newGeo = &Geo{}
-		newGeo, err = ac.geoClient.GetLocationForIP(addr)
+		newGeo, err = ac.geoClient.getLocationForAddr(addr)
 		if err != nil {
 			return nil, err
 		}
