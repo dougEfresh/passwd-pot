@@ -30,7 +30,7 @@ type Server struct {
 }
 
 const (
-	auditEventUrl =  "/api/v1/audit"
+	auditEventUrl =  "/api/v0.1/audit"
 )
 
 

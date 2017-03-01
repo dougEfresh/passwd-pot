@@ -17,7 +17,7 @@ package cmd
 import (
 	"database/sql"
 	log "github.com/Sirupsen/logrus"
-	"github.com/dougEfresh/dbr"
+	"gopkg.in/dougEfresh/dbr.v2"
 	"time"
 )
 

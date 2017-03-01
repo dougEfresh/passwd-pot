@@ -21,7 +21,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	_ "github.com/lib/pq"
-	"github.com/dougEfresh/dbr"
+	"gopkg.in/dougEfresh/dbr.v2"
 )
 
 var cfgFile string

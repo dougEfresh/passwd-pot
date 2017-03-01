@@ -14,7 +14,7 @@
 
 package main
 
-import "github.com/dougEfresh/ssh-audit/cmd"
+import "github.com/dougEfresh/ssh-password-pot/cmd"
 
 func main() {
 	cmd.Execute()

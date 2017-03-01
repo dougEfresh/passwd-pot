@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/dougEfresh/dbr"
+	"gopkg.in/dougEfresh/dbr.v2"
 	"testing"
 	"time"
 	"encoding/json"

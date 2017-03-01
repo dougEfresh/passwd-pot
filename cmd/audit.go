@@ -2,7 +2,7 @@ package cmd
 
 import (
 	log "github.com/Sirupsen/logrus"
-	"github.com/dougEfresh/dbr"
+	"gopkg.in/dougEfresh/dbr.v2"
 )
 
 type AuditRecorder interface {
