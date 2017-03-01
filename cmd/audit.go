@@ -16,8 +16,6 @@ type AuditClient struct {
 	geoClient GeoClientTransporter
 }
 
-
-
 func (ac *AuditClient) RecordEvent(event *SshEvent) error {
 	log.Infof("Processing event %+v", event)
 	sess := ac.db.NewSession(nil)
