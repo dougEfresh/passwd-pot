@@ -144,18 +144,18 @@ func TestLookup(t *testing.T) {
 	}
 
 	if geoEvent.RemoteLatitude != 1.1 {
-		t.Fatalf("%s != 1.1", geoEvent.RemoteLatitude)
+		t.Fatalf("%f != 1.1", geoEvent.RemoteLatitude)
 	}
 
 	if geoEvent.RemoteLongitude != 101.00 {
-		t.Fatalf("%s != 101.00", geoEvent.RemoteLongitude)
+		t.Fatalf("%f != 101.00", geoEvent.RemoteLongitude)
 	}
 
 	if geoEvent.OriginLatitude != 2.2 {
-		t.Fatalf("%s != 2.2", geoEvent.OriginLatitude)
+		t.Fatalf("%f != 2.2", geoEvent.OriginLatitude)
 	}
 
 	if geoEvent.OriginLongitude != 102.00 {
-		t.Fatalf("%s != 102.00", geoEvent.OriginLongitude)
+		t.Fatalf("%f != 102.00", geoEvent.OriginLongitude)
 	}
 }

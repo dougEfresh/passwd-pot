@@ -100,7 +100,7 @@ func (g *Geo) equals(another *Geo) bool {
 func (e SshEvent) String() string {
 	b, err := json.Marshal(e)
 	if err != nil {
-		return fmt.Sprintf("%+v", &e)
+		return fmt.Sprintf("%s", err)
 	}
 	return string(b)
 }
