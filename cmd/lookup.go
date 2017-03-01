@@ -24,7 +24,7 @@ import (
 type mockGeoClient struct {
 }
 
-var geoClient = GeoClientTransporter(DefaultGeoClient())
+var geoClient = geoClientTransporter(defaultGeoClient())
 
 func insertGeo(geo *Geo, session *dbr.Session) (int64, error) {
 	var ids []int64
@@ -39,7 +39,7 @@ func insertGeo(geo *Geo, session *dbr.Session) (int64, error) {
 	return geo.ID, nil
 }
 
-func (ac *AuditClient) resolveIp(ip string) (*Geo, error) {
+func (ac *auditClient) resolveAddr(addr string) (*Geo, error) {
 	sess := ac.db.NewSession(nil)
 	now := time.Now()
 	expire := now.AddDate(0, -1, 0)
@@ -47,7 +47,7 @@ func (ac *AuditClient) resolveIp(ip string) (*Geo, error) {
 
 	rowCount, err := sess.Select("*").
 		From("geo").
-		Where("ip = ?", ip).
+		Where("ip = ?", addr).
 		OrderDir("last_update", false).
 		Limit(1).
 		Load(&geo)
@@ -56,10 +56,10 @@ func (ac *AuditClient) resolveIp(ip string) (*Geo, error) {
 		return nil, err
 	}
 	if err == sql.ErrNoRows || rowCount == 0 {
-		log.Infof("No rows returned for %s", ip)
-		geo, err = ac.geoClient.GetLocationForIP(ip)
-		if geo, err = ac.geoClient.GetLocationForIP(ip); err != nil {
-			log.Errorf("Error looking up IP: %s  %s", ip, err)
+		log.Infof("No rows returned for %s", addr)
+		geo, err = ac.geoClient.GetLocationForIP(addr)
+		if geo, err = ac.geoClient.GetLocationForIP(addr); err != nil {
+			log.Errorf("Error looking up IP: %s  %s", addr, err)
 			return nil, err
 		}
 		if _, err = insertGeo(geo, sess); err != nil {
@@ -70,7 +70,7 @@ func (ac *AuditClient) resolveIp(ip string) (*Geo, error) {
 	}
 	if geo.LastUpdate.Before(expire) {
 		var newGeo = &Geo{}
-		newGeo, err = ac.geoClient.GetLocationForIP(ip)
+		newGeo, err = ac.geoClient.GetLocationForIP(addr)
 		if err != nil {
 			return nil, err
 		}

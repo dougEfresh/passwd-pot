@@ -7,7 +7,7 @@ import (
 )
 
 func TestUnMarshalEvent(t *testing.T) {
-	var event SshEvent
+	var event SSHEvent
 	err := json.Unmarshal([]byte(requestBodyOrigin), &event)
 	if err != nil {
 		t.Fatalf("Cannot deserialize event %s \n%s", err, requestBodyOrigin)
@@ -32,7 +32,7 @@ func TestUnMarshalEvent(t *testing.T) {
 
 //Verify time is converted properly
 func TestMarshalEvent(t *testing.T) {
-	var event SshEvent
+	var event SSHEvent
 	var kv map[string]interface{}
 	err := json.Unmarshal([]byte(requestBodyOrigin), &event)
 	b, err := json.Marshal(&event)
@@ -58,7 +58,7 @@ func TestMarshalEvent(t *testing.T) {
 func TestEventEquals(t *testing.T) {
 	g := Geo{
 		ID:          0,
-		Ip:          testEvent.RemoteAddr,
+		IP:          testEvent.RemoteAddr,
 		CountryCode: "US",
 		City:        "Mexico",
 		RegionName:  "A galaxy far far away",
@@ -71,7 +71,7 @@ func TestEventEquals(t *testing.T) {
 
 	another := Geo{
 		ID:          0,
-		Ip:          testEvent.RemoteAddr,
+		IP:          testEvent.RemoteAddr,
 		CountryCode: "US",
 		City:        "New York",
 		RegionName:  "A galaxy far far away",

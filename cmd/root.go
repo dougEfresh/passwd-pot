@@ -17,7 +17,6 @@ package cmd
 import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
-	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/dougEfresh/dbr.v2"
@@ -27,6 +26,7 @@ import (
 var cfgFile string
 var debug bool
 
+// RootCmd for ssh pot
 var RootCmd = &cobra.Command{
 	Use:   "ssh-audit",
 	Short: "",

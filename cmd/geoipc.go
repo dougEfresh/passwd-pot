@@ -6,22 +6,23 @@ import (
 	"time"
 )
 
-type GeoClientTransporter interface {
-	GetLocationForIP(ip string) (*Geo, error)
+type geoClientTransporter interface {
+	getLocationForAddr(ip string) (*Geo, error)
 }
 
+//GeoClient for geo IP
 type GeoClient struct {
-	Url string
+	URL string
 }
 
-func DefaultGeoClient() *GeoClient {
+func defaultGeoClient() *GeoClient {
 	return &GeoClient{
-		Url: "https://freegeoip.net/json",
+		URL: "https://freegeoip.net/json",
 	}
 }
 
-func (c *GeoClient) GetLocationForIP(ip string) (*Geo, error) {
-	res, err := http.Get(c.Url + "/" + ip)
+func (c *GeoClient) getLocationForAddr(ip string) (*Geo, error) {
+	res, err := http.Get(c.URL + "/" + ip)
 	if err != nil {
 		return &Geo{}, err
 	}

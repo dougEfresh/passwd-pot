@@ -25,17 +25,17 @@ import (
 	"time"
 )
 
-type Server struct {
-	auditClient AuditRecorder
+type server struct {
+	auditClient auditRecorder
 }
 
 const (
-	auditEventUrl = "/api/v0.1/audit"
+	auditEventURL = "/api/v0.1/audit"
 )
 
-func Handlers(s *Server) *mux.Router {
+func handlers(s *server) *mux.Router {
 	router := mux.NewRouter()
-	router.HandleFunc(auditEventUrl, s.handleEvent).
+	router.HandleFunc(auditEventURL, s.handleEvent).
 		Methods("POST").
 		HeadersRegexp("Content-Type", "application/json")
 
@@ -48,16 +48,16 @@ var serverCmd = &cobra.Command{
 	Long:  "",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		defaultAuditClient := &AuditClient{
+		defaultAuditClient := &auditClient{
 			db:        loadDSN(cmd.Flag("dsn").Value.String()),
-			geoClient: GeoClientTransporter(geoClient),
+			geoClient: geoClientTransporter(geoClient),
 		}
 
-		s := &Server{
+		s := &server{
 			auditClient: defaultAuditClient,
 		}
 		srv := &http.Server{
-			Handler:      Handlers(s),
+			Handler:      handlers(s),
 			Addr:         "127.0.0.1:8080",
 			WriteTimeout: 3 * time.Second,
 			ReadTimeout:  3 * time.Second,
@@ -67,8 +67,8 @@ var serverCmd = &cobra.Command{
 	},
 }
 
-func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
-	var event SshEvent
+func (s *server) handleEvent(w http.ResponseWriter, r *http.Request) {
+	var event SSHEvent
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -85,8 +85,8 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 		event.OriginAddr = strings.Split(r.RemoteAddr, ":")[0]
 	}
 
-	err = s.auditClient.RecordEvent(&event)
-	go s.auditClient.ResolveGeoEvent(&event)
+	err = s.auditClient.recordEvent(&event)
+	go s.auditClient.resolveGeoEvent(&event)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("Error writing %+v %s", &event, err)

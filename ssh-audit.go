@@ -15,6 +15,7 @@
 package main
 
 import "github.com/dougEfresh/ssh-password-pot/cmd"
+import _ "github.com/lib/pq"
 
 func main() {
 	cmd.Execute()

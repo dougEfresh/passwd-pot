@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-var testServer = &Server{
+var testServer = &server{
 	auditClient: testAuditClient,
 }
 
@@ -21,11 +21,11 @@ const requestBodyOrigin = `{"time": 1487973301661, "user": "admin", "passwd": "1
 
 func TestServerRequest(t *testing.T) {
 
-	ts := httptest.NewServer(Handlers(testServer))
+	ts := httptest.NewServer(handlers(testServer))
 	defer ts.Close()
-	t.Log(fmt.Sprintf("%s%s", ts.URL, auditEventUrl))
+	t.Log(fmt.Sprintf("%s%s", ts.URL, auditEventURL))
 
-	res, err := http.Post(fmt.Sprintf("%s%s", ts.URL, auditEventUrl),
+	res, err := http.Post(fmt.Sprintf("%s%s", ts.URL, auditEventURL),
 		"application/json",
 		strings.NewReader(requestBody))
 
@@ -41,7 +41,7 @@ func TestServerRequest(t *testing.T) {
 		t.Fatal("No Body")
 	}
 
-	var event SshEvent
+	var event SSHEvent
 	b, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		t.Fatalf("Error reading body %s", err)
@@ -73,10 +73,10 @@ func TestServerRequest(t *testing.T) {
 }
 
 func TestServerRequestWithOrigin(t *testing.T) {
-	ts := httptest.NewServer(Handlers(testServer))
+	ts := httptest.NewServer(handlers(testServer))
 	defer ts.Close()
 
-	res, err := http.Post(fmt.Sprintf("%s%s", ts.URL, auditEventUrl),
+	res, err := http.Post(fmt.Sprintf("%s%s", ts.URL, auditEventURL),
 		"application/json",
 		strings.NewReader(requestBodyOrigin))
 
@@ -84,7 +84,7 @@ func TestServerRequestWithOrigin(t *testing.T) {
 		t.Error(err)
 	}
 
-	var event SshEvent
+	var event SSHEvent
 	b, _ := ioutil.ReadAll(res.Body)
 	err = json.Unmarshal(b, &event)
 	if err != nil {

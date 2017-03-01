@@ -5,18 +5,18 @@ import (
 	"gopkg.in/dougEfresh/dbr.v2"
 )
 
-type AuditRecorder interface {
-	RecordEvent(event *SshEvent) error
-	ResolveGeoEvent(event *SshEvent) error
-	Get(id int64) *SshEventGeo
+type auditRecorder interface {
+	recordEvent(event *SSHEvent) error
+	resolveGeoEvent(event *SSHEvent) error
+	get(id int64) *SSHEventGeo
 }
 
-type AuditClient struct {
+type auditClient struct {
 	db        *dbr.Connection
-	geoClient GeoClientTransporter
+	geoClient geoClientTransporter
 }
 
-func (ac *AuditClient) RecordEvent(event *SshEvent) error {
+func (ac *auditClient) RecordEvent(event *SSHEvent) error {
 	log.Infof("Processing event %+v", event)
 	sess := ac.db.NewSession(nil)
 	var ids []int64
@@ -32,9 +32,9 @@ func (ac *AuditClient) RecordEvent(event *SshEvent) error {
 	return nil
 }
 
-func (ac *AuditClient) ResolveGeoEvent(event *SshEvent) error {
+func (ac *auditClient) ResolveGeoEvent(event *SSHEvent) error {
 	sess := ac.db.NewSession(nil)
-	geo, err := ac.resolveIp(event.RemoteAddr)
+	geo, err := ac.resolveAddr(event.RemoteAddr)
 	if err != nil {
 		log.Errorf("Error geting location for RemoteAddr %+v %s", event, err)
 		return err
@@ -44,7 +44,7 @@ func (ac *AuditClient) ResolveGeoEvent(event *SshEvent) error {
 		log.Errorf("Error updating remote_addr_geo_id for id %d %s", event.ID, err)
 	}
 
-	geo, err = ac.resolveIp(event.OriginAddr)
+	geo, err = ac.resolveAddr(event.OriginAddr)
 	if err != nil {
 		log.Errorf("Errro getting location for origin %+v %s", event, err)
 		return err
@@ -57,9 +57,9 @@ func (ac *AuditClient) ResolveGeoEvent(event *SshEvent) error {
 	return nil
 }
 
-func (ac *AuditClient) Get(id int64) *SshEventGeo {
+func (ac *auditClient) Get(id int64) *SSHEventGeo {
 	sess := ac.db.NewSession(nil)
-	var event SshEventGeo
+	var event SSHEventGeo
 	if _, err := sess.Select("*").
 		From("vw_event").
 		Where("id = ?", id).

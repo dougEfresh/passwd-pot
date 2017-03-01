@@ -20,16 +20,16 @@ func (c *mockGeoClient) GetLocationForIP(ip string) (*Geo, error) {
 	resp := []byte(localGeo[ip])
 	var geo = &Geo{}
 	err := json.Unmarshal(resp, geo)
-	geo.Ip = ip
+	geo.IP = ip
 	geo.LastUpdate = time.Now()
 	return geo, err
 }
 
 const dsn string = "postgres://postgres:@127.0.0.1/?sslmode=disable"
 
-var testAuditClient = &AuditClient{
+var testAuditClient = &auditClient{
 	db:        loadDSN(dsn),
-	geoClient: GeoClientTransporter(&mockGeoClient{}),
+	geoClient: geoClientTransporter(&mockGeoClient{}),
 }
 
 func clearDb(db *dbr.Connection, t *testing.T) {
@@ -43,24 +43,24 @@ func clearDb(db *dbr.Connection, t *testing.T) {
 }
 
 var now = time.Now()
-var testEvent = SshEvent{
+var testEvent = SSHEvent{
 	RemoteAddr:    "1.2.3.4",
 	RemotePort:    3432,
 	RemoteVersion: "SSH-2.0-JSCH-0.1.51",
 	RemoteName:    "blah",
 	User:          "admin",
 	Passwd:        "1234",
-	Time:          JsonTime{Time: now},
+	Time:          jsonTime{Time: now},
 	OriginAddr:    "127.0.0.1",
 }
 
-func createEvent(event *SshEvent) error {
+func createEvent(event *SSHEvent) error {
 	sess := testAuditClient.db.NewSession(nil)
 	err := testAuditClient.RecordEvent(event)
 	if err != nil {
 		return err
 	}
-	var eventGeo SshEventGeo
+	var eventGeo SSHEventGeo
 	_, err = sess.Select("*").From("vw_event").Where("id = ?", event.ID).Load(&eventGeo)
 	if err != nil {
 		return err
