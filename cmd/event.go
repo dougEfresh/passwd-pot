@@ -1,23 +1,40 @@
 package cmd
 
 import (
-	"encoding/binary"
-	"time"
 	"database/sql/driver"
+	"encoding/json"
+	"fmt"
+	"time"
+	log "github.com/Sirupsen/logrus"
+
+	"strconv"
+	"errors"
 )
 
-type JsonTime time.Time
+//Custom Serializer
+type JsonTime struct {
+	time.Time
+}
 
-func (jt JsonTime) Unmarshal(data []byte, v interface{}) error {
-	t := int64(binary.BigEndian.Uint64(data))
-	time.Unix(t/1000, (t%1000)*1000000)
-	v = &t
+// Time is in epoch ms
+func (jt *JsonTime) UnmarshalJSON(data []byte) (err error) {
+	ts, err := strconv.ParseInt(string(data),10, 64)
+	if err != nil {
+		return errors.New("could not decode time " + string(data))
+	}
+	log.Infof("time %d", ts)
+	jt.Time = time.Unix(ts/1000,(ts%1000)*1000000).UTC()
 	return nil
+}
+
+func (jt JsonTime) MarshalJSON() ([]byte, error) {
+	ft := jt.Time.UTC().UnixNano() / int64(time.Millisecond)
+	return []byte(fmt.Sprintf("%d", ft)), nil
 }
 
 // Value implements the driver Valuer interface.
 func (jt JsonTime) Value() (driver.Value, error) {
-	return time.Time(jt), nil
+	return jt.Time, nil
 }
 
 //SSHAudit data
@@ -76,5 +93,14 @@ func (g *Geo) equals(another *Geo) bool {
 		g.MetroCode == another.MetroCode &&
 		g.RegionName == another.RegionName &&
 		g.RegionCode == another.RegionCode &&
-		g.TimeZone == another.TimeZone
+		g.TimeZone == another.TimeZone &&
+		g.Ip == another.Ip
+}
+
+func (e SshEvent) String() string {
+	b, err := json.Marshal(e)
+	if err != nil {
+		return fmt.Sprintf("%+v", &e)
+	}
+	return string(b)
 }

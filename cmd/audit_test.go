@@ -12,6 +12,8 @@ var localGeo = make(map[string]string)
 func init() {
 	localGeo["1.2.3.4"] = `{"ip":"1.2.3.4","country_code":"CA","country_name":"Singapore","region_code":"01","region_name":"Central Singapore Community Development Council","city":"Singapore","zip_code":"","time_zone":"Asia/Singapore","latitude":1.1,"longitude":101.00,"metro_code":0}`
 	localGeo["127.0.0.1"] = `{"ip":"127.0.0.1","country_code":"US","country_name":"USA","region_code":"05","region_name":"America","city":"New York","zip_code":"","time_zone":"Asia/Singapore","latitude":2.2,"longitude":102.00,"metro_code":0}`
+	localGeo["192.168.1.1"] = `{"ip":"192.168.1.1","country_code":"ZZ","country_name":"USA","region_code":"05","region_name":"America","city":"New York","zip_code":"","time_zone":"Asia/Singapore","latitude":2.2,"longitude":102.00,"metro_code":0}`
+	localGeo["10.0.0.1"] = `{"ip":"10.0.0.1","country_code":"ZX","country_name":"USA","region_code":"05","region_name":"America","city":"New York","zip_code":"","time_zone":"Asia/Singapore","latitude":2.2,"longitude":102.00,"metro_code":0}`
 }
 
 func (c *mockGeoClient) GetLocationForIP(ip string) (*Geo, error) {
@@ -23,7 +25,7 @@ func (c *mockGeoClient) GetLocationForIP(ip string) (*Geo, error) {
 	return geo, err
 }
 
-const dsn string = "postgres://ssh_audit:ssh_audit@localhost/ssh_audit"
+const dsn string = "postgres://ssh_audit:ssh_audit@127.0.0.1/ssh_audit?sslmode=disable"
 
 var testAuditClient = &AuditClient{
 	db:        loadDSN(dsn),
@@ -41,14 +43,14 @@ func clearDb(db *dbr.Connection, t *testing.T) {
 }
 
 var now = time.Now()
-var event = SshEvent{
+var testEvent = SshEvent{
 	RemoteAddr:    "1.2.3.4",
 	RemotePort:    3432,
 	RemoteVersion: "SSH-2.0-JSCH-0.1.51",
 	RemoteName:    "blah",
 	User:          "admin",
 	Passwd:        "1234",
-	Time:         JsonTime(now),
+	Time:         JsonTime{Time: now},
 	OriginAddr:    "127.0.0.1",
 }
 
@@ -68,57 +70,57 @@ func createEvent(event *SshEvent) error {
 
 func TestRecordEvent(t *testing.T) {
 	clearDb(testAuditClient.db, t)
-	err := createEvent(&event)
+	err := createEvent(&testEvent)
 	if err != nil {
 		t.Fatalf("Error creting event %s", err)
 	}
 
-	if event.ID <= 0 {
-		t.Fatalf("Event id should be > 0 %+v", &event)
+	if testEvent.ID <= 0 {
+		t.Fatalf("Event id should be > 0 %+v", &testEvent)
 	}
 
 }
 
 func TestLookup(t *testing.T) {
 	TestRecordEvent(t)
-	err := createEvent(&event)
+	err := createEvent(&testEvent)
 	if err != nil {
 		t.Fatalf("Error creting event %s", err )
 	}
 
-	if event.ID <= 0 {
-		t.Fatalf("Event id should be > 0 %+v", &event)
+	if testEvent.ID <= 0 {
+		t.Fatalf("Event id should be > 0 %+v", &testEvent)
 	}
 
-	testAuditClient.ResolveGeoEvent(&event)
-	geoEvent := testAuditClient.Get(event.ID)
+	testAuditClient.ResolveGeoEvent(&testEvent)
+	geoEvent := testAuditClient.Get(testEvent.ID)
 
 	if geoEvent == nil {
-		t.Fatalf("Could not find id %d", event.ID)
+		t.Fatalf("Could not find id %d", testEvent.ID)
 	}
 
-	if geoEvent.RemoteAddr != event.RemoteAddr {
-		t.Fatalf("%s != %s", geoEvent.RemoteAddr, event.RemoteAddr)
+	if geoEvent.RemoteAddr != testEvent.RemoteAddr {
+		t.Fatalf("%s != %s", geoEvent.RemoteAddr, testEvent.RemoteAddr)
 	}
 
-	if geoEvent.RemotePort != event.RemotePort {
-		t.Fatalf("%d != %d", geoEvent.RemotePort, event.RemotePort)
+	if geoEvent.RemotePort != testEvent.RemotePort {
+		t.Fatalf("%d != %d", geoEvent.RemotePort, testEvent.RemotePort)
 	}
 
-	if geoEvent.RemoteName != event.RemoteName {
-		t.Fatalf("%s != %s", geoEvent.RemoteName, event.RemoteName)
+	if geoEvent.RemoteName != testEvent.RemoteName {
+		t.Fatalf("%s != %s", geoEvent.RemoteName, testEvent.RemoteName)
 	}
 
-	if geoEvent.RemoteVersion != event.RemoteVersion {
-		t.Fatalf("%s != %s", geoEvent.RemoteVersion, event.RemoteVersion)
+	if geoEvent.RemoteVersion != testEvent.RemoteVersion {
+		t.Fatalf("%s != %s", geoEvent.RemoteVersion, testEvent.RemoteVersion)
 	}
 
-	if geoEvent.User != event.User {
-		t.Fatalf("%s != %s", geoEvent.User, event.User)
+	if geoEvent.User != testEvent.User {
+		t.Fatalf("%s != %s", geoEvent.User, testEvent.User)
 	}
 
-	if geoEvent.Passwd != event.Passwd {
-		t.Fatalf("%s != %s", geoEvent.Passwd, event.Passwd)
+	if geoEvent.Passwd != testEvent.Passwd {
+		t.Fatalf("%s != %s", geoEvent.Passwd, testEvent.Passwd)
 	}
 
 	if geoEvent.RemoteCountry != "CA" {

@@ -27,19 +27,16 @@ type mockGeoClient struct {
 var geoClient = GeoClientTransporter(DefaultGeoClient())
 
 func insertGeo(geo *Geo, session *dbr.Session) (int64, error) {
-	var id int64
-	err := session.QueryRow(`
-	INSERT INTO geo(ip, country_code, region_code, region_name, city, time_zone, latitude, longitude, metro_code, last_update)
-	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-	RETURNING id `,
-		geo.Ip, geo.CountryCode, geo.RegionCode, geo.RegionName, geo.City, geo.TimeZone, geo.Latitude, geo.Longitude, geo.MetroCode, geo.LastUpdate).
-		Scan(&id)
-
+	var ids []int64
+	_, err := session.InsertInto("geo").
+		Columns("ip", "country_code", "region_code", "region_name", "city", "time_zone", "latitude", "longitude", "metro_code", "last_update").
+		Record(geo).
+		Returning(&ids, "id")
 	if err != nil {
 		return 0, err
 	}
-	geo.ID = id
-	return id, nil
+	geo.ID = ids[0]
+	return geo.ID, nil
 }
 
 func (ac *AuditClient) resolveIp(ip string) (*Geo, error) {

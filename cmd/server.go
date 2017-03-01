@@ -29,7 +29,20 @@ type Server struct {
 	auditClient AuditRecorder
 }
 
-// serverCmd represents the server command
+const (
+	auditEventUrl =  "/api/v1/audit"
+)
+
+
+func Handlers(s *Server) *mux.Router {
+	router := mux.NewRouter()
+	router.HandleFunc(auditEventUrl, s.handleEvent).
+		Methods("POST").
+		HeadersRegexp("Content-Type", "application/json")
+
+	return router
+}
+
 var serverCmd = &cobra.Command{
 	Use:   "server",
 	Short: "",
@@ -44,15 +57,8 @@ var serverCmd = &cobra.Command{
 		s := &Server{
 			auditClient: defaultAuditClient,
 		}
-		//defer db.Close()
-		r := mux.NewRouter()
-		r.HandleFunc("/api/v1/audit", s.handleEvent).
-			Methods("POST").
-			HeadersRegexp("Content-Type", "application/json")
-		r.HandleFunc("/api/v1/audit", list).
-			Methods("GET")
 		srv := &http.Server{
-			Handler:      r,
+			Handler:      Handlers(s),
 			Addr:         "127.0.0.1:8080",
 			WriteTimeout: 3 * time.Second,
 			ReadTimeout:  3 * time.Second,
@@ -67,11 +73,12 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Println(err)
+		log.Error(err)
 		return
 	}
 	if  err = json.Unmarshal(b, &event) ; err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		log.Errorf("Error reading %s", err)
 		return
 	}
 	//IP:Port
