@@ -30,7 +30,7 @@ type server struct {
 }
 
 const (
-	auditEventURL = "/api/v0.1/audit"
+	auditEventURL = "/api/v1/audit"
 )
 
 func handlers(s *server) *mux.Router {
@@ -47,7 +47,9 @@ var serverCmd = &cobra.Command{
 	Short: "",
 	Long:  "",
 	Run: func(cmd *cobra.Command, args []string) {
-
+		if debug {
+			log.SetLevel(log.DebugLevel)
+		}
 		defaultAuditClient := &auditClient{
 			db:        loadDSN(cmd.Flag("dsn").Value.String()),
 			geoClient: geoClientTransporter(geoClient),
@@ -82,6 +84,7 @@ func (s *server) handleEvent(w http.ResponseWriter, r *http.Request) {
 	}
 	//IP:Port
 	if event.OriginAddr == "" {
+		log.Debugf("Using RemoteAddr as OriginAddr %s", r.RemoteAddr)
 		event.OriginAddr = strings.Split(r.RemoteAddr, ":")[0]
 	}
 
@@ -89,7 +92,7 @@ func (s *server) handleEvent(w http.ResponseWriter, r *http.Request) {
 	go s.auditClient.resolveGeoEvent(&event)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Printf("Error writing %+v %s", &event, err)
+		log.Errorf("Error writing %+v %s", &event, err)
 		return
 	}
 
