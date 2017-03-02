@@ -4,7 +4,6 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"time"
 
 	"errors"
