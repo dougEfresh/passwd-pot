@@ -22,7 +22,6 @@ func (jt *jsonTime) UnmarshalJSON(data []byte) (err error) {
 	if err != nil {
 		return errors.New("could not decode time " + string(data))
 	}
-	log.Infof("time %d", ts)
 	jt.Time = time.Unix(ts/1000, (ts%1000)*1000000).UTC()
 	return nil
 }
