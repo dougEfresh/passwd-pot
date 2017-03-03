@@ -95,11 +95,13 @@ func (s *server) handleEvent(w http.ResponseWriter, r *http.Request) {
 	//IP:Port
 	if event.OriginAddr == "" {
 		if r.Header.Get("X-Forwarded-For") != "" {
+			log.Debug("Using RemoteAddr from  X-Forwarded-For %s")
 			event.OriginAddr = r.Header.Get("X-Forwarded-For")
 		} else {
+			log.Debugf("Using RemoteAddr as OriginAddr %s", r.RemoteAddr)
 			event.OriginAddr = strings.Split(r.RemoteAddr, ":")[0]
 		}
-		log.Debugf("Using RemoteAddr as OriginAddr %s", r.RemoteAddr)
+
 	}
 
 	err = s.auditClient.recordEvent(&event)
