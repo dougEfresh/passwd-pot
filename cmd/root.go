@@ -25,9 +25,14 @@ import (
 	"os"
 )
 
+var config struct {
+	BindAddr string
+	Debug bool
+	Syslog string
+	Dsn string
+}
+
 var cfgFile string
-var bindAddr string
-var debug bool
 
 // RootCmd for ssh pot
 var RootCmd = &cobra.Command{
@@ -48,9 +53,10 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ssh-audit-geo.yaml)")
-	RootCmd.PersistentFlags().String("dsn", "", "DSN database url")
-	RootCmd.PersistentFlags().StringVar(&bindAddr, "bind", "127.0.0.1:8080", "bind to this address:port")
-	RootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable Debug")
+	RootCmd.PersistentFlags().StringVar(&config.Dsn,"dsn", "", "DSN database url")
+	RootCmd.PersistentFlags().StringVar(&config.BindAddr, "bind", "127.0.0.1:8080", "bind to this address:port")
+	RootCmd.PersistentFlags().StringVar(&config.Syslog, "syslog", "localhost", "use syslog server")
+	RootCmd.PersistentFlags().BoolVar(&config.Debug, "debug", false, "Enable Debug")
 
 	// Log as JSON instead of the default ASCII formatter.
 	//log.SetFormatter(&log.JSONFormatter{})

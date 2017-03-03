@@ -23,6 +23,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"github.com/Sirupsen/logrus/hooks/syslog"
+	"log/syslog"
 )
 
 type server struct {
@@ -47,11 +49,11 @@ var serverCmd = &cobra.Command{
 	Short: "",
 	Long:  "",
 	Run: func(cmd *cobra.Command, args []string) {
-		if debug {
+		if config.Debug {
 			log.SetLevel(log.DebugLevel)
 		}
 		defaultAuditClient := &auditClient{
-			db:        loadDSN(cmd.Flag("dsn").Value.String()),
+			db:        loadDSN(config.Dsn),
 			geoClient: geoClientTransporter(geoClient),
 		}
 
@@ -60,11 +62,19 @@ var serverCmd = &cobra.Command{
 		}
 		srv := &http.Server{
 			Handler:      handlers(s),
-			Addr:         bindAddr,
+			Addr:         config.BindAddr,
 			WriteTimeout: 3 * time.Second,
 			ReadTimeout:  3 * time.Second,
 		}
-		log.Infof("Listing on %s", bindAddr)
+		if config.Syslog != "" {
+			hook, err := logrus_syslog.NewSyslogHook("tcp", "localhost:514", syslog.LOG_INFO, "ssh-password-pot")
+			if err != nil {
+				log.Error("Unable to connect to local syslog daemon")
+			} else {
+				log.AddHook(hook)
+			}
+		}
+		log.Infof("Listing on %s", config.BindAddr)
 		log.Fatal(srv.ListenAndServe())
 	},
 }
