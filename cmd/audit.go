@@ -3,6 +3,7 @@ package cmd
 import (
 	log "github.com/Sirupsen/logrus"
 	"gopkg.in/dougEfresh/dbr.v2"
+	"errors"
 )
 
 type auditRecorder interface {
@@ -33,6 +34,11 @@ func (ac *auditClient) recordEvent(event *SSHEvent) error {
 }
 
 func (ac *auditClient) resolveGeoEvent(event *SSHEvent) error {
+	if event.ID == 0 {
+		log.Errorf("Got bad event %s", event)
+		return errors.New("Bad event recv")
+	}
+
 	sess := ac.db.NewSession(nil)
 	geo, err := ac.resolveAddr(event.RemoteAddr)
 	if err != nil {

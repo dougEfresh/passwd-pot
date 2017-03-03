@@ -19,10 +19,14 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"gopkg.in/dougEfresh/dbr.v2"
 	"time"
+	"sync"
 )
 
 type mockGeoClient struct {
 }
+
+var state = make(map[string]chan bool)
+var mutex = &sync.Mutex{}
 
 var geoClient = geoClientTransporter(defaultGeoClient())
 
@@ -40,11 +44,12 @@ func insertGeo(geo *Geo, session *dbr.Session) (int64, error) {
 }
 
 func (ac *auditClient) resolveAddr(addr string) (*Geo, error) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	sess := ac.db.NewSession(nil)
 	now := time.Now()
 	expire := now.AddDate(0, -1, 0)
 	var geo = &Geo{}
-
 	rowCount, err := sess.Select("*").
 		From("geo").
 		Where("ip = ?", addr).
