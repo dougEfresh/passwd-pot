@@ -34,6 +34,7 @@ func (e SSHEvent) Execute() {
 	if e.ID % 1000 == 0 {
 		log.Infof("Running %s", e)
 	}
+
 	b, err := json.Marshal(e)
 	if err != nil {
 		log.Errorf("Error decoding %s", err)
@@ -117,6 +118,9 @@ var queryCmd = &cobra.Command{
 	Short: "",
 	Long: "",
 	Run: func(cmd *cobra.Command, args []string) {
+		if config.Debug {
+			log.SetLevel(log.DebugLevel)
+		}
 		db := loadDSN(config.Dsn)
 		runtime.GOMAXPROCS(5)
 		sess := db.NewSession(nil)

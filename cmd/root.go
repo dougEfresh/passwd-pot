@@ -89,12 +89,12 @@ func initConfig() {
 func loadDSN(dsn string) *dbr.Connection {
 	var db *dbr.Connection
 	var err error
-	if strings.Contains(dsn, "mysql") {
-		log.Debug("Using mysql driver")
-		db, err = dbr.Open("mysql", dsn, dbEventLogger)
-	} else {
+	if strings.Contains(dsn, "postgres") {
 		log.Debug("Using pq driver")
 		db, err = dbr.Open("postgres", dsn, dbEventLogger)
+	} else {
+		log.Debug("Using mysql driver")
+		db, err = dbr.Open("mysql", dsn, dbEventLogger)
 	}
 
 	if err != nil {
