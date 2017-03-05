@@ -17,14 +17,15 @@ package cmd
 import (
 	"encoding/json"
 	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus/hooks/syslog"
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
 	"io/ioutil"
+	"log/syslog"
 	"net/http"
+	"runtime"
 	"strings"
 	"time"
-	"github.com/Sirupsen/logrus/hooks/syslog"
-	"log/syslog"
 )
 
 type server struct {
@@ -48,35 +49,45 @@ var serverCmd = &cobra.Command{
 	Use:   "server",
 	Short: "",
 	Long:  "",
-	Run: func(cmd *cobra.Command, args []string) {
-		if config.Debug {
-			log.SetLevel(log.DebugLevel)
-		}
-		defaultAuditClient := &auditClient{
-			db:        loadDSN(config.Dsn),
-			geoClient: geoClientTransporter(geoClient),
-		}
+	Run:   run,
+}
 
-		s := &server{
-			auditClient: defaultAuditClient,
+func run(cmd *cobra.Command, args []string) {
+	if config.Debug {
+		log.SetLevel(log.DebugLevel)
+	}
+	if config.Threads > 0 {
+		runtime.GOMAXPROCS(config.Threads)
+	}
+	defaultAuditClient := &auditClient{
+		db:        loadDSN(config.Dsn),
+		geoClient: geoClientTransporter(geoClient),
+	}
+	log.Debugf("Running %s with %s", cmd.Name(), args)
+	s := &server{
+		auditClient: defaultAuditClient,
+	}
+	srv := &http.Server{
+		Handler:      handlers(s),
+		Addr:         config.BindAddr,
+		WriteTimeout: 3 * time.Second,
+		ReadTimeout:  3 * time.Second,
+	}
+	if config.Syslog != "" {
+		p := syslog.LOG_DAEMON
+		if config.Debug {
+			p = syslog.LOG_DEBUG
 		}
-		srv := &http.Server{
-			Handler:      handlers(s),
-			Addr:         config.BindAddr,
-			WriteTimeout: 3 * time.Second,
-			ReadTimeout:  3 * time.Second,
+		if hook, err := logrus_syslog.NewSyslogHook("tcp", config.Syslog, p, "ssh-password-pot") ; err != nil {
+			log.Error("Unable to connect to local syslog daemon")
+		} else {
+			log.AddHook(hook)
 		}
-		if config.Syslog != "" {
-			hook, err := logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_INFO, "ssh-password-pot")
-			if err != nil {
-				log.Error("Unable to connect to local syslog daemon")
-			} else {
-				log.AddHook(hook)
-			}
-		}
-		log.Infof("Listing on %s", config.BindAddr)
-		log.Fatal(srv.ListenAndServe())
-	},
+	}
+
+	healthMonitor()
+	log.Infof("Listing on %s", config.BindAddr)
+	log.Fatal(srv.ListenAndServe())
 }
 
 func (s *server) handleEvent(w http.ResponseWriter, r *http.Request) {
@@ -117,9 +128,6 @@ func (s *server) handleEvent(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 	w.Header().Add("Content-type", "application/json")
 	w.Write(j)
-}
-
-func list(w http.ResponseWriter, r *http.Request) {
 }
 
 func init() {

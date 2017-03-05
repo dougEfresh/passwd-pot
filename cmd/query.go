@@ -126,7 +126,10 @@ var queryCmd = &cobra.Command{
 		sess := db.NewSession(nil)
 		var events []SSHEvent
 		log.Info("Running query")
-		num, err := sess.Select("*").From("event").OrderBy("id").LoadValues(&events)
+		num, err := sess.Select("*").
+			From("event").
+			Where("id > ?", 99624).
+			OrderBy("id").LoadValues(&events)
 		if err != nil {
 			log.Errorf("Error running query %s ", err)
 		}

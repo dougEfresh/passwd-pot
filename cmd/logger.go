@@ -2,7 +2,10 @@ package cmd
 
 import (
 	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus/hooks/syslog"
 )
+
+var hook *logrus_syslog.SyslogHook
 
 type kvs map[string]string
 
