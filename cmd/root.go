@@ -23,6 +23,7 @@ import (
 	"github.com/spf13/viper"
 	"gopkg.in/dougEfresh/dbr.v2"
 	"os"
+	"strings"
 )
 
 var config struct {
@@ -86,7 +87,15 @@ func initConfig() {
 }
 
 func loadDSN(dsn string) *dbr.Connection {
-	db, err := dbr.Open("postgres", dsn, dbEventLogger)
+	var db *dbr.Connection
+	var err error
+	if strings.Contains(dsn, "mysql") {
+		log.Debug("Using mysql driver")
+		db, err = dbr.Open("mysql", dsn, dbEventLogger)
+	} else {
+		log.Debug("Using pq driver")
+		db, err = dbr.Open("postgres", dsn, dbEventLogger)
+	}
 
 	if err != nil {
 		panic(err)

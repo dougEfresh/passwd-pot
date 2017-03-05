@@ -67,7 +67,7 @@ var serverCmd = &cobra.Command{
 			ReadTimeout:  3 * time.Second,
 		}
 		if config.Syslog != "" {
-			hook, err := logrus_syslog.NewSyslogHook("tcp", "localhost:514", syslog.LOG_INFO, "ssh-password-pot")
+			hook, err := logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_INFO, "ssh-password-pot")
 			if err != nil {
 				log.Error("Unable to connect to local syslog daemon")
 			} else {

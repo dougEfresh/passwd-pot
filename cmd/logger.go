@@ -23,7 +23,10 @@ func (n *DbEvent) EventKv(eventName string, kvs map[string]string) {
 }
 
 // EventErr receives a notification of an error if one occurs
-func (n *DbEvent) EventErr(eventName string, err error) error { return err }
+func (n *DbEvent) EventErr(eventName string, err error) error {
+	log.Errorf("eventName %s", eventName)
+	return err
+}
 
 // EventErrKv receives a notification of an error if one occurs along with
 // optional key/value data

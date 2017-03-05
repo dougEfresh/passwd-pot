@@ -34,6 +34,27 @@ func (jt jsonTime) MarshalJSON() ([]byte, error) {
 func (jt jsonTime) Value() (driver.Value, error) {
 	return jt.Time, nil
 }
+// Gets the value from epoch time
+func (n *jsonTime) Scan(value interface{}) error {
+	var err error
+
+	if value == nil {
+		return nil
+	}
+
+	switch v := value.(type) {
+	case time.Time:
+		return nil
+	case []byte:
+		n.UnmarshalJSON(v)
+		return nil
+	case string:
+		n.UnmarshalJSON([]byte(v))
+		return err
+	}
+
+	return nil
+}
 
 //SSHEventGeo event with location
 type SSHEventGeo struct {
