@@ -25,9 +25,7 @@ import (
 type mockGeoClient struct {
 }
 
-var state = make(map[string]chan bool)
 var mutex = &sync.Mutex{}
-
 var geoClient = geoClientTransporter(defaultGeoClient())
 
 func insertGeo(geo *Geo, session *dbr.Session) (int64, error) {

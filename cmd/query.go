@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"encoding/json"
 	"bytes"
+	"time"
 )
 
 type Task interface {
@@ -52,6 +53,7 @@ func (e SSHEvent) Execute() {
 	if resp.StatusCode != http.StatusAccepted {
 		log.Errorf("Error posting %s", resp.Status)
 	}
+	time.Sleep(500 * time.Millisecond)
 }
 
 type Pool struct {
@@ -128,7 +130,7 @@ var queryCmd = &cobra.Command{
 		log.Info("Running query")
 		num, err := sess.Select("*").
 			From("event").
-			Where("id > ?", 99624).
+//			Where("id > ?", 99624).
 			OrderBy("id").LoadValues(&events)
 		if err != nil {
 			log.Errorf("Error running query %s ", err)

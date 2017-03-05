@@ -26,6 +26,7 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"github.com/gocraft/health"
 )
 
 type server struct {
@@ -53,6 +54,7 @@ var serverCmd = &cobra.Command{
 }
 
 func run(cmd *cobra.Command, args []string) {
+	var err error
 	if config.Debug {
 		log.SetLevel(log.DebugLevel)
 	}
@@ -74,33 +76,34 @@ func run(cmd *cobra.Command, args []string) {
 		ReadTimeout:  3 * time.Second,
 	}
 	if config.Syslog != "" {
-		p := syslog.LOG_DAEMON
-		if config.Debug {
-			p = syslog.LOG_DEBUG
-		}
-		if hook, err := logrus_syslog.NewSyslogHook("tcp", config.Syslog, p, "ssh-password-pot") ; err != nil {
+		if syslogHook, err = logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, "ssh-password-pot") ; err != nil {
 			log.Error("Unable to connect to local syslog daemon")
 		} else {
-			log.AddHook(hook)
+			log.AddHook(syslogHook)
 		}
 	}
-
+	defaultDbEventLogger.Debug = config.Debug
 	healthMonitor()
 	log.Infof("Listing on %s", config.BindAddr)
 	log.Fatal(srv.ListenAndServe())
 }
 
 func (s *server) handleEvent(w http.ResponseWriter, r *http.Request) {
+	job := stream.NewJob("handle_event")
 	var event SSHEvent
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Error(err)
+		job.EventErr("handle_event_invalid_body", err)
+		job.Complete(health.ValidationError)
 		return
 	}
 	if err = json.Unmarshal(b, &event); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		log.Errorf("Error reading %s", err)
+		job.EventErr("handle_event_invalid_json", err)
+		job.Complete(health.ValidationError)
 		return
 	}
 
@@ -121,9 +124,11 @@ func (s *server) handleEvent(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Errorf("Error writing %+v %s", &event, err)
+		job.EventErr("handle_event_event_error", err)
+		job.Complete(health.Error)
 		return
 	}
-
+	job.Complete(health.Success)
 	j, _ := json.Marshal(event)
 	w.WriteHeader(http.StatusAccepted)
 	w.Header().Add("Content-type", "application/json")
