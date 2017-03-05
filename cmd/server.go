@@ -27,14 +27,15 @@ import (
 	"strings"
 	"time"
 	"github.com/gocraft/health"
+	"fmt"
 )
 
 type server struct {
-	auditClient auditRecorder
+	auditClient eventRecorder
 }
 
 const (
-	auditEventURL = "/api/v1/audit"
+	auditEventURL = "/api/v1/event"
 )
 
 func handlers(s *server) *mux.Router {
@@ -61,7 +62,7 @@ func run(cmd *cobra.Command, args []string) {
 	if config.Threads > 0 {
 		runtime.GOMAXPROCS(config.Threads)
 	}
-	defaultAuditClient := &auditClient{
+	defaultAuditClient := &eventClient{
 		db:        loadDSN(config.Dsn),
 		geoClient: geoClientTransporter(geoClient),
 	}
@@ -83,13 +84,13 @@ func run(cmd *cobra.Command, args []string) {
 		}
 	}
 	defaultDbEventLogger.Debug = config.Debug
-	healthMonitor()
+	healthMonitor(cmd.Name())
 	log.Infof("Listing on %s", config.BindAddr)
 	log.Fatal(srv.ListenAndServe())
 }
 
 func (s *server) handleEvent(w http.ResponseWriter, r *http.Request) {
-	job := stream.NewJob("handle_event")
+	job := stream.NewJob(fmt.Sprintf("%s", auditEventURL))
 	var event SSHEvent
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {

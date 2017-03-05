@@ -41,7 +41,7 @@ func insertGeo(geo *Geo, session *dbr.Session) (int64, error) {
 	return geo.ID, nil
 }
 
-func (ac *auditClient) resolveAddr(addr string) (*Geo, error) {
+func (ac *eventClient) resolveAddr(addr string) (*Geo, error) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	sess := ac.db.NewSession(nil)

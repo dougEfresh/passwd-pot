@@ -33,6 +33,7 @@ var config struct {
 	Dsn string
 	Threads int
 	Health string
+	Statsd string
 }
 
 var cfgFile string
@@ -57,9 +58,10 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ssh-audit-geo.yaml)")
 	RootCmd.PersistentFlags().StringVar(&config.Dsn,"dsn", "", "DSN database url")
-	RootCmd.PersistentFlags().StringVar(&config.BindAddr, "bind", "127.0.0.1:8080", "bind to this address:port")
-	RootCmd.PersistentFlags().StringVar(&config.Syslog, "syslog", "localhost:514", "use syslog server")
-	RootCmd.PersistentFlags().StringVar(&config.Health, "health", "localhost:8081", "create health server")
+	RootCmd.PersistentFlags().StringVar(&config.BindAddr, "bind", "localhost:8080", "bind to this address:port")
+	RootCmd.PersistentFlags().StringVar(&config.Syslog, "syslog", "", "use syslog server")
+	RootCmd.PersistentFlags().StringVar(&config.Health, "health", "", "create health server")
+	RootCmd.PersistentFlags().StringVar(&config.Statsd, "statsd", "", "push stats to statsd (localhost:8125")
 	RootCmd.PersistentFlags().IntVar(&config.Threads, "threads", 0, "number of thread workers to use")
 	RootCmd.PersistentFlags().BoolVar(&config.Debug, "debug", false, "Enable Debug")
 

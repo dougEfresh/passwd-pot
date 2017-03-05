@@ -27,7 +27,7 @@ func (c *mockGeoClient) getLocationForAddr(ip string) (*Geo, error) {
 
 const dsn string = "postgres://postgres:@127.0.0.1/?sslmode=disable"
 
-var testAuditClient = &auditClient{
+var testAuditClient = &eventClient{
 	db:        loadDSN(dsn),
 	geoClient: geoClientTransporter(&mockGeoClient{}),
 }
