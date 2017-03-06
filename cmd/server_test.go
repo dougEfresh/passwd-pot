@@ -25,9 +25,9 @@ func TestServerRequest(t *testing.T) {
 
 	ts := httptest.NewServer(handlers())
 	defer ts.Close()
-	t.Log(fmt.Sprintf("%s%s", ts.URL, auditEventURL))
+	t.Log(fmt.Sprintf("%s%s", ts.URL, eventUrl))
 
-	res, err := http.Post(fmt.Sprintf("%s%s", ts.URL, auditEventURL),
+	res, err := http.Post(fmt.Sprintf("%s%s", ts.URL, eventUrl),
 		"application/json",
 		strings.NewReader(requestBody))
 
@@ -79,7 +79,7 @@ func TestServerRequestWithOrigin(t *testing.T) {
 	ts := httptest.NewServer(handlers())
 	defer ts.Close()
 
-	res, err := http.Post(fmt.Sprintf("%s%s", ts.URL, auditEventURL),
+	res, err := http.Post(fmt.Sprintf("%s%s", ts.URL, eventUrl),
 		"application/json",
 		strings.NewReader(requestBodyOrigin))
 

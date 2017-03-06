@@ -28,9 +28,10 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"os"
 )
 
-const auditEventURL = "/api/v1/event"
+const eventUrl = "/api/v1/event"
 
 type Context struct {
 	eventClient eventRecorder
@@ -42,7 +43,8 @@ func handlers() *web.Router {
 		Middleware(web.ShowErrorsMiddleware).
 		Middleware((*Context).debuggerContext).
 		NotFound(notFound).
-		Post(auditEventURL, (*Context).handleEvent)
+		Post(eventUrl, (*Context).handleEvent).
+	Get(eventUrl, (*Context).streamEvents)
 	return router
 }
 
@@ -74,8 +76,8 @@ func run(cmd *cobra.Command, args []string) {
 	srv := &http.Server{
 		Handler:      handlers(),
 		Addr:         config.BindAddr,
-		WriteTimeout: 3 * time.Second,
-		ReadTimeout:  3 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		ReadTimeout:  10 * time.Second,
 	}
 	if config.Syslog != "" {
 		if syslogHook, err = logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, "ssh-password-pot"); err != nil {
@@ -87,7 +89,13 @@ func run(cmd *cobra.Command, args []string) {
 	defaultDbEventLogger.Debug = config.Debug
 	healthMonitor(cmd.Name())
 	log.Infof("Listing on %s", config.BindAddr)
-	log.Fatal(srv.ListenAndServe())
+	go hub.run()
+
+	err = srv.ListenAndServe()
+	if err != nil {
+		log.Errorf("Caught error %s", err)
+		os.Exit(-1)
+	}
 }
 
 func (c *Context) debuggerContext(rw web.ResponseWriter, req *web.Request, next web.NextMiddlewareFunc) {
@@ -95,7 +103,7 @@ func (c *Context) debuggerContext(rw web.ResponseWriter, req *web.Request, next 
 }
 
 func (c *Context) handleEvent(w web.ResponseWriter, r *web.Request) {
-	job := stream.NewJob(fmt.Sprintf("%s", auditEventURL))
+	job := stream.NewJob(fmt.Sprintf("%s", eventUrl))
 	var event SSHEvent
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -143,4 +151,11 @@ func (c *Context) handleEvent(w web.ResponseWriter, r *web.Request) {
 
 func init() {
 	RootCmd.AddCommand(serverCmd)
+	RootCmd.PersistentFlags().StringVar(&config.Dsn,"dsn", "", "DSN database url")
+	RootCmd.PersistentFlags().StringVar(&config.BindAddr, "bind", "localhost:8080", "bind to this address:port")
+	RootCmd.PersistentFlags().StringVar(&config.Syslog, "syslog", "", "use syslog server")
+	RootCmd.PersistentFlags().StringVar(&config.Health, "health", "", "create health server")
+	RootCmd.PersistentFlags().StringVar(&config.Statsd, "statsd", "", "push stats to statsd (localhost:8125")
+	RootCmd.PersistentFlags().IntVar(&config.Threads, "threads", 0, "number of thread workers to use")
+
 }

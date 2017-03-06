@@ -42,7 +42,7 @@ func (e SSHEvent) Execute() {
 		return
 	}
 
-	resp, err := http.Post(fmt.Sprintf("%s%s", config.BindAddr, auditEventURL),
+	resp, err := http.Post(fmt.Sprintf("%s%s", config.BindAddr, eventUrl),
 		"application/json",bytes.NewReader(b))
 
 	if err != nil {
