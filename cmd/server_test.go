@@ -12,16 +12,18 @@ import (
 	"time"
 )
 
-var testServer = &server{
-	auditClient: testAuditClient,
-}
+const (
+	requestBody = `{"time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "1.2.3.4", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51" }`
+	requestBodyOrigin = `{"time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "192.168.1.1", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51" , "originAddr" : "10.0.0.1"}`
+)
 
-const requestBody = `{"time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "1.2.3.4", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51" }`
-const requestBodyOrigin = `{"time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "192.168.1.1", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51" , "originAddr" : "10.0.0.1"}`
+func init()  {
+	defaultEventClient = testEventClient
+}
 
 func TestServerRequest(t *testing.T) {
 
-	ts := httptest.NewServer(handlers(testServer))
+	ts := httptest.NewServer(handlers())
 	defer ts.Close()
 	t.Log(fmt.Sprintf("%s%s", ts.URL, auditEventURL))
 
@@ -32,9 +34,11 @@ func TestServerRequest(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	defer res.Body.Close()
+	b, err := ioutil.ReadAll(res.Body)
 
 	if res.StatusCode != http.StatusAccepted {
-		t.Fatalf("Status code not 202 (%d)", res.StatusCode)
+		t.Fatalf("Status code not 202 (%d)\n%s", res.StatusCode, string(b))
 	}
 
 	if res.ContentLength == 0 {
@@ -42,7 +46,6 @@ func TestServerRequest(t *testing.T) {
 	}
 
 	var event SSHEvent
-	b, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		t.Fatalf("Error reading body %s", err)
 	}
@@ -58,7 +61,7 @@ func TestServerRequest(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	eventGeo := testAuditClient.get(event.ID)
+	eventGeo := testEventClient.get(event.ID)
 	if eventGeo == nil {
 		t.Fatalf("Not not find id %d", event.ID)
 	}
@@ -73,7 +76,7 @@ func TestServerRequest(t *testing.T) {
 }
 
 func TestServerRequestWithOrigin(t *testing.T) {
-	ts := httptest.NewServer(handlers(testServer))
+	ts := httptest.NewServer(handlers())
 	defer ts.Close()
 
 	res, err := http.Post(fmt.Sprintf("%s%s", ts.URL, auditEventURL),
@@ -88,7 +91,7 @@ func TestServerRequestWithOrigin(t *testing.T) {
 	b, _ := ioutil.ReadAll(res.Body)
 	err = json.Unmarshal(b, &event)
 	if err != nil {
-		t.Fatalf("%s", err)
+		t.Fatalf("%s %s", string(b), err)
 	}
 
 	if event.ID == 0 {
@@ -97,7 +100,7 @@ func TestServerRequestWithOrigin(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	eventGeo := testAuditClient.get(event.ID)
+	eventGeo := testEventClient.get(event.ID)
 	if eventGeo == nil {
 		t.Fatalf("Not not find id %d", event.ID)
 	}

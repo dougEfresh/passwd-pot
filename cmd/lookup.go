@@ -41,10 +41,10 @@ func insertGeo(geo *Geo, session *dbr.Session) (int64, error) {
 	return geo.ID, nil
 }
 
-func (ac *eventClient) resolveAddr(addr string) (*Geo, error) {
+func (c *eventClient) resolveAddr(addr string) (*Geo, error) {
 	mutex.Lock()
 	defer mutex.Unlock()
-	sess := ac.db.NewSession(nil)
+	sess := c.db.NewSession(nil)
 	now := time.Now()
 	expire := now.AddDate(0, -1, 0)
 	var geo = &Geo{}
@@ -60,8 +60,8 @@ func (ac *eventClient) resolveAddr(addr string) (*Geo, error) {
 	}
 	if err == sql.ErrNoRows || rowCount == 0 {
 		log.Infof("No rows returned for %s", addr)
-		geo, err = ac.geoClient.getLocationForAddr(addr)
-		if geo, err = ac.geoClient.getLocationForAddr(addr); err != nil {
+		geo, err = c.geoClient.getLocationForAddr(addr)
+		if geo, err = c.geoClient.getLocationForAddr(addr); err != nil {
 			log.Errorf("Error looking up IP: %s  %s", addr, err)
 			return nil, err
 		}
@@ -73,7 +73,7 @@ func (ac *eventClient) resolveAddr(addr string) (*Geo, error) {
 	}
 	if geo.LastUpdate.Before(expire) {
 		var newGeo = &Geo{}
-		newGeo, err = ac.geoClient.getLocationForAddr(addr)
+		newGeo, err = c.geoClient.getLocationForAddr(addr)
 		if err != nil {
 			return nil, err
 		}

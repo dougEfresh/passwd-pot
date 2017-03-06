@@ -16,9 +16,11 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/Sirupsen/logrus/hooks/syslog"
-	"github.com/gorilla/mux"
+	"github.com/gocraft/health"
+	"github.com/gocraft/web"
 	"github.com/spf13/cobra"
 	"io/ioutil"
 	"log/syslog"
@@ -26,25 +28,27 @@ import (
 	"runtime"
 	"strings"
 	"time"
-	"github.com/gocraft/health"
-	"fmt"
 )
 
-type server struct {
-	auditClient eventRecorder
+const auditEventURL = "/api/v1/event"
+
+type Context struct {
+	eventClient eventRecorder
 }
 
-const (
-	auditEventURL = "/api/v1/event"
-)
-
-func handlers(s *server) *mux.Router {
-	router := mux.NewRouter()
-	router.HandleFunc(auditEventURL, s.handleEvent).
-		Methods("POST").
-		HeadersRegexp("Content-Type", "application/json")
-
+func handlers() *web.Router {
+	router := web.New(Context{}).
+		Middleware(loggerMiddleware).
+		Middleware(web.ShowErrorsMiddleware).
+		Middleware((*Context).debuggerContext).
+		NotFound(notFound).
+		Post(auditEventURL, (*Context).handleEvent)
 	return router
+}
+
+func notFound(rw web.ResponseWriter, r *web.Request) {
+	rw.WriteHeader(http.StatusNotFound)
+	log.Infof("%s not found", r.URL.Path)
 }
 
 var serverCmd = &cobra.Command{
@@ -62,22 +66,19 @@ func run(cmd *cobra.Command, args []string) {
 	if config.Threads > 0 {
 		runtime.GOMAXPROCS(config.Threads)
 	}
-	defaultAuditClient := &eventClient{
-		db:        loadDSN(config.Dsn),
-		geoClient: geoClientTransporter(geoClient),
+	defaultEventClient = &eventClient{
+		db: loadDSN(config.Dsn),
+		geoClient: geoClient,
 	}
-	log.Debugf("Running %s with %s", cmd.Name(), args)
-	s := &server{
-		auditClient: defaultAuditClient,
-	}
+	log.Debugf("Running %s %s with %s", defaultEventClient, cmd.Name(), args)
 	srv := &http.Server{
-		Handler:      handlers(s),
+		Handler:      handlers(),
 		Addr:         config.BindAddr,
 		WriteTimeout: 3 * time.Second,
 		ReadTimeout:  3 * time.Second,
 	}
 	if config.Syslog != "" {
-		if syslogHook, err = logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, "ssh-password-pot") ; err != nil {
+		if syslogHook, err = logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, "ssh-password-pot"); err != nil {
 			log.Error("Unable to connect to local syslog daemon")
 		} else {
 			log.AddHook(syslogHook)
@@ -89,7 +90,11 @@ func run(cmd *cobra.Command, args []string) {
 	log.Fatal(srv.ListenAndServe())
 }
 
-func (s *server) handleEvent(w http.ResponseWriter, r *http.Request) {
+func (c *Context) debuggerContext(rw web.ResponseWriter, req *web.Request, next web.NextMiddlewareFunc) {
+	next(rw, req)
+}
+
+func (c *Context) handleEvent(w web.ResponseWriter, r *web.Request) {
 	job := stream.NewJob(fmt.Sprintf("%s", auditEventURL))
 	var event SSHEvent
 	b, err := ioutil.ReadAll(r.Body)
@@ -120,8 +125,8 @@ func (s *server) handleEvent(w http.ResponseWriter, r *http.Request) {
 
 	}
 
-	err = s.auditClient.recordEvent(&event)
-	go s.auditClient.resolveGeoEvent(&event)
+	err = defaultEventClient.recordEvent(&event)
+	go defaultEventClient.resolveGeoEvent(&event)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Errorf("Error writing %+v %s", &event, err)
