@@ -25,10 +25,10 @@ import (
 	"io/ioutil"
 	"log/syslog"
 	"net/http"
+	"os"
 	"runtime"
 	"strings"
 	"time"
-	"os"
 )
 
 const eventUrl = "/api/v1/event"
@@ -44,7 +44,7 @@ func handlers() *web.Router {
 		Middleware((*Context).debuggerContext).
 		NotFound(notFound).
 		Post(eventUrl, (*Context).handleEvent).
-	Get(eventUrl, (*Context).streamEvents)
+		Get(eventUrl, (*Context).streamEvents)
 	return router
 }
 
@@ -69,7 +69,7 @@ func run(cmd *cobra.Command, args []string) {
 		runtime.GOMAXPROCS(config.Threads)
 	}
 	defaultEventClient = &eventClient{
-		db: loadDSN(config.Dsn),
+		db:        loadDSN(config.Dsn),
 		geoClient: geoClient,
 	}
 	log.Debugf("Running %s %s with %s", defaultEventClient, cmd.Name(), args)
@@ -151,7 +151,7 @@ func (c *Context) handleEvent(w web.ResponseWriter, r *web.Request) {
 
 func init() {
 	RootCmd.AddCommand(serverCmd)
-	RootCmd.PersistentFlags().StringVar(&config.Dsn,"dsn", "", "DSN database url")
+	RootCmd.PersistentFlags().StringVar(&config.Dsn, "dsn", "", "DSN database url")
 	RootCmd.PersistentFlags().StringVar(&config.BindAddr, "bind", "localhost:8080", "bind to this address:port")
 	RootCmd.PersistentFlags().StringVar(&config.Syslog, "syslog", "", "use syslog server")
 	RootCmd.PersistentFlags().StringVar(&config.Health, "health", "", "create health server")

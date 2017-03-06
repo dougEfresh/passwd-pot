@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"github.com/gocraft/health"
-	"time"
 	log "github.com/Sirupsen/logrus"
+	"github.com/gocraft/health"
 	"os"
+	"time"
 )
 
 var stream = health.NewStream()

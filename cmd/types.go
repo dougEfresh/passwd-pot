@@ -34,6 +34,7 @@ func (jt jsonTime) MarshalJSON() ([]byte, error) {
 func (jt jsonTime) Value() (driver.Value, error) {
 	return jt.Time, nil
 }
+
 // Gets the value from epoch time
 func (n *jsonTime) Scan(value interface{}) error {
 	var err error

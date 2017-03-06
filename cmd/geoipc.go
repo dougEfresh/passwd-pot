@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"encoding/json"
+	"github.com/gocraft/health"
 	"net/http"
 	"time"
-	"github.com/gocraft/health"
 )
 
 type geoClientTransporter interface {

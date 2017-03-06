@@ -15,15 +15,15 @@
 package cmd
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	log "github.com/Sirupsen/logrus"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/spf13/cobra"
-	log "github.com/Sirupsen/logrus"
-	"sync"
-	"runtime"
 	"net/http"
-	"fmt"
-	"encoding/json"
-	"bytes"
+	"runtime"
+	"sync"
 	"time"
 )
 
@@ -32,7 +32,7 @@ type Task interface {
 }
 
 func (e SSHEvent) Execute() {
-	if e.ID % 1000 == 0 {
+	if e.ID%1000 == 0 {
 		log.Infof("Running %s", e)
 	}
 
@@ -43,7 +43,7 @@ func (e SSHEvent) Execute() {
 	}
 
 	resp, err := http.Post(fmt.Sprintf("%s%s", config.BindAddr, eventUrl),
-		"application/json",bytes.NewReader(b))
+		"application/json", bytes.NewReader(b))
 
 	if err != nil {
 		log.Errorf("Error posting %s", err)
@@ -118,7 +118,7 @@ func (p *Pool) Exec(task Task) {
 var queryCmd = &cobra.Command{
 	Use:   "query",
 	Short: "",
-	Long: "",
+	Long:  "",
 	Run: func(cmd *cobra.Command, args []string) {
 		if config.Debug {
 			log.SetLevel(log.DebugLevel)
@@ -130,7 +130,7 @@ var queryCmd = &cobra.Command{
 		log.Info("Running query")
 		num, err := sess.Select("*").
 			From("event").
-//			Where("id > ?", 99624).
+			//			Where("id > ?", 99624).
 			OrderBy("id").LoadValues(&events)
 		if err != nil {
 			log.Errorf("Error running query %s ", err)

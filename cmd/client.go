@@ -5,8 +5,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/gocraft/web"
+	"github.com/gorilla/websocket"
 )
 
 const (

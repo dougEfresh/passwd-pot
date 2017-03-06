@@ -24,7 +24,7 @@ import (
 var streamCmd = &cobra.Command{
 	Use:   "stream",
 	Short: "",
-	Long: "",
+	Long:  "",
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO: Work your own magic here
 		fmt.Println("stream called")
@@ -44,5 +44,5 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	streamCmd.Flags().StringVarP(&streamingEndpoint, "server", "s" ,"", "server endpoint")
+	streamCmd.Flags().StringVarP(&streamingEndpoint, "server", "s", "", "server endpoint")
 }

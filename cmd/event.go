@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	log "github.com/Sirupsen/logrus"
-	"gopkg.in/dougEfresh/dbr.v2"
 	"errors"
+	log "github.com/Sirupsen/logrus"
 	"github.com/gocraft/health"
+	"gopkg.in/dougEfresh/dbr.v2"
 )
 
 type eventRecorder interface {

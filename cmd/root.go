@@ -28,12 +28,12 @@ import (
 
 var config struct {
 	BindAddr string
-	Debug bool
-	Syslog string
-	Dsn string
-	Threads int
-	Health string
-	Statsd string
+	Debug    bool
+	Syslog   string
+	Dsn      string
+	Threads  int
+	Health   string
+	Statsd   string
 }
 
 var cfgFile string

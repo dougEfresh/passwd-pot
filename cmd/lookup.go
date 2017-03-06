@@ -18,8 +18,8 @@ import (
 	"database/sql"
 	log "github.com/Sirupsen/logrus"
 	"gopkg.in/dougEfresh/dbr.v2"
-	"time"
 	"sync"
+	"time"
 )
 
 type mockGeoClient struct {
