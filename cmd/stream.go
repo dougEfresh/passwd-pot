@@ -60,7 +60,6 @@ func streamEvents() {
 		}
 	}()
 
-
 	for {
 		select {
 		case <-interrupt:

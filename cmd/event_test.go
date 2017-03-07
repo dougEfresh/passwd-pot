@@ -191,11 +191,10 @@ func TestExpire(t *testing.T) {
 	}
 
 	if _, err = sess.Update("geo").
-		Set("last_update", time.Now().Add(time.Hour * 24 * -100)).
+		Set("last_update", time.Now().Add(time.Hour*24*-100)).
 		Exec(); err != nil {
 		t.Fatalf("Error updating time %s", err)
 	}
-
 
 	createEvent(&testEvent)
 	testEventClient.resolveGeoEvent(&testEvent)
@@ -211,7 +210,6 @@ func TestExpire(t *testing.T) {
 		t.Fatalf("old is afer new %s > %s", oldlastUpdate, newerLastUpdate)
 	}
 }
-
 
 func TestExpireAndChangedGeo(t *testing.T) {
 	clearDb(testEventClient.db, t)
@@ -231,7 +229,7 @@ func TestExpireAndChangedGeo(t *testing.T) {
 	if geoEvent == nil {
 		t.Fatalf("Could not find id %d", testEvent.ID)
 	}
-	debugLogger := &DbEvent{ Debug:true}
+	debugLogger := &DbEvent{Debug: true}
 	sess := testEventClient.db.NewSession(debugLogger)
 	var oldlastUpdate time.Time
 	var newerLastUpdate time.Time
@@ -244,13 +242,12 @@ func TestExpireAndChangedGeo(t *testing.T) {
 	}
 
 	if _, err = sess.Update("geo").
-		Set("last_update", time.Now().Add(time.Hour * 24 * -100)).
+		Set("last_update", time.Now().Add(time.Hour*24*-100)).
 		Exec(); err != nil {
 		t.Fatalf("Error updating time %s", err)
 	}
 	oldGeo := localGeo["1.2.3.4"]
 	localGeo["1.2.3.4"] = `{"ip":"1.2.3.4","country_code":"DE","country_name":"Singapore","region_code":"01","region_name":"Central Singapore Community Development Council","city":"Singapore","zip_code":"","time_zone":"Asia/Singapore","latitude":1.1,"longitude":101.00,"metro_code":0}`
-
 
 	if err = createEvent(&testEvent); err != nil {
 		t.Fatalf("can't create event %s", err)

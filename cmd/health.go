@@ -12,7 +12,7 @@ var stream = health.NewStream()
 func healthMonitor(name string) {
 	if config.Debug {
 		if syslogHook != nil {
-			log.Infof("Configing syslog sinker")
+			log.Infof("Configuring syslog sinker")
 			stream.AddSink(&health.WriterSink{syslogHook.Writer})
 		} else {
 			stream.AddSink(&health.WriterSink{os.Stdout})
