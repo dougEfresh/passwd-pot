@@ -127,7 +127,7 @@ func serveWs(hub *Hub, w web.ResponseWriter, r *web.Request) {
 		log.Error(err)
 		return
 	}
-	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256)}
+	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 512)}
 	client.hub.register <- client
 	go client.writePump()
 	client.readPump()

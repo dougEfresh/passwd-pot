@@ -40,9 +40,11 @@ type Context struct {
 
 func handlers() *web.Router {
 	router := web.New(Context{}).
-		Middleware(loggerMiddleware).
-		Middleware(web.ShowErrorsMiddleware).
-		Middleware((*Context).debuggerContext).
+		Middleware(loggerMiddleware)
+	if config.Debug {
+		router.Middleware(web.ShowErrorsMiddleware)
+	}
+	router.Middleware((*Context).debuggerContext).
 		NotFound(notFound).
 		Post(eventURL, (*Context).handleEvent).
 		Get(eventURL, (*Context).streamEvents)
@@ -152,7 +154,7 @@ func (c *Context) handleEvent(w web.ResponseWriter, r *web.Request) {
 
 func init() {
 	RootCmd.AddCommand(serverCmd)
-	serverCmd.PersistentFlags().StringVar(&config.Dsn, "dsn", "", "DSN database url")
+	serverCmd.PersistentFlags().StringVar(&config.Dsn, "dsn", "postgres://postgres:@172.17.0.1/?sslmode=disable", "DSN database url")
 	serverCmd.PersistentFlags().StringVar(&config.BindAddr, "bind", "localhost:8080", "bind to this address:port")
 	serverCmd.PersistentFlags().StringVar(&config.Syslog, "syslog", "", "use syslog server")
 	serverCmd.PersistentFlags().StringVar(&config.Health, "health", "", "create health server")

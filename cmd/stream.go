@@ -60,17 +60,9 @@ func streamEvents() {
 		}
 	}()
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
 
 	for {
 		select {
-		case t := <-ticker.C:
-			err := c.WriteMessage(websocket.TextMessage, []byte(t.String()))
-			if err != nil {
-				log.Println("write:", err)
-				return
-			}
 		case <-interrupt:
 			log.Println("interrupt")
 			// To cleanly close a connection, a client should send a close
@@ -92,5 +84,5 @@ func streamEvents() {
 
 func init() {
 	RootCmd.AddCommand(streamCmd)
-	streamCmd.Flags().StringVarP(&streamingEndpoint, "server", "s", "", "server endpoint")
+	streamCmd.Flags().StringVarP(&streamingEndpoint, "server", "s", "ws://localhost:8080/api/v1/event", "server endpoint")
 }

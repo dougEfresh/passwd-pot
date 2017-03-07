@@ -45,8 +45,7 @@ func (c *eventClient) resolveAddr(addr string) (*Geo, error) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	sess := c.db.NewSession(nil)
-	now := time.Now()
-	expire := now.AddDate(0, -1, 0)
+	expire := time.Now().AddDate(0, -1, 0)
 	var geo = &Geo{}
 	rowCount, err := sess.Select("*").
 		From("geo").
@@ -59,7 +58,7 @@ func (c *eventClient) resolveAddr(addr string) (*Geo, error) {
 		return nil, err
 	}
 	if err == sql.ErrNoRows || rowCount == 0 {
-		log.Infof("No rows returned for %s", addr)
+		log.Infof("New addr found %s", addr)
 		geo, err = c.geoClient.getLocationForAddr(addr)
 		if geo, err = c.geoClient.getLocationForAddr(addr); err != nil {
 			log.Errorf("Error looking up IP: %s  %s", addr, err)
@@ -72,13 +71,14 @@ func (c *eventClient) resolveAddr(addr string) (*Geo, error) {
 		return geo, nil
 	}
 	if geo.LastUpdate.Before(expire) {
+		log.Infof("Found expired addr %s (%s) (%s)", addr, geo.LastUpdate, expire)
 		var newGeo = &Geo{}
 		newGeo, err = c.geoClient.getLocationForAddr(addr)
 		if err != nil {
 			return nil, err
 		}
 		if geo.equals(newGeo) {
-			log.Infof("Updating id %d ", geo.ID)
+			log.Infof("Updating last_update for id %d ", geo.ID)
 			if _, err = sess.UpdateBySql("UPDATE geo SET last_update = now() WHERE id = ?", geo.ID).
 				Exec(); err != nil {
 				return nil, err
@@ -88,10 +88,9 @@ func (c *eventClient) resolveAddr(addr string) (*Geo, error) {
 			if _, err := insertGeo(newGeo, sess); err != nil {
 				return nil, err
 			}
+			geo = newGeo
 
 		}
-		log.Infof("Before %+v ", *geo)
 	}
-	log.Debugf("%+v", *geo)
 	return geo, nil
 }

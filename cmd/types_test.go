@@ -82,6 +82,19 @@ func TestEventEquals(t *testing.T) {
 		MetroCode:   69,
 	}
 
+	notEqual := Geo{
+		ID:          0,
+		IP:          testEvent.RemoteAddr,
+		CountryCode: "CA",
+		City:        "New York",
+		RegionName:  "A galaxy far far away",
+		RegionCode:  "777",
+		TimeZone:    "GMT",
+		Latitude:    1,
+		Longitude:   2,
+		MetroCode:   69,
+	}
+
 	if !g.equals(&g) {
 		t.Fatalf("%+v != %+v", &g, &g)
 
@@ -90,5 +103,9 @@ func TestEventEquals(t *testing.T) {
 	if g.equals(&another) {
 		t.Fatalf("%+v == %+v", &g, &another)
 
+	}
+
+	if g.equals(&notEqual) {
+		t.Fatalf("%+v == %+v", &g, &notEqual)
 	}
 }

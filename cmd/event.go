@@ -24,7 +24,6 @@ var defaultEventClient *eventClient
 func (c *eventClient) recordEvent(event *SSHEvent) error {
 	log.Infof("Processing event %+v", event)
 	job := stream.NewJob("record_event")
-	log.Infof("%s", c.db)
 	if c.db == nil {
 		return nil
 	}
