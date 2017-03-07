@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package cmd
 
 import (
@@ -30,8 +31,9 @@ import (
 	"time"
 )
 
-const eventUrl = "/api/v1/event"
+const eventURL = "/api/v1/event"
 
+//Context for http requests
 type Context struct {
 	eventClient eventRecorder
 }
@@ -42,8 +44,8 @@ func handlers() *web.Router {
 		Middleware(web.ShowErrorsMiddleware).
 		Middleware((*Context).debuggerContext).
 		NotFound(notFound).
-		Post(eventUrl, (*Context).handleEvent).
-		Get(eventUrl, (*Context).streamEvents)
+		Post(eventURL, (*Context).handleEvent).
+		Get(eventURL, (*Context).streamEvents)
 	return router
 }
 
@@ -102,7 +104,7 @@ func (c *Context) debuggerContext(rw web.ResponseWriter, req *web.Request, next 
 }
 
 func (c *Context) handleEvent(w web.ResponseWriter, r *web.Request) {
-	job := stream.NewJob(fmt.Sprintf("%s", eventUrl))
+	job := stream.NewJob(fmt.Sprintf("%s", eventURL))
 	var event SSHEvent
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {

@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
+	//DB driver
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/spf13/cobra"
 	"net/http"
@@ -27,11 +28,11 @@ import (
 	"time"
 )
 
-type Task interface {
-	Execute()
+type task interface {
+	execute()
 }
 
-func (e SSHEvent) Execute() {
+func (e SSHEvent) execute() {
 	if e.ID%1000 == 0 {
 		log.Infof("Running %s", e)
 	}
@@ -42,7 +43,7 @@ func (e SSHEvent) Execute() {
 		return
 	}
 
-	resp, err := http.Post(fmt.Sprintf("%s%s", config.BindAddr, eventUrl),
+	resp, err := http.Post(fmt.Sprintf("%s%s", config.BindAddr, eventURL),
 		"application/json", bytes.NewReader(b))
 
 	if err != nil {
@@ -56,24 +57,24 @@ func (e SSHEvent) Execute() {
 	time.Sleep(500 * time.Millisecond)
 }
 
-type Pool struct {
+type pool struct {
 	mu    sync.Mutex
 	size  int
-	tasks chan Task
+	tasks chan task
 	kill  chan struct{}
 	wg    sync.WaitGroup
 }
 
-func NewPool(size int) *Pool {
-	pool := &Pool{
-		tasks: make(chan Task, 128),
+func newPool(size int) *pool {
+	pool := &pool{
+		tasks: make(chan task, 128),
 		kill:  make(chan struct{}),
 	}
-	pool.Resize(size)
+	pool.resize(size)
 	return pool
 }
 
-func (p *Pool) worker() {
+func (p *pool) worker() {
 	defer p.wg.Done()
 	for {
 		select {
@@ -81,14 +82,14 @@ func (p *Pool) worker() {
 			if !ok {
 				return
 			}
-			task.Execute()
+			task.execute()
 		case <-p.kill:
 			return
 		}
 	}
 }
 
-func (p *Pool) Resize(n int) {
+func (p *pool) resize(n int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	for p.size < n {
@@ -102,15 +103,15 @@ func (p *Pool) Resize(n int) {
 	}
 }
 
-func (p *Pool) Close() {
+func (p *pool) Close() {
 	close(p.tasks)
 }
 
-func (p *Pool) Wait() {
+func (p *pool) Wait() {
 	p.wg.Wait()
 }
 
-func (p *Pool) Exec(task Task) {
+func (p *pool) Exec(task task) {
 	p.tasks <- task
 }
 
@@ -136,18 +137,17 @@ var queryCmd = &cobra.Command{
 			log.Errorf("Error running query %s ", err)
 		}
 		log.Info("Done running query (%d)", num)
-		pool := NewPool(10)
+		p := newPool(10)
 		for _, e := range events {
-			pool.Exec(e)
+			p.Exec(e)
 		}
 		log.Info("Closing channel")
-		pool.Close()
+		p.Close()
 		log.Info("Waiting for workings")
-		pool.Wait()
+		p.Wait()
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(queryCmd)
-
 }

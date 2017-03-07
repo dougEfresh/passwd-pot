@@ -36,7 +36,7 @@ func (jt jsonTime) Value() (driver.Value, error) {
 }
 
 // Gets the value from epoch time
-func (n *jsonTime) Scan(value interface{}) error {
+func (jt *jsonTime) Scan(value interface{}) error {
 	var err error
 
 	if value == nil {
@@ -47,10 +47,10 @@ func (n *jsonTime) Scan(value interface{}) error {
 	case time.Time:
 		return nil
 	case []byte:
-		n.UnmarshalJSON(v)
+		jt.UnmarshalJSON(v)
 		return nil
 	case string:
-		n.UnmarshalJSON([]byte(v))
+		jt.UnmarshalJSON([]byte(v))
 		return err
 	}
 

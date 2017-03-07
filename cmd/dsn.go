@@ -2,8 +2,8 @@ package cmd
 
 import (
 	log "github.com/Sirupsen/logrus"
-	"strings"
 	"gopkg.in/dougEfresh/dbr.v2"
+	"strings"
 )
 
 func loadDSN(dsn string) *dbr.Connection {
