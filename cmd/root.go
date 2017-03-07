@@ -21,9 +21,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"gopkg.in/dougEfresh/dbr.v2"
 	"os"
-	"strings"
 )
 
 var config struct {
@@ -40,7 +38,7 @@ var cfgFile string
 
 // RootCmd for ssh pot
 var RootCmd = &cobra.Command{
-	Use:   "ssh-audit",
+	Use:   "ssh-password-pot",
 	Short: "",
 	Long:  "",
 }
@@ -56,7 +54,7 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ssh-audit-geo.yaml)")
+	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ssh-password-pot.yaml)")
 	RootCmd.PersistentFlags().BoolVar(&config.Debug, "debug", false, "Enable Debug")
 
 	// Log as JSON instead of the default ASCII formatter.
@@ -84,26 +82,4 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
-}
-
-func loadDSN(dsn string) *dbr.Connection {
-	var db *dbr.Connection
-	var err error
-	if strings.Contains(dsn, "postgres") {
-		log.Debug("Using pq driver")
-		db, err = dbr.Open("postgres", dsn, defaultDbEventLogger)
-	} else {
-		log.Debug("Using mysql driver")
-		db, err = dbr.Open("mysql", dsn, defaultDbEventLogger)
-	}
-
-	if err != nil {
-		panic(err)
-	}
-	err = db.Ping()
-	if err != nil {
-		panic(err)
-	}
-
-	return db
 }

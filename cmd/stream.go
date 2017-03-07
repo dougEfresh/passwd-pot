@@ -11,38 +11,85 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 package cmd
 
 import (
-	"fmt"
-
+	log "github.com/Sirupsen/logrus"
+	"github.com/gorilla/websocket"
 	"github.com/spf13/cobra"
+	"os"
+	"os/signal"
+	"time"
 )
 
 // streamCmd represents the stream command
+var streamingEndpoint string
+
 var streamCmd = &cobra.Command{
 	Use:   "stream",
 	Short: "",
 	Long:  "",
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: Work your own magic here
-		fmt.Println("stream called")
+		streamEvents()
 	},
 }
 
-var streamingEndpoint string
+func streamEvents() {
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
+	c, resp, err := websocket.DefaultDialer.Dial(streamingEndpoint, nil)
+	if err != nil {
+		log.Errorf("websocket.NewClient Error: %s\nResp:%+v", err, resp)
+		return
+	}
+
+	defer c.Close()
+	done := make(chan struct{})
+
+	go func() {
+		defer c.Close()
+		defer close(done)
+		for {
+			_, message, err := c.ReadMessage()
+			if err != nil {
+				log.Println("read:", err)
+				return
+			}
+			log.Printf("recv: %s", message)
+		}
+	}()
+
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case t := <-ticker.C:
+			err := c.WriteMessage(websocket.TextMessage, []byte(t.String()))
+			if err != nil {
+				log.Println("write:", err)
+				return
+			}
+		case <-interrupt:
+			log.Println("interrupt")
+			// To cleanly close a connection, a client should send a close
+			// frame and wait for the server to close the connection.
+			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			if err != nil {
+				log.Println("write close:", err)
+				return
+			}
+			select {
+			case <-done:
+			case <-time.After(time.Second):
+			}
+			c.Close()
+			return
+		}
+	}
+}
 
 func init() {
 	RootCmd.AddCommand(streamCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// streamCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
 	streamCmd.Flags().StringVarP(&streamingEndpoint, "server", "s", "", "server endpoint")
 }

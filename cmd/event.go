@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"errors"
 	log "github.com/Sirupsen/logrus"
 	"github.com/gocraft/health"
@@ -80,7 +81,21 @@ func (c *eventClient) resolveGeoEvent(event *SSHEvent) error {
 		return err
 	}
 	job.Complete(health.Success)
+	go c.broadcastEvent(event.ID)
 	return nil
+}
+
+func (c *eventClient) broadcastEvent(id int64) {
+	gEvent := c.get(id)
+	if gEvent == nil {
+		return
+	}
+	if b, err := json.Marshal(gEvent); err != nil {
+		log.Errorf("Error decoding geo event %d %s", id, err)
+	} else {
+		hub.broadcast <- b
+	}
+
 }
 
 func (c *eventClient) get(id int64) *SSHEventGeo {

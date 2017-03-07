@@ -117,7 +117,7 @@ func (c *Client) writePump() {
 }
 
 func (c *Context) streamEvents(w web.ResponseWriter, r *web.Request) {
-
+	serveWs(hub, w, r)
 }
 
 // serveWs handles websocket requests from the peer.
