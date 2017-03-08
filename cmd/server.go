@@ -32,6 +32,7 @@ import (
 )
 
 const eventURL = "/api/v1/event"
+const streamURL = "/api/v1/event/stream"
 
 //Context for http requests
 type Context struct {
@@ -47,7 +48,7 @@ func handlers() *web.Router {
 	router.Middleware((*Context).debuggerContext).
 		NotFound(notFound).
 		Post(eventURL, (*Context).handleEvent).
-		Get(eventURL, (*Context).streamEvents)
+		Get(streamURL, (*Context).streamEvents)
 	return router
 }
 

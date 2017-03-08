@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/signal"
 	"time"
+	"fmt"
 )
 
 // streamCmd represents the stream command
@@ -83,5 +84,7 @@ func streamEvents() {
 
 func init() {
 	RootCmd.AddCommand(streamCmd)
-	streamCmd.Flags().StringVarP(&streamingEndpoint, "server", "s", "ws://localhost:8080/api/v1/event", "server endpoint")
+	streamCmd.Flags().StringVarP(&streamingEndpoint, "server", "s",
+		fmt.Sprintf("ws://localhost:8080%s", streamURL),
+		"server endpoint")
 }
