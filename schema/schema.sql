@@ -24,7 +24,9 @@ CREATE TABLE event (
   remote_name varchar(256),
   remote_version varchar(64),
   origin_addr varchar(16) NOT NULL,
-  origin_geo_id bigint NULL REFERENCES geo(id)
+  origin_geo_id bigint NULL REFERENCES geo(id),
+  application varchar(32),
+  protocol varchar(32)
 );
 
 CREATE OR REPLACE VIEW vw_event AS
