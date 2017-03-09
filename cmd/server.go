@@ -84,7 +84,7 @@ func run(cmd *cobra.Command, args []string) {
 		ReadTimeout:  10 * time.Second,
 	}
 	if config.Syslog != "" {
-		if syslogHook, err = logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, "ssh-password-pot"); err != nil {
+		if syslogHook, err = logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, "password-pot"); err != nil {
 			log.Error("Unable to connect to local syslog daemon")
 		} else {
 			log.AddHook(syslogHook)
@@ -108,7 +108,7 @@ func (c *Context) debuggerContext(rw web.ResponseWriter, req *web.Request, next 
 
 func (c *Context) handleEvent(w web.ResponseWriter, r *web.Request) {
 	job := stream.NewJob(fmt.Sprintf("%s", eventURL))
-	var event SSHEvent
+	var event Event
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

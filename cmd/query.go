@@ -32,7 +32,7 @@ type task interface {
 	execute()
 }
 
-func (e SSHEvent) execute() {
+func (e Event) execute() {
 	if e.ID%1000 == 0 {
 		log.Infof("Running %s", e)
 	}
@@ -127,7 +127,7 @@ var queryCmd = &cobra.Command{
 		db := loadDSN(config.Dsn)
 		runtime.GOMAXPROCS(5)
 		sess := db.NewSession(nil)
-		var events []SSHEvent
+		var events []Event
 		log.Info("Running query")
 		num, err := sess.Select("*").
 			From("event").

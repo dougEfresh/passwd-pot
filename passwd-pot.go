@@ -14,7 +14,7 @@
 
 package main
 
-import "github.com/dougEfresh/ssh-passwd-pot/cmd"
+import "github.com/dougEfresh/passwd-pot/cmd"
 import _ "github.com/lib/pq"
 
 func main() {

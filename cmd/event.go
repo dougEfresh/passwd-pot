@@ -9,9 +9,9 @@ import (
 )
 
 type eventRecorder interface {
-	recordEvent(event *SSHEvent) error
-	resolveGeoEvent(event *SSHEvent) error
-	get(id int64) *SSHEventGeo
+	recordEvent(event *Event) error
+	resolveGeoEvent(event *Event) error
+	get(id int64) *EventGeo
 }
 
 type eventClient struct {
@@ -21,7 +21,7 @@ type eventClient struct {
 
 var defaultEventClient *eventClient
 
-func (c *eventClient) recordEvent(event *SSHEvent) error {
+func (c *eventClient) recordEvent(event *Event) error {
 	log.Infof("Processing event %+v", event)
 	job := stream.NewJob("record_event")
 	if c.db == nil {
@@ -43,7 +43,7 @@ func (c *eventClient) recordEvent(event *SSHEvent) error {
 	return nil
 }
 
-func (c *eventClient) resolveGeoEvent(event *SSHEvent) error {
+func (c *eventClient) resolveGeoEvent(event *Event) error {
 	job := stream.NewJob("resolve_geo_event")
 	if event.ID == 0 {
 		err := errors.New("Bad event recv")
@@ -97,10 +97,10 @@ func (c *eventClient) broadcastEvent(id int64) {
 
 }
 
-func (c *eventClient) get(id int64) *SSHEventGeo {
+func (c *eventClient) get(id int64) *EventGeo {
 	job := stream.NewJob("get_event")
 	sess := c.db.NewSession(nil)
-	var event SSHEventGeo
+	var event EventGeo
 	if _, err := sess.Select("*").
 		From("vw_event").
 		Where("id = ?", id).

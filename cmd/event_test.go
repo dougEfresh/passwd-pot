@@ -43,7 +43,7 @@ func clearDb(db *dbr.Connection, t *testing.T) {
 }
 
 var now = time.Now()
-var testEvent = SSHEvent{
+var testEvent = Event{
 	RemoteAddr:    "1.2.3.4",
 	RemotePort:    3432,
 	RemoteVersion: "SSH-2.0-JSCH-0.1.51",
@@ -56,13 +56,13 @@ var testEvent = SSHEvent{
 	Protocol:      "ssh",
 }
 
-func createEvent(event *SSHEvent) error {
+func createEvent(event *Event) error {
 	sess := testEventClient.db.NewSession(nil)
 	err := testEventClient.recordEvent(event)
 	if err != nil {
 		return err
 	}
-	var eventGeo SSHEventGeo
+	var eventGeo EventGeo
 	_, err = sess.Select("*").From("vw_event").Where("id = ?", event.ID).Load(&eventGeo)
 	if err != nil {
 		return err

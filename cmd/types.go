@@ -57,8 +57,8 @@ func (jt *jsonTime) Scan(value interface{}) error {
 	return nil
 }
 
-//SSHEventGeo event with location
-type SSHEventGeo struct {
+//EventGeo event with location
+type EventGeo struct {
 	ID              int64     `db:"id"`
 	Time            time.Time `db:"dt"`
 	User            string    `db:"username"`
@@ -94,8 +94,8 @@ type Geo struct {
 	MetroCode   int       `db:"metro_code" json:"metro_code"`
 }
 
-//SSHEvent to record
-type SSHEvent struct {
+//Event to record
+type Event struct {
 	ID            int64    `db:"id" json:"id"`
 	Time          jsonTime `db:"dt" json:"time"`
 	User          string   `db:"username"`
@@ -121,7 +121,7 @@ func (g *Geo) equals(another *Geo) bool {
 		g.IP == another.IP
 }
 
-func (e SSHEvent) String() string {
+func (e Event) String() string {
 	b, err := json.Marshal(e)
 	if err != nil {
 		return fmt.Sprintf("%s", err)
