@@ -84,7 +84,7 @@ func run(cmd *cobra.Command, args []string) {
 		ReadTimeout:  10 * time.Second,
 	}
 	if config.Syslog != "" {
-		if syslogHook, err = logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, "password-pot"); err != nil {
+		if syslogHook, err = logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, "passwd-pot"); err != nil {
 			log.Error("Unable to connect to local syslog daemon")
 		} else {
 			log.AddHook(syslogHook)
