@@ -38,7 +38,6 @@ func (c *eventClient) list() []EventGeo {
 	_, err := sess.Select("*").
 		From("vw_event").
 		Where("dt > ?", after).
-		Limit(1000).
 		LoadValues(&geoEvents)
 	if err != nil {
 		log.Errorf("Error getting events %s", err)
