@@ -41,7 +41,9 @@ type Context struct {
 
 func handlers() *web.Router {
 	router := web.New(Context{}).
-		Middleware(loggerMiddleware)
+		Middleware(loggerMiddleware).
+		Middleware(allowCors)
+
 	if config.Debug {
 		router.Middleware(web.ShowErrorsMiddleware)
 	}
@@ -53,6 +55,10 @@ func handlers() *web.Router {
 	return router
 }
 
+func allowCors(w web.ResponseWriter, r *web.Request, next web.NextMiddlewareFunc) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	next(w, r)
+}
 func notFound(rw web.ResponseWriter, r *web.Request) {
 	rw.WriteHeader(http.StatusNotFound)
 	log.Infof("%s not found", r.URL.Path)
