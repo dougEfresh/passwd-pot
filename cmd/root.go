@@ -36,7 +36,7 @@ var config struct {
 
 var cfgFile string
 
-// RootCmd for ssh pot
+// RootCmd for pot
 var RootCmd = &cobra.Command{
 	Use:   "passwd-pot",
 	Short: "",
@@ -74,7 +74,7 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	}
 
-	viper.SetConfigName(".ssh-audit-geo") // name of config file (without extension)
+	viper.SetConfigName(".passwd-pot") // name of config file (without extension)
 	viper.AddConfigPath("$HOME")          // adding home directory as first search path
 	viper.AutomaticEnv()                  // read in environment variables that match
 
