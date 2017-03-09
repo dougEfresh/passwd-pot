@@ -52,6 +52,8 @@ var testEvent = SSHEvent{
 	Passwd:        "1234",
 	Time:          jsonTime{Time: now},
 	OriginAddr:    "127.0.0.1",
+	Application:   "OpenSSH",
+	Protocol:      "ssh",
 }
 
 func createEvent(event *SSHEvent) error {

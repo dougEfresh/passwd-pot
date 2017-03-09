@@ -15,13 +15,13 @@
 package cmd
 
 import (
+	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
 	"github.com/spf13/cobra"
 	"os"
 	"os/signal"
 	"time"
-	"fmt"
 )
 
 // streamCmd represents the stream command

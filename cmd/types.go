@@ -105,6 +105,8 @@ type SSHEvent struct {
 	RemoteName    string   `db:"remote_name"`
 	RemoteVersion string   `db:"remote_version"`
 	OriginAddr    string   `db:"origin_addr"`
+	Application   string   `db:"application"`
+	Protocol      string   `db:"protocol"`
 }
 
 func (g *Geo) equals(another *Geo) bool {

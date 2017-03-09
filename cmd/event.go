@@ -30,7 +30,7 @@ func (c *eventClient) recordEvent(event *SSHEvent) error {
 	sess := c.db.NewSession(nil)
 	var ids []int64
 	_, err := sess.InsertInto("event").
-		Columns("dt", "username", "passwd", "remote_addr", "remote_port", "remote_name", "remote_version", "origin_addr").
+		Columns("dt", "username", "passwd", "remote_addr", "remote_port", "remote_name", "remote_version", "origin_addr", "application", "protocol").
 		Record(event).
 		Returning(&ids, "id")
 
