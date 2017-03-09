@@ -12,11 +12,11 @@ import (
 type eventRecorder interface {
 	recordEvent(event *Event) error
 	resolveGeoEvent(event *Event) error
-	get(id int64) *EventGeo
 }
 
 type eventLister interface {
 	list() []EventGeo
+	get(id int64) *EventGeo
 }
 
 type eventTransporter interface {
