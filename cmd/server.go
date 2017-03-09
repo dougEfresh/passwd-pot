@@ -36,7 +36,7 @@ const streamURL = "/api/v1/event/stream"
 
 //Context for http requests
 type Context struct {
-	eventClient eventRecorder
+	eventTransporter
 }
 
 func handlers() *web.Router {
@@ -45,9 +45,10 @@ func handlers() *web.Router {
 	if config.Debug {
 		router.Middleware(web.ShowErrorsMiddleware)
 	}
-	router.Middleware((*Context).debuggerContext).
+	router.Middleware((*Context).initContext).
 		NotFound(notFound).
 		Post(eventURL, (*Context).handleEvent).
+		Get(eventURL, (*Context).listEvents).
 		Get(streamURL, (*Context).streamEvents)
 	return router
 }
@@ -93,6 +94,8 @@ func run(cmd *cobra.Command, args []string) {
 	defaultDbEventLogger.Debug = config.Debug
 	healthMonitor(cmd.Name())
 	log.Infof("Listing on %s", config.BindAddr)
+
+	//websocket requests
 	go hub.run()
 
 	err = srv.ListenAndServe()
@@ -102,7 +105,8 @@ func run(cmd *cobra.Command, args []string) {
 	}
 }
 
-func (c *Context) debuggerContext(rw web.ResponseWriter, req *web.Request, next web.NextMiddlewareFunc) {
+func (c *Context) initContext(rw web.ResponseWriter, req *web.Request, next web.NextMiddlewareFunc) {
+	c.eventTransporter = defaultEventClient
 	next(rw, req)
 }
 
@@ -137,8 +141,8 @@ func (c *Context) handleEvent(w web.ResponseWriter, r *web.Request) {
 
 	}
 
-	err = defaultEventClient.recordEvent(&event)
-	go defaultEventClient.resolveGeoEvent(&event)
+	err = c.eventTransporter.recordEvent(&event)
+	go c.eventTransporter.resolveGeoEvent(&event)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Errorf("Error writing %+v %s", &event, err)
@@ -149,6 +153,14 @@ func (c *Context) handleEvent(w web.ResponseWriter, r *web.Request) {
 	job.Complete(health.Success)
 	j, _ := json.Marshal(event)
 	w.WriteHeader(http.StatusAccepted)
+	w.Header().Add("Content-type", "application/json")
+	w.Write(j)
+}
+
+func (c *Context) listEvents(w web.ResponseWriter, r *web.Request) {
+	geoEvents := c.eventTransporter.list()
+	j, _ := json.Marshal(geoEvents)
+	w.WriteHeader(http.StatusOK)
 	w.Header().Add("Content-type", "application/json")
 	w.Write(j)
 }

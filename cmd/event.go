@@ -6,6 +6,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gocraft/health"
 	"gopkg.in/dougEfresh/dbr.v2"
+	"time"
 )
 
 type eventRecorder interface {
@@ -14,12 +15,36 @@ type eventRecorder interface {
 	get(id int64) *EventGeo
 }
 
+type eventLister interface {
+	list() []EventGeo
+}
+
+type eventTransporter interface {
+	eventLister
+	eventRecorder
+}
+
 type eventClient struct {
 	db        *dbr.Connection
 	geoClient geoClientTransporter
 }
 
 var defaultEventClient *eventClient
+
+func (c *eventClient) list() []EventGeo {
+	sess := c.db.NewSession(nil)
+	after := time.Now().UTC().AddDate(0, 0, -1)
+	var geoEvents []EventGeo
+	_, err := sess.Select("*").
+		From("vw_event").
+		Where("dt > ?", after).
+		Limit(1000).
+		LoadValues(&geoEvents)
+	if err != nil {
+		log.Errorf("Error getting events %s", err)
+	}
+	return geoEvents
+}
 
 func (c *eventClient) recordEvent(event *Event) error {
 	log.Infof("Processing event %+v", event)
@@ -94,7 +119,6 @@ func (c *eventClient) broadcastEvent(id int64) {
 	} else {
 		hub.broadcast <- b
 	}
-
 }
 
 func (c *eventClient) get(id int64) *EventGeo {
