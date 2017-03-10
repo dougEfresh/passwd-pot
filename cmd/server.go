@@ -51,7 +51,8 @@ func handlers() *web.Router {
 		NotFound(notFound).
 		Post(eventURL, (*Context).handleEvent).
 		Get(eventURL, (*Context).listEvents).
-		Get(streamURL, (*Context).streamEvents)
+		Get(streamURL, (*Context).streamEvents).
+		Get(streamURL+"/random", (*Context).streamEvents)
 	return router
 }
 
@@ -69,46 +70,6 @@ var serverCmd = &cobra.Command{
 	Short: "",
 	Long:  "",
 	Run:   run,
-}
-
-func run(cmd *cobra.Command, args []string) {
-	var err error
-	if config.Debug {
-		log.SetLevel(log.DebugLevel)
-	}
-	if config.Threads > 0 {
-		runtime.GOMAXPROCS(config.Threads)
-	}
-	defaultEventClient = &eventClient{
-		db:        loadDSN(config.Dsn),
-		geoClient: geoClient,
-	}
-	log.Debugf("Running %s with %s", cmd.Name(), args)
-	srv := &http.Server{
-		Handler:      handlers(),
-		Addr:         config.BindAddr,
-		WriteTimeout: 10 * time.Second,
-		ReadTimeout:  10 * time.Second,
-	}
-	if config.Syslog != "" {
-		if syslogHook, err = logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, "passwd-pot"); err != nil {
-			log.Error("Unable to connect to local syslog daemon")
-		} else {
-			log.AddHook(syslogHook)
-		}
-	}
-	defaultDbEventLogger.Debug = config.Debug
-	healthMonitor(cmd.Name())
-	log.Infof("Listing on %s", config.BindAddr)
-
-	//websocket requests
-	go hub.run()
-
-	err = srv.ListenAndServe()
-	if err != nil {
-		log.Errorf("Caught error %s", err)
-		os.Exit(-1)
-	}
 }
 
 func (c *Context) initContext(rw web.ResponseWriter, req *web.Request, next web.NextMiddlewareFunc) {
@@ -169,6 +130,47 @@ func (c *Context) listEvents(w web.ResponseWriter, r *web.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Add("Content-type", "application/json")
 	w.Write(j)
+}
+
+func run(cmd *cobra.Command, args []string) {
+	var err error
+	if config.Debug {
+		log.SetLevel(log.DebugLevel)
+	}
+	if config.Threads > 0 {
+		runtime.GOMAXPROCS(config.Threads)
+	}
+	defaultEventClient = &eventClient{
+		db:        loadDSN(config.Dsn),
+		geoClient: geoClient,
+	}
+	log.Debugf("Running %s with %s", cmd.Name(), args)
+	srv := &http.Server{
+		Handler:      handlers(),
+		Addr:         config.BindAddr,
+		WriteTimeout: 10 * time.Second,
+		ReadTimeout:  10 * time.Second,
+	}
+	if config.Syslog != "" {
+		if syslogHook, err = logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, "passwd-pot"); err != nil {
+			log.Error("Unable to connect to local syslog daemon")
+		} else {
+			log.AddHook(syslogHook)
+		}
+	}
+	defaultDbEventLogger.Debug = config.Debug
+	healthMonitor(cmd.Name())
+	log.Infof("Listing on %s", config.BindAddr)
+
+	//websocket requests
+	go hub.run()
+	go randomDataHub.run()
+	go startRandomHub(randomDataHub)
+	err = srv.ListenAndServe()
+	if err != nil {
+		log.Errorf("Caught error %s", err)
+		os.Exit(-1)
+	}
 }
 
 func init() {

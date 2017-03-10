@@ -39,6 +39,7 @@ func (c *eventClient) list() []EventGeo {
 		From("vw_event").
 		Where("dt > ?", after).
 		LoadValues(&geoEvents)
+
 	if err != nil {
 		log.Errorf("Error getting events %s", err)
 	}
@@ -104,20 +105,21 @@ func (c *eventClient) resolveGeoEvent(event *Event) error {
 		return err
 	}
 	job.Complete(health.Success)
-	go c.broadcastEvent(event.ID)
+	go c.broadcastEvent(event.ID, hub)
 	return nil
 }
 
-func (c *eventClient) broadcastEvent(id int64) {
+func (c *eventClient) broadcastEvent(id int64, hub *Hub) *EventGeo {
 	gEvent := c.get(id)
 	if gEvent == nil {
-		return
+		return nil
 	}
 	if b, err := json.Marshal(gEvent); err != nil {
 		log.Errorf("Error decoding geo event %d %s", id, err)
 	} else {
 		hub.broadcast <- b
 	}
+	return gEvent
 }
 
 func (c *eventClient) get(id int64) *EventGeo {

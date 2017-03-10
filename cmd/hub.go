@@ -17,6 +17,9 @@ type Hub struct {
 
 var hub = newHub()
 
+// Holds clients that want randomized data sent back
+var randomDataHub = newHub()
+
 func newHub() *Hub {
 	return &Hub{
 		broadcast:  make(chan []byte),

@@ -8,6 +8,7 @@ import (
 	"github.com/gocraft/web"
 	"github.com/gorilla/websocket"
 	"net/http"
+	"strings"
 )
 
 const (
@@ -121,7 +122,24 @@ func (c *Client) writePump() {
 }
 
 func (c *Context) streamEvents(w web.ResponseWriter, r *web.Request) {
-	serveWs(hub, w, r)
+	if strings.Contains(r.URL.Path, "random") {
+		serveRandomWs(randomDataHub, w, r)
+	} else {
+		serveWs(hub, w, r)
+	}
+}
+
+// serveWs handles websocket requests from the peer.
+func serveRandomWs(hub *Hub, w web.ResponseWriter, r *web.Request) {
+	conn, err := upgrader.Upgrade(w, r.Request, nil)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 512)}
+	client.hub.register <- client
+	go client.writePump()
+	client.readPump()
 }
 
 // serveWs handles websocket requests from the peer.
@@ -135,4 +153,45 @@ func serveWs(hub *Hub, w web.ResponseWriter, r *web.Request) {
 	client.hub.register <- client
 	go client.writePump()
 	client.readPump()
+}
+
+var lastRandomEvent *EventGeo
+
+func startRandomHub(hub *Hub) {
+	log.Info("Starting random hub")
+	var id int64
+	var event *EventGeo
+	for {
+		time.Sleep(1 * time.Second)
+		if len(hub.clients) == 0 {
+			continue
+		}
+		sess := defaultEventClient.db.NewSession(nil)
+		if lastRandomEvent == nil {
+			if err := sess.Select("max(id)").From(eventGeoTable).LoadValue(&id); err != nil {
+				log.Errorf("Error getting max id %d", id)
+			}
+		} else {
+			sess.Select("id").
+				From(eventGeoTable).
+				Where("id != ? and city != ?", lastRandomEvent.ID, lastRandomEvent.RemoteCity).
+				Limit(1).
+				OrderBy("RANDOM()").
+				LoadValue(&id)
+			if event == nil {
+				sess.Select("id").
+					From(eventGeoTable).
+					Where("id != ?", lastRandomEvent.ID).
+					Limit(1).
+					OrderBy("RANDOM()").
+					LoadValue(&id)
+			}
+			if id == 0 {
+				log.Error("Could not find an random event!")
+			}
+		}
+		if id != 0 {
+			lastRandomEvent = defaultEventClient.broadcastEvent(id, hub)
+		}
+	}
 }

@@ -6,6 +6,12 @@ import (
 	"strings"
 )
 
+const (
+	eventTable    = "event"
+	eventGeoTable = "vw_event"
+	geoTable      = "geo"
+)
+
 func loadDSN(dsn string) *dbr.Connection {
 	var db *dbr.Connection
 	var err error
