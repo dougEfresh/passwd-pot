@@ -25,6 +25,7 @@ import (
 	"io/ioutil"
 	"log/syslog"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"runtime"
 	"strings"
@@ -166,6 +167,9 @@ func run(cmd *cobra.Command, args []string) {
 	go hub.run()
 	go randomDataHub.run()
 	go startRandomHub(randomDataHub)
+	if config.Pprof != "" {
+		go func() { log.Error(http.ListenAndServe(config.Pprof, nil)) }()
+	}
 	err = srv.ListenAndServe()
 	if err != nil {
 		log.Errorf("Caught error %s", err)
@@ -180,5 +184,6 @@ func init() {
 	serverCmd.PersistentFlags().StringVar(&config.Syslog, "syslog", "", "use syslog server")
 	serverCmd.PersistentFlags().StringVar(&config.Health, "health", "", "create health server")
 	serverCmd.PersistentFlags().StringVar(&config.Statsd, "statsd", "", "push stats to statsd (localhost:8125")
+	serverCmd.PersistentFlags().StringVar(&config.Pprof, "pprof", "", "pprof endpoint http://localhost:6060")
 	serverCmd.PersistentFlags().IntVar(&config.Threads, "threads", 0, "number of thread workers to use")
 }

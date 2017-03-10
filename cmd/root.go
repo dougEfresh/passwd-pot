@@ -32,6 +32,7 @@ var config struct {
 	Threads  int
 	Health   string
 	Statsd   string
+	Pprof    string
 }
 
 var cfgFile string
