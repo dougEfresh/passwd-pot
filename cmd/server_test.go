@@ -1,14 +1,14 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"encoding/json"
-	"io/ioutil"
 	"time"
 )
 
@@ -17,14 +17,15 @@ const (
 	requestBodyOrigin = `{"time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "192.168.1.1", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51" , "originAddr" : "10.0.0.1", "application": "OpenSSH" , "protocol": "ssh" }`
 )
 
+var ts = httptest.NewServer(handlers())
+var endpoint = fmt.Sprintf("%s%s", ts.URL, eventURL)
+
 func init() {
 	defaultEventClient = testEventClient
+	log.SetLevel(log.WarnLevel)
 }
 
 func TestServerRequest(t *testing.T) {
-
-	ts := httptest.NewServer(handlers())
-	defer ts.Close()
 	t.Log(fmt.Sprintf("%s%s", ts.URL, eventURL))
 
 	res, err := http.Post(fmt.Sprintf("%s%s", ts.URL, eventURL),
@@ -76,10 +77,7 @@ func TestServerRequest(t *testing.T) {
 }
 
 func TestServerRequestWithOrigin(t *testing.T) {
-	ts := httptest.NewServer(handlers())
-	defer ts.Close()
-
-	res, err := http.Post(fmt.Sprintf("%s%s", ts.URL, eventURL),
+	res, err := http.Post(endpoint,
 		"application/json",
 		strings.NewReader(requestBodyOrigin))
 
@@ -111,5 +109,18 @@ func TestServerRequestWithOrigin(t *testing.T) {
 
 	if eventGeo.RemoteCountry == "" {
 		t.Fatal("Remote Country is null")
+	}
+}
+
+func BenchmarkServer(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		res, err := http.Post(endpoint,
+			"application/json",
+			strings.NewReader(requestBodyOrigin))
+		if err != nil {
+			b.Fatal(err)
+		}
+		res.Body.Close()
 	}
 }
