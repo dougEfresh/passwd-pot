@@ -5,6 +5,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"time"
 
+	"fmt"
 	"github.com/gocraft/web"
 	"github.com/gorilla/websocket"
 	"net/http"
@@ -160,35 +161,28 @@ var lastRandomEvent *EventGeo
 func startRandomHub(hub *Hub) {
 	log.Info("Starting random hub")
 	var id int64
-	var event *EventGeo
+	sess := defaultEventClient.db.NewSession(nil)
+	whereClause := fmt.Sprintf("id != ? and remote_latitude != ? and remote_longitude != ? and id >= (select max(id) * RANDOM()  from %s) ", eventTable)
 	for {
 		time.Sleep(1 * time.Second)
 		if len(hub.clients) == 0 {
 			continue
 		}
-		sess := defaultEventClient.db.NewSession(nil)
+
 		if lastRandomEvent == nil {
 			if err := sess.Select("max(id)").From(eventGeoTable).LoadValue(&id); err != nil {
-				log.Errorf("Error getting max id %d", id)
+				log.Error("Error getting max id")
 			}
 		} else {
 			sess.Select("id").
 				From(eventGeoTable).
-				Where("id != ? and city != ?", lastRandomEvent.ID, lastRandomEvent.RemoteCity).
+				Where(whereClause, lastRandomEvent.ID, lastRandomEvent.RemoteLatitude, lastRandomEvent.RemoteLongitude).
 				Limit(1).
-				OrderBy("RANDOM()").
+				OrderBy("id").
 				LoadValue(&id)
-			if event == nil {
-				sess.Select("id").
-					From(eventGeoTable).
-					Where("id != ?", lastRandomEvent.ID).
-					Limit(1).
-					OrderBy("RANDOM()").
-					LoadValue(&id)
-			}
-			if id == 0 {
-				log.Error("Could not find an random event!")
-			}
+		}
+		if id == 0 {
+			log.Error("Could not find an random event!")
 		}
 		if id != 0 {
 			lastRandomEvent = defaultEventClient.broadcastEvent(id, hub)
