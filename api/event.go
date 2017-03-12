@@ -74,8 +74,8 @@ type Event struct {
 }
 
 type Transporter interface {
-	SendEvent(event *Event) *Event
-	GetEvent(id int64) *Event
+	SendEvent(event *Event) (*Event, error)
+	GetEvent(id int64) (*Event, error)
 }
 
 type EventClient struct {
@@ -97,7 +97,7 @@ func (e *EventClient) SendEvent(event *Event) (*Event, error) {
 }
 
 //TODO
-func (e *EventClient) GetEvent(id int64) (*EventClient, error) {
+func (e *EventClient) GetEvent(id int64) (*Event, error) {
 	return nil, nil
 }
 

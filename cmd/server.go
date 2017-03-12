@@ -51,7 +51,7 @@ func handlers() *web.Router {
 		Post(api.EventURL, (*Context).handleEvent).
 		Get(api.EventURL, (*Context).listEvents).
 		Get(api.EventURL, (*Context).streamEvents).
-		Get(api.EventURL+"/random", (*Context).streamEvents)
+		Get(api.StreamURL+"/random", (*Context).streamEvents)
 	return router
 }
 
