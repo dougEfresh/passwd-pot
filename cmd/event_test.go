@@ -64,7 +64,7 @@ func createEvent(event *Event) error {
 		return err
 	}
 	var eventGeo EventGeo
-	_, err = sess.Select("*").From("vw_event").Where("id = ?", event.ID).Load(&eventGeo)
+	_, err = sess.Select("*").From(eventGeoTable).Where("id = ?", event.ID).Load(&eventGeo)
 	if err != nil {
 		return err
 	}

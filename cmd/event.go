@@ -36,7 +36,7 @@ func (c *eventClient) list() []EventGeo {
 	after := time.Now().UTC().AddDate(0, 0, -1)
 	var geoEvents []EventGeo
 	_, err := sess.Select("*").
-		From("vw_event").
+		From(eventGeoTable).
 		Where("dt > ?", after).
 		LoadValues(&geoEvents)
 
@@ -127,7 +127,7 @@ func (c *eventClient) get(id int64) *EventGeo {
 	sess := c.db.NewSession(nil)
 	var event EventGeo
 	if _, err := sess.Select("*").
-		From("vw_event").
+		From(eventGeoTable).
 		Where("id = ?", id).
 		Load(&event); err != nil {
 		log.Errorf("Error getting event id %d %s", id, err)

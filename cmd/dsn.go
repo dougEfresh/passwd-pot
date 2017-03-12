@@ -8,7 +8,7 @@ import (
 
 const (
 	eventTable    = "event"
-	eventGeoTable = "vw_event"
+	eventGeoTable = "event_geo"
 	geoTable      = "geo"
 )
 
