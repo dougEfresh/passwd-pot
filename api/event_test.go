@@ -41,7 +41,7 @@ func TestSend(t *testing.T) {
 		Application:   "OpenSSH",
 		Protocol:      "ssh",
 	}
-	eventResp, err := ec.sendEvent(event)
+	eventResp, err := ec.SendEvent(event)
 	if err != nil {
 		t.Fatalf("SendEvent: %s", err)
 	}
