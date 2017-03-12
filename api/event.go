@@ -74,15 +74,15 @@ type Event struct {
 }
 
 type Transporter interface {
-	sendEvent(event *Event) *Event
-	getEvent(id int64) *Event
+	SendEvent(event *Event) *Event
+	GetEvent(id int64) *Event
 }
 
 type EventClient struct {
 	server string
 }
 
-func (e *EventClient) sendEvent(event *Event) (*Event, error) {
+func (e *EventClient) SendEvent(event *Event) (*Event, error) {
 
 	b, err := json.Marshal(event)
 	if err != nil {
@@ -97,7 +97,7 @@ func (e *EventClient) sendEvent(event *Event) (*Event, error) {
 }
 
 //TODO
-func (e *EventClient) getEvent(id int64) (*EventClient, error) {
+func (e *EventClient) GetEvent(id int64) (*EventClient, error) {
 	return nil, nil
 }
 
@@ -146,4 +146,12 @@ func NewClient(server string, options ...func(*EventClient) error) (*EventClient
 		}
 	}
 	return ec, nil
+}
+
+func (e Event) String() string {
+	b, err := json.Marshal(e)
+	if err != nil {
+		return fmt.Sprintf("%s", err)
+	}
+	return string(b)
 }
