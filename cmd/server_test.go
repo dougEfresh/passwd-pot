@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
+	"github.com/dougEfresh/passwd-pot/api"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -18,7 +19,7 @@ const (
 )
 
 var ts = httptest.NewServer(handlers())
-var endpoint = fmt.Sprintf("%s%s", ts.URL, eventURL)
+var endpoint = fmt.Sprintf("%s%s", ts.URL, api.EventURL)
 
 func init() {
 	defaultEventClient = testEventClient
@@ -26,9 +27,9 @@ func init() {
 }
 
 func TestServerRequest(t *testing.T) {
-	t.Log(fmt.Sprintf("%s%s", ts.URL, eventURL))
+	t.Log(fmt.Sprintf("%s%s", ts.URL, api.EventURL))
 
-	res, err := http.Post(fmt.Sprintf("%s%s", ts.URL, eventURL),
+	res, err := http.Post(fmt.Sprintf("%s%s", ts.URL, api.EventURL),
 		"application/json",
 		strings.NewReader(requestBody))
 

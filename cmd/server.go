@@ -19,6 +19,7 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/Sirupsen/logrus/hooks/syslog"
+	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/gocraft/health"
 	"github.com/gocraft/web"
 	"github.com/spf13/cobra"
@@ -31,9 +32,6 @@ import (
 	"strings"
 	"time"
 )
-
-const eventURL = "/api/v1/event"
-const streamURL = "/api/v1/event/stream"
 
 //Context for http requests
 type Context struct {
@@ -50,10 +48,10 @@ func handlers() *web.Router {
 	}
 	router.Middleware((*Context).initContext).
 		NotFound(notFound).
-		Post(eventURL, (*Context).handleEvent).
-		Get(eventURL, (*Context).listEvents).
-		Get(streamURL, (*Context).streamEvents).
-		Get(streamURL+"/random", (*Context).streamEvents)
+		Post(api.EventURL, (*Context).handleEvent).
+		Get(api.EventURL, (*Context).listEvents).
+		Get(api.EventURL, (*Context).streamEvents).
+		Get(api.EventURL+"/random", (*Context).streamEvents)
 	return router
 }
 
@@ -79,7 +77,7 @@ func (c *Context) initContext(rw web.ResponseWriter, req *web.Request, next web.
 }
 
 func (c *Context) handleEvent(w web.ResponseWriter, r *web.Request) {
-	job := stream.NewJob(fmt.Sprintf("%s", eventURL))
+	job := stream.NewJob(fmt.Sprintf("%s", api.EventURL))
 	var event Event
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {

@@ -17,6 +17,7 @@ package cmd
 import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
+	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/gorilla/websocket"
 	"github.com/spf13/cobra"
 	"os"
@@ -85,6 +86,6 @@ func streamEvents() {
 func init() {
 	RootCmd.AddCommand(streamCmd)
 	streamCmd.Flags().StringVarP(&streamingEndpoint, "server", "s",
-		fmt.Sprintf("ws://localhost:8080%s", streamURL),
+		fmt.Sprintf("ws://localhost:8080%s", api.StreamURL),
 		"server endpoint")
 }

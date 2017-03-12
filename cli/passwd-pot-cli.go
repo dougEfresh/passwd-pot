@@ -14,7 +14,7 @@
 
 package main
 
-import "github.com/dougEfresh/passwd-pot/cmd"
+import "github.com/dougEfresh/passwd-pot/cli/cmd"
 
 func main() {
 	cmd.Execute()

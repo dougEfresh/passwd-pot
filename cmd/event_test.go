@@ -50,7 +50,7 @@ var testEvent = Event{
 	RemoteName:    "blah",
 	User:          "admin",
 	Passwd:        "1234",
-	Time:          jsonTime{Time: now},
+	Time:          eventTime(now),
 	OriginAddr:    "127.0.0.1",
 	Application:   "OpenSSH",
 	Protocol:      "ssh",

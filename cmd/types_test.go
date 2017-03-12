@@ -13,8 +13,8 @@ func TestUnMarshalEvent(t *testing.T) {
 		t.Fatalf("Cannot deserialize event %s \n%s", err, requestBodyOrigin)
 	}
 
-	if event.Time.Time.UnixNano()/int64(time.Millisecond) != 1487973301661 {
-		t.Fatalf("%s != 1487973301661", event.Time.Time)
+	if time.Time(event.Time).UnixNano()/int64(time.Millisecond) != 1487973301661 {
+		t.Fatalf("%s != 1487973301661", event.Time)
 	}
 
 	if event.OriginAddr != "10.0.0.1" {
