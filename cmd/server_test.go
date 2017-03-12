@@ -27,8 +27,6 @@ func init() {
 }
 
 func TestServerRequest(t *testing.T) {
-	t.Log(fmt.Sprintf("%s%s", ts.URL, api.EventURL))
-
 	res, err := http.Post(fmt.Sprintf("%s%s", ts.URL, api.EventURL),
 		"application/json",
 		strings.NewReader(requestBody))
@@ -51,10 +49,9 @@ func TestServerRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error reading body %s", err)
 	}
-
 	err = json.Unmarshal(b, &event)
 	if err != nil {
-		t.Fatalf("%s", err)
+		t.Fatalf("%s %s", string(b), err)
 	}
 
 	if event.ID == 0 {

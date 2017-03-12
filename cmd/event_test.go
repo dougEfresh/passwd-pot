@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"github.com/dougEfresh/passwd-pot/api"
 	"gopkg.in/dougEfresh/dbr.v2"
 	"testing"
 	"time"
@@ -50,7 +51,7 @@ var testEvent = Event{
 	RemoteName:    "blah",
 	User:          "admin",
 	Passwd:        "1234",
-	Time:          eventTime(now),
+	Time:          api.EventTime(now),
 	OriginAddr:    "127.0.0.1",
 	Application:   "OpenSSH",
 	Protocol:      "ssh",

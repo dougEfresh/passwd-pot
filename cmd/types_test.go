@@ -48,7 +48,7 @@ func TestMarshalEvent(t *testing.T) {
 	switch i := kv["time"].(type) {
 	case float64:
 		if i != float64(1487973301661) {
-			t.Fatalf("Error %d != 1487973301661", kv["time"])
+			t.Fatalf("Error %s != 1487973301661", kv["time"])
 		}
 	default:
 		t.Fatal("Unknown type")

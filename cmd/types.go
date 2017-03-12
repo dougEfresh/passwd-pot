@@ -1,57 +1,11 @@
 package cmd
 
 import (
-	"database/sql/driver"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"strconv"
+	"github.com/dougEfresh/passwd-pot/api"
 	"time"
 )
-
-//Custom Serializer
-type eventTime time.Time
-
-// Time is in epoch ms
-func (et *eventTime) UnmarshalJSON(data []byte) (err error) {
-	ts, err := strconv.ParseInt(string(data), 10, 64)
-	if err != nil {
-		return errors.New("could not decode time " + string(data))
-	}
-	*et = eventTime(time.Unix(ts/1000, (ts%1000)*1000000).UTC())
-	return nil
-}
-
-func (et eventTime) MarshalJSON() ([]byte, error) {
-	ts := time.Time(et).UTC().UnixNano() / int64(time.Millisecond)
-	stamp := fmt.Sprint(ts)
-	return []byte(stamp), nil
-}
-
-// Value implements the driver Valuer interface.
-func (et eventTime) Value() (driver.Value, error) {
-	return time.Time(et), nil
-}
-
-// Gets the value from epoch time
-func (et *eventTime) Scan(value interface{}) error {
-	if value == nil {
-		return nil
-	}
-
-	switch v := value.(type) {
-	case time.Time:
-		return nil
-	case []byte:
-		et.UnmarshalJSON(v)
-		return nil
-	case string:
-		et.UnmarshalJSON([]byte(v))
-		return nil
-	}
-
-	return nil
-}
 
 //EventGeo event with location
 type EventGeo struct {
@@ -92,17 +46,17 @@ type Geo struct {
 
 //Event to record
 type Event struct {
-	ID            int64     `db:"id" json:"id"`
-	Time          eventTime `db:"dt" json:"time"`
-	User          string    `db:"username"`
-	Passwd        string    `db:"passwd"`
-	RemoteAddr    string    `db:"remote_addr"`
-	RemotePort    int       `db:"remote_port"`
-	RemoteName    string    `db:"remote_name"`
-	RemoteVersion string    `db:"remote_version"`
-	OriginAddr    string    `db:"origin_addr"`
-	Application   string    `db:"application"`
-	Protocol      string    `db:"protocol"`
+	ID            int64         `db:"id" json:"id"`
+	Time          api.EventTime `db:"dt" json:"time"`
+	User          string        `db:"username"`
+	Passwd        string        `db:"passwd"`
+	RemoteAddr    string        `db:"remote_addr"`
+	RemotePort    int           `db:"remote_port"`
+	RemoteName    string        `db:"remote_name"`
+	RemoteVersion string        `db:"remote_version"`
+	OriginAddr    string        `db:"origin_addr"`
+	Application   string        `db:"application"`
+	Protocol      string        `db:"protocol"`
 }
 
 func (g *Geo) equals(another *Geo) bool {

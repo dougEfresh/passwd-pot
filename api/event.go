@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,16 +22,40 @@ type EventTime time.Time
 func (et *EventTime) UnmarshalJSON(data []byte) (err error) {
 	ts, err := strconv.ParseInt(string(data), 10, 64)
 	if err != nil {
-		return errors.New("could not decode time " + string(data))
+		return errors.New(fmt.Sprintf("could not decode time %s err:%s", string(data), err))
 	}
 	*et = EventTime(time.Unix(ts/1000, (ts%1000)*1000000).UTC())
 	return nil
 }
 
-func (et *EventTime) MarshalJSON() ([]byte, error) {
-	ts := time.Time(*et).UTC().UnixNano() / int64(time.Millisecond)
+func (et EventTime) MarshalJSON() ([]byte, error) {
+	ts := time.Time(et).UTC().UnixNano() / int64(time.Millisecond)
 	stamp := fmt.Sprint(ts)
 	return []byte(stamp), nil
+}
+
+// Value implements the driver Valuer interface.
+func (et EventTime) Value() (driver.Value, error) {
+	return time.Time(et), nil
+}
+
+// Gets the value from epoch time
+func (et *EventTime) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
+
+	switch v := value.(type) {
+	case time.Time:
+		return nil
+	case []byte:
+		et.UnmarshalJSON(v)
+		return nil
+	case string:
+		et.UnmarshalJSON([]byte(v))
+		return nil
+	}
+	return nil
 }
 
 //Event to record
