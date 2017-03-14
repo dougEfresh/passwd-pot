@@ -28,7 +28,6 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"runtime"
 	"strings"
 	"time"
 )
@@ -136,9 +135,6 @@ func run(cmd *cobra.Command, args []string) {
 	if config.Debug {
 		log.SetLevel(log.DebugLevel)
 	}
-	if config.Threads > 0 {
-		runtime.GOMAXPROCS(config.Threads)
-	}
 	defaultEventClient = &eventClient{
 		db:        loadDSN(config.Dsn),
 		geoClient: geoClient,
@@ -179,9 +175,4 @@ func init() {
 	RootCmd.AddCommand(serverCmd)
 	serverCmd.PersistentFlags().StringVar(&config.Dsn, "dsn", "postgres://postgres:@172.17.0.1/?sslmode=disable", "DSN database url")
 	serverCmd.PersistentFlags().StringVar(&config.BindAddr, "bind", "localhost:8080", "bind to this address:port")
-	serverCmd.PersistentFlags().StringVar(&config.Syslog, "syslog", "", "use syslog server")
-	serverCmd.PersistentFlags().StringVar(&config.Health, "health", "", "create health server")
-	serverCmd.PersistentFlags().StringVar(&config.Statsd, "statsd", "", "push stats to statsd (localhost:8125")
-	serverCmd.PersistentFlags().StringVar(&config.Pprof, "pprof", "", "pprof endpoint http://localhost:6060")
-	serverCmd.PersistentFlags().IntVar(&config.Threads, "threads", 0, "number of thread workers to use")
 }

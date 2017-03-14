@@ -29,7 +29,6 @@ var config struct {
 	Debug    bool
 	Syslog   string
 	Dsn      string
-	Threads  int
 	Health   string
 	Statsd   string
 	Pprof    string
@@ -57,15 +56,12 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.passwd-pot.yaml)")
 	RootCmd.PersistentFlags().BoolVar(&config.Debug, "debug", false, "Enable Debug")
-
-	// Log as JSON instead of the default ASCII formatter.
+	RootCmd.PersistentFlags().StringVar(&config.Syslog, "syslog", "", "use syslog server")
+	RootCmd.PersistentFlags().StringVar(&config.Health, "health", "", "create health server")
+	RootCmd.PersistentFlags().StringVar(&config.Statsd, "statsd", "", "push stats to statsd (localhost:8125)")
+	RootCmd.PersistentFlags().StringVar(&config.Pprof, "pprof", "", "pprof endpoint (localhost:6060)")
 	//log.SetFormatter(&log.JSONFormatter{})
-
-	// Output to stdout instead of the default stderr
-	// Can be any io.Writer, see below for File example
 	log.SetOutput(os.Stdout)
-
-	// Only log the warning severity or above.
 	log.SetLevel(log.InfoLevel)
 }
 
