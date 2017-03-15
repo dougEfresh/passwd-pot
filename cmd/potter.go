@@ -17,7 +17,9 @@ package cmd
 import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/cmd/ftp"
 	"github.com/dougEfresh/passwd-pot/cmd/http"
+	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"github.com/spf13/cobra"
 	"sync"
 )
@@ -53,7 +55,7 @@ func (d *dryRunClient) Send(event *api.Event) {
 
 }
 func (d *dryRunClient) SendEvent(event *api.Event) (*api.Event, error) {
-	return event, nil
+	return nil, nil
 }
 func (d *dryRunClient) GetEvent(id int64) (*api.Event, error) {
 	return nil, nil
@@ -85,7 +87,19 @@ func runPotter() {
 		eventClient: c,
 	}
 	wg.Add(1)
-	go http.RunHttpPot(potConfig.Http, pc, &wg)
+	go http.Run(&work.Worker{
+		Addr:       potConfig.Http,
+		EventQueue: pc,
+		Wg:         &wg,
+	},
+	)
+	wg.Add(1)
+	go ftp.Run(&work.Worker{
+		Addr:       potConfig.Ftp,
+		EventQueue: pc,
+		Wg:         &wg,
+	},
+	)
 	wg.Wait()
 }
 

@@ -24,9 +24,9 @@ import (
 
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/cmd/queue"
+	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"net"
 	"strconv"
-	"sync"
 )
 
 var unAuthorieds []byte = []byte("401 Unauthorized\n")
@@ -98,22 +98,21 @@ func (p *potHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // RunHttpPot
-func RunHttpPot(addr string, eq queue.EventQueue, wg *sync.WaitGroup) {
-	defer wg.Done()
-	if addr == "" {
+func Run(worker *work.Worker) {
+	defer worker.Wg.Done()
+	if worker.Addr == "" {
 		log.Warn("Not starting http pot")
 		return
 	}
-	log.Infof("Starting http pot on %s", addr)
-
 	srv := &http.Server{
 		Handler: &potHttpHandler{
-			eventQueue: eq,
+			eventQueue: worker.EventQueue,
 		},
-		Addr:         addr,
+		Addr:         worker.Addr,
 		WriteTimeout: 10 * time.Second,
 		ReadTimeout:  10 * time.Second,
 	}
+	log.Infof("Started http pot on %s", worker.Addr)
 	if err := srv.ListenAndServe(); err != nil {
 		log.Errorf("Error starting server %v", err)
 	}
