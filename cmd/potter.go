@@ -22,6 +22,8 @@ import (
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"github.com/spf13/cobra"
 	"sync"
+	"github.com/Sirupsen/logrus/hooks/syslog"
+	"log/syslog"
 )
 
 var potConfig struct {
@@ -66,7 +68,16 @@ var potterCmd = &cobra.Command{
 	Use:   "potter",
 	Short: "potter",
 	Long:  "",
-	Run:   func(cmd *cobra.Command, args []string) { runPotter() },
+	Run:   func(cmd *cobra.Command, args []string) {
+		if config.Syslog != "" {
+			if syslogHook, err := logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, "passwd-potter"); err != nil {
+				log.Error("Unable to connect to local syslog daemon")
+			} else {
+				log.AddHook(syslogHook)
+			}
+		}
+		runPotter()
+	},
 }
 
 func runPotter() {
