@@ -19,10 +19,13 @@ import (
 	"github.com/Sirupsen/logrus/hooks/syslog"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/cmd/ftp"
-	"github.com/dougEfresh/passwd-pot/cmd/http"
+	httppot "github.com/dougEfresh/passwd-pot/cmd/http"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"github.com/spf13/cobra"
+
+	"github.com/dougEfresh/passwd-pot/cmd/pop"
 	"log/syslog"
+	"net/http"
 	"sync"
 )
 
@@ -30,6 +33,7 @@ var potConfig struct {
 	Ftp    string
 	Http   string
 	Telnet string
+	Pop    string
 	Vnc    string
 	Health string
 	Server string
@@ -69,12 +73,18 @@ var potterCmd = &cobra.Command{
 	Short: "potter",
 	Long:  "",
 	Run: func(cmd *cobra.Command, args []string) {
+		if config.Debug {
+			log.SetLevel(log.DebugLevel)
+		}
 		if config.Syslog != "" {
 			if syslogHook, err := logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, "passwd-potter"); err != nil {
 				log.Error("Unable to connect to local syslog daemon")
 			} else {
 				log.AddHook(syslogHook)
 			}
+		}
+		if config.Pprof != "" {
+			go func() { log.Error(http.ListenAndServe(config.Pprof, nil)) }()
 		}
 		runPotter()
 	},
@@ -93,12 +103,13 @@ func runPotter() {
 	if err != nil {
 		log.Panicf("Error creating eventCLient %s %s", potConfig.Server, err)
 	}
+
 	var wg sync.WaitGroup
 	pc = &potterClient{
 		eventClient: c,
 	}
 	wg.Add(1)
-	go http.Run(&work.Worker{
+	go httppot.Run(&work.Worker{
 		Addr:       potConfig.Http,
 		EventQueue: pc,
 		Wg:         &wg,
@@ -111,6 +122,13 @@ func runPotter() {
 		Wg:         &wg,
 	},
 	)
+	wg.Add(1)
+	go pop.Run(&work.Worker{
+		Addr:       potConfig.Pop,
+		EventQueue: pc,
+		Wg:         &wg,
+	},
+	)
 	wg.Wait()
 }
 
@@ -118,6 +136,7 @@ func init() {
 	RootCmd.AddCommand(potterCmd)
 	potterCmd.PersistentFlags().StringVar(&potConfig.Http, "http", "", "create http pot")
 	potterCmd.PersistentFlags().StringVar(&potConfig.Ftp, "ftp", "", "create ftp pot")
+	potterCmd.PersistentFlags().StringVar(&potConfig.Pop, "pop", "", "create pop pot")
 	potterCmd.PersistentFlags().StringVar(&potConfig.Vnc, "vnc", "", "create vnc pot")
 	potterCmd.PersistentFlags().StringVar(&potConfig.Telnet, "telnet", "", "create ftp pot")
 	potterCmd.PersistentFlags().StringVar(&potConfig.Server, "server", "http://localhost:8080", "send events to this server")

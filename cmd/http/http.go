@@ -97,7 +97,7 @@ func (p *potHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	handleRequest(w, r, p)
 }
 
-// RunHttpPot
+// Run the worker
 func Run(worker *work.Worker) {
 	defer worker.Wg.Done()
 	if worker.Addr == "" {

@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"bufio"
-	"errors"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/cmd/queue"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
@@ -68,66 +67,66 @@ func (p *potHandler) handleNewConnection(conn net.Conn) {
 	}
 	p.handleConnection(conn)
 }
+func getCommand(line string) (string, []string) {
+	line = strings.Trim(line, "\r \n")
+	cmd := strings.Split(line, " ")
+	return cmd[0], cmd[1:]
+}
+
+func getSafeArg(args []string, nr int) (string, error) {
+	if nr < len(args) {
+		return args[nr], nil
+	}
+	log.Error("Out of range")
+	return "", nil
+}
 
 func (p *potHandler) handleConnection(conn net.Conn) {
+	defer conn.Close()
 	var user string
 	var pass string
 	remoteAddrPair := strings.Split(conn.RemoteAddr().String(), ":")
 	for {
-		commandPair, err := readCommand(conn)
+		cmd, args, err := readCommand(conn)
 		if err == io.EOF {
-			conn.Close()
 			return
 		}
-		if err != nil && err != io.EOF {
-			conn.Close()
+		if err != nil {
 			log.Errorf("Error reading cmd %s", err)
 			return
 		}
-		if len(commandPair) < 2 {
-			conn.Close()
-			log.Errorf("Unknown CMD %s", commandPair)
-			return
-		}
-		if commandPair[0] == "USER" {
+		if cmd == "USER" {
 			if _, err := conn.Write(userOk); err != nil {
 				log.Error("Error writing 331 User")
-				conn.Close()
 				return
 			}
-			user = commandPair[1]
+			user = args[0]
 			continue
 		}
 
-		if commandPair[0] == "PASS" {
-			pass = commandPair[1]
+		if cmd == "PASS" {
+			pass = args[0]
 			go p.sendEvent(user, pass, remoteAddrPair)
 			if conn.Write(unAuthorized); err != nil {
-				conn.Close()
 				log.Errorf("Error sending unauthorized")
 				return
 			}
 			continue
 		}
-		if commandPair[0] == "QUIT" {
-			conn.Close()
+		if cmd == "QUIT" {
 			return
 		}
-		log.Errorf("Unknown command! %s", commandPair)
+		log.Errorf("Unknown command! %s %s", cmd, args)
 	}
 }
 
-func readCommand(conn net.Conn) ([]string, error) {
+func readCommand(conn net.Conn) (string, []string, error) {
 	c, err := bufio.NewReader(conn).ReadString('\n')
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
-	c = strings.Replace(c, "\r\n", "", 1)
-	log.Debugf("CMD: %s", c)
-	if strings.Contains(c, "QUIT") {
-		return nil, errors.New("QUIT issued")
-	}
-	return strings.Split(c, " "), nil
+	cmd, args := getCommand(c)
+	return cmd, args, nil
 }
 
 func Run(worker *work.Worker) {
