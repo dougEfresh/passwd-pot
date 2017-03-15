@@ -67,7 +67,8 @@ func TestServerRequest(t *testing.T) {
 	if !strings.Contains(msg, "530 Login authentication failed") {
 		t.Fatalf("530 not there (%s)", msg)
 	}
-
+	conn.Write([]byte("QUIT\r\n"))
+	time.Sleep(200 * time.Millisecond)
 	if submittedEvent == nil {
 		t.Fatal("Submitted event is null")
 	}

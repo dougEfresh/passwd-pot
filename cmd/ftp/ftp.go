@@ -25,6 +25,7 @@ import (
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/cmd/queue"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
+	"io"
 	"net"
 	"strconv"
 )
@@ -32,9 +33,8 @@ import (
 var unAuthorized []byte = []byte("530 Login authentication failed\r\n")
 var userOk []byte = []byte("331 User OK\r\n")
 
-func (p *potHandler) sendEvent(user string, password string, conn net.Conn) {
+func (p *potHandler) sendEvent(user string, password string, remoteAddrPair []string) {
 	log.Debugf("processing request %s %s", user, password)
-	remoteAddrPair := strings.Split(conn.RemoteAddr().String(), ":")
 	remotePort, err := strconv.Atoi(remoteAddrPair[1])
 	if err != nil {
 		remotePort = 0
@@ -60,36 +60,61 @@ type potHandler struct {
 	eventQueue queue.EventQueue
 }
 
+func (p *potHandler) handleNewConnection(conn net.Conn) {
+	if _, err := conn.Write([]byte("220 This is a private system - No anonymous login\r\n")); err != nil {
+		log.Errorf("Error sending 220 %s", err)
+		conn.Close()
+		return
+	}
+	p.handleConnection(conn)
+}
+
 func (p *potHandler) handleConnection(conn net.Conn) {
 	var user string
 	var pass string
-	defer conn.Close()
-	if _, err := conn.Write([]byte("220 This is a private system - No anonymous login\r\n")); err != nil {
-		log.Errorf("Error sending 220 %s", err)
-		return
+	remoteAddrPair := strings.Split(conn.RemoteAddr().String(), ":")
+	for {
+		commandPair, err := readCommand(conn)
+		if err == io.EOF {
+			conn.Close()
+			return
+		}
+		if err != nil && err != io.EOF {
+			conn.Close()
+			log.Errorf("Error reading cmd %s", err)
+			return
+		}
+		if len(commandPair) < 2 {
+			conn.Close()
+			log.Errorf("Unknown CMD %s", commandPair)
+			return
+		}
+		if commandPair[0] == "USER" {
+			if _, err := conn.Write(userOk); err != nil {
+				log.Error("Error writing 331 User")
+				conn.Close()
+				return
+			}
+			user = commandPair[1]
+			continue
+		}
+
+		if commandPair[0] == "PASS" {
+			pass = commandPair[1]
+			go p.sendEvent(user, pass, remoteAddrPair)
+			if conn.Write(unAuthorized); err != nil {
+				conn.Close()
+				log.Errorf("Error sending unauthorized")
+				return
+			}
+			continue
+		}
+		if commandPair[0] == "QUIT" {
+			conn.Close()
+			return
+		}
+		log.Errorf("Unknown command! %s", commandPair)
 	}
-	commandPair, err := readCommand(conn)
-	if err != nil {
-		log.Errorf("Error reading cmd %s", err)
-		return
-	}
-	if len(commandPair) >= 2 {
-		user = commandPair[1]
-	}
-	if _, err := conn.Write(userOk); err != nil {
-		log.Error("Error writing 331 User")
-		return
-	}
-	commandPair, err = readCommand(conn)
-	if err != nil {
-		log.Errorf("Error reading command %s", err)
-		return
-	}
-	if len(commandPair) >= 2 {
-		pass = commandPair[1]
-	}
-	p.sendEvent(user, pass, conn)
-	conn.Write(unAuthorized)
 }
 
 func readCommand(conn net.Conn) ([]string, error) {
@@ -122,6 +147,6 @@ func Run(worker *work.Worker) {
 	}
 	for {
 		conn, _ := ln.Accept()
-		go p.handleConnection(conn)
+		go p.handleNewConnection(conn)
 	}
 }
