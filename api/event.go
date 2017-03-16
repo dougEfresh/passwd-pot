@@ -148,6 +148,10 @@ func NewClient(server string, options ...func(*EventClient) error) (*EventClient
 	return ec, nil
 }
 
+func (t EventTime) String() string {
+	return fmt.Sprintf("%s", time.Time(t))
+}
+
 func (e Event) String() string {
 	b, err := json.Marshal(e)
 	if err != nil {

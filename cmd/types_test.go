@@ -14,7 +14,7 @@ func TestUnMarshalEvent(t *testing.T) {
 	}
 
 	if time.Time(event.Time).UnixNano()/int64(time.Millisecond) != 1487973301661 {
-		t.Fatalf("%s != 1487973301661", event.Time)
+		t.Fatalf("%s != 1487973301661", event.Time.String())
 	}
 
 	if event.OriginAddr != "10.0.0.1" {

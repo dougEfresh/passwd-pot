@@ -23,20 +23,29 @@ import (
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"github.com/spf13/cobra"
 
+	"fmt"
 	"github.com/dougEfresh/passwd-pot/cmd/pop"
 	"log/syslog"
 	"net/http"
 	"sync"
 )
 
+const (
+	defaultFtpPort  = 2121
+	defaultHttpPort = 8000
+	defaultPopPort  = 1110
+)
+
 var potConfig struct {
-	Ftp    string
-	Http   string
-	Telnet string
-	Pop    string
-	Vnc    string
+	Ftp    int
+	Http   int
+	Telnet int
+	Pop    int
+	Vnc    int
 	Health string
 	Server string
+	Bind   string
+	All    bool
 	DryRun bool
 }
 
@@ -108,37 +117,48 @@ func runPotter() {
 	pc = &potterClient{
 		eventClient: c,
 	}
-	wg.Add(1)
-	go httppot.Run(&work.Worker{
-		Addr:       potConfig.Http,
-		EventQueue: pc,
-		Wg:         &wg,
-	},
-	)
-	wg.Add(1)
-	go ftp.Run(&work.Worker{
-		Addr:       potConfig.Ftp,
-		EventQueue: pc,
-		Wg:         &wg,
-	},
-	)
-	wg.Add(1)
-	go pop.Run(&work.Worker{
-		Addr:       potConfig.Pop,
-		EventQueue: pc,
-		Wg:         &wg,
-	},
-	)
+	if potConfig.All {
+		wg.Add(1)
+		go httppot.Run(&work.Worker{
+			Addr:       fmt.Sprintf("%s:%d", potConfig.Bind, getPort(defaultHttpPort, potConfig.Http)),
+			EventQueue: pc,
+			Wg:         &wg,
+		},
+		)
+		wg.Add(1)
+		go ftp.Run(&work.Worker{
+			Addr:       fmt.Sprintf("%s:%d", potConfig.Bind, getPort(defaultFtpPort, potConfig.Ftp)),
+			EventQueue: pc,
+			Wg:         &wg,
+		},
+		)
+		wg.Add(1)
+		go pop.Run(&work.Worker{
+			Addr:       fmt.Sprintf("%s:%d", potConfig.Bind, getPort(defaultPopPort, potConfig.Pop)),
+			EventQueue: pc,
+			Wg:         &wg,
+		},
+		)
+	}
 	wg.Wait()
+}
+
+func getPort(defaultPort int, customPort int) int {
+	if customPort > 0 {
+		return customPort
+	}
+	return defaultPort
 }
 
 func init() {
 	RootCmd.AddCommand(potterCmd)
-	potterCmd.PersistentFlags().StringVar(&potConfig.Http, "http", "", "create http pot")
-	potterCmd.PersistentFlags().StringVar(&potConfig.Ftp, "ftp", "", "create ftp pot")
-	potterCmd.PersistentFlags().StringVar(&potConfig.Pop, "pop", "", "create pop pot")
-	potterCmd.PersistentFlags().StringVar(&potConfig.Vnc, "vnc", "", "create vnc pot")
-	potterCmd.PersistentFlags().StringVar(&potConfig.Telnet, "telnet", "", "create ftp pot")
+	potterCmd.PersistentFlags().IntVar(&potConfig.Http, "http", 0, "create http pot")
+	potterCmd.PersistentFlags().IntVar(&potConfig.Ftp, "ftp", 0, "create ftp pot")
+	potterCmd.PersistentFlags().IntVar(&potConfig.Pop, "pop", 0, "create pop pot")
+	potterCmd.PersistentFlags().IntVar(&potConfig.Vnc, "vnc", 0, "create vnc pot")
+	potterCmd.PersistentFlags().IntVar(&potConfig.Telnet, "telnet", 0, "create ftp pot")
 	potterCmd.PersistentFlags().StringVar(&potConfig.Server, "server", "http://localhost:8080", "send events to this server")
+	potterCmd.PersistentFlags().StringVar(&potConfig.Bind, "bind", "localhost", "bind to this address")
 	potterCmd.PersistentFlags().BoolVar(&potConfig.DryRun, "dry-run", false, "don't send events")
+	potterCmd.PersistentFlags().BoolVar(&potConfig.All, "all", false, "run all potters")
 }
