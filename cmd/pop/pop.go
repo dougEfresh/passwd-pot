@@ -23,6 +23,7 @@ import (
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"io"
 	"net"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -31,11 +32,24 @@ var helloMsg = []byte("+OK POP3 server\r\n")
 var okMsg = []byte("+OK\r\n")
 var unAuthMsg = []byte("-ERR Password incorrect\r\n")
 
-func sendEvent(user string, password string, worker work.Worker) {
+func sendEvent(user string, password string, remoteAddrPair []string, worker work.Worker) {
+	remotePort, err := strconv.Atoi(remoteAddrPair[1])
+	if err != nil {
+		remotePort = 0
+	}
 	e := &api.Event{
-		User:   user,
-		Passwd: password,
-		Time:   api.EventTime(time.Now().UTC()),
+		User:        user,
+		Passwd:      password,
+		Time:        api.EventTime(time.Now().UTC()),
+		RemoteName:  remoteAddrPair[0],
+		RemoteAddr:  remoteAddrPair[0],
+		RemotePort:  remotePort,
+		Application: "pop-passwd-pot",
+		Protocol:    "pop",
+	}
+
+	if names, err := net.LookupAddr(e.RemoteAddr); err == nil && len(names) > 0 {
+		e.RemoteName = names[0]
 	}
 	worker.EventQueue.Send(e)
 }
@@ -44,6 +58,7 @@ func handleClient(conn net.Conn, worker work.Worker) {
 	defer conn.Close()
 	conn.Write(helloMsg)
 	reader := bufio.NewReader(conn)
+	remoteAddrPair := strings.Split(conn.RemoteAddr().String(), ":")
 	var user string
 	var password string
 	for {
@@ -66,7 +81,7 @@ func handleClient(conn net.Conn, worker work.Worker) {
 
 		} else if cmd == "PASS" {
 			password, _ = getSafeArg(args, 0)
-			go sendEvent(user, password, worker)
+			go sendEvent(user, password, remoteAddrPair, worker)
 			conn.Write(unAuthMsg)
 
 		} else if cmd == "QUIT" {

@@ -15,15 +15,15 @@
 package telnet
 
 import (
-	log "github.com/Sirupsen/logrus"
-	"github.com/dougEfresh/passwd-pot/cmd/work"
-	"github.com/dougEfresh/passwd-pot/api"
-	"time"
-	"strings"
-	"net"
 	"bufio"
-	"strconv"
+	log "github.com/Sirupsen/logrus"
+	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"io"
+	"net"
+	"strconv"
+	"strings"
+	"time"
 )
 
 var welcomMsg = []byte("Welcome. Please enter your loging credentials.\r\n")
@@ -41,9 +41,9 @@ func (h potHandler) sendEvent(user string, password string, remoteAddrPair []str
 		remotePort = 0
 	}
 	e := &api.Event{
-		User:   user,
-		Passwd: password,
-		Time:   api.EventTime(time.Now().UTC()),
+		User:        user,
+		Passwd:      password,
+		Time:        api.EventTime(time.Now().UTC()),
 		RemoteAddr:  remoteAddrPair[0],
 		RemoteName:  remoteAddrPair[0],
 		RemotePort:  remotePort,
@@ -60,7 +60,7 @@ func readLine(conn net.Conn) (string, error) {
 		if err != io.EOF {
 			log.Errorf("Error reading %s", err)
 		}
-		return "",  err
+		return "", err
 	}
 	return strings.Trim(c, "\r \n"), nil
 }
@@ -108,9 +108,8 @@ func (h potHandler) handleNewConnection(conn net.Conn) {
 	}
 }
 
-
 func Run(worker work.Worker) {
-	handler  := potHandler{
+	handler := potHandler{
 		worker: worker,
 	}
 	defer worker.Wg.Done()
