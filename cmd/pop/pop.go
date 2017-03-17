@@ -31,7 +31,7 @@ var helloMsg = []byte("+OK POP3 server\r\n")
 var okMsg = []byte("+OK\r\n")
 var unAuthMsg = []byte("-ERR Password incorrect\r\n")
 
-func sendEvent(user string, password string, worker *work.Worker) {
+func sendEvent(user string, password string, worker work.Worker) {
 	e := &api.Event{
 		User:   user,
 		Passwd: password,
@@ -40,7 +40,7 @@ func sendEvent(user string, password string, worker *work.Worker) {
 	worker.EventQueue.Send(e)
 }
 
-func handleClient(conn net.Conn, worker *work.Worker) {
+func handleClient(conn net.Conn, worker work.Worker) {
 	defer conn.Close()
 	conn.Write(helloMsg)
 	reader := bufio.NewReader(conn)
@@ -91,7 +91,7 @@ func getSafeArg(args []string, nr int) (string, error) {
 	return "", nil
 }
 
-func Run(worker *work.Worker) {
+func Run(worker work.Worker) {
 	defer worker.Wg.Done()
 	if worker.Addr == "" {
 		log.Warn("Not starting pop pot")

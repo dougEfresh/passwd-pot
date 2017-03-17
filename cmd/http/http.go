@@ -98,7 +98,7 @@ func (p *potHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Run the worker
-func Run(worker *work.Worker) {
+func Run(worker work.Worker) {
 	defer worker.Wg.Done()
 	if worker.Addr == "" {
 		log.Warn("Not starting http pot")

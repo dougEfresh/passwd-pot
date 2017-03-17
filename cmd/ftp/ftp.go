@@ -129,7 +129,7 @@ func readCommand(conn net.Conn) (string, []string, error) {
 	return cmd, args, nil
 }
 
-func Run(worker *work.Worker) {
+func Run(worker work.Worker) {
 	defer worker.Wg.Done()
 	if worker.Addr == "" {
 		log.Warn("Not starting ftp pot")

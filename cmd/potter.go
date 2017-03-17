@@ -25,15 +25,18 @@ import (
 
 	"fmt"
 	"github.com/dougEfresh/passwd-pot/cmd/pop"
+	"github.com/dougEfresh/passwd-pot/cmd/queue"
+	"github.com/dougEfresh/passwd-pot/cmd/telnet"
 	"log/syslog"
 	"net/http"
 	"sync"
 )
 
 const (
-	defaultFtpPort  = 2121
-	defaultHttpPort = 8000
-	defaultPopPort  = 1110
+	defaultFtpPort    = 2121
+	defaultHttpPort   = 8080
+	defaultPopPort    = 1110
+	defaultTelnetPort = 2323
 )
 
 var potConfig struct {
@@ -119,28 +122,24 @@ func runPotter() {
 	}
 	if potConfig.All {
 		wg.Add(1)
-		go httppot.Run(&work.Worker{
-			Addr:       fmt.Sprintf("%s:%d", potConfig.Bind, getPort(defaultHttpPort, potConfig.Http)),
-			EventQueue: pc,
-			Wg:         &wg,
-		},
-		)
+		go httppot.Run(getWorker(pc, wg, getPort(defaultHttpPort, potConfig.Http)))
 		wg.Add(1)
-		go ftp.Run(&work.Worker{
-			Addr:       fmt.Sprintf("%s:%d", potConfig.Bind, getPort(defaultFtpPort, potConfig.Ftp)),
-			EventQueue: pc,
-			Wg:         &wg,
-		},
-		)
+		go ftp.Run(getWorker(pc, wg, getPort(defaultFtpPort, potConfig.Ftp)))
 		wg.Add(1)
-		go pop.Run(&work.Worker{
-			Addr:       fmt.Sprintf("%s:%d", potConfig.Bind, getPort(defaultPopPort, potConfig.Pop)),
-			EventQueue: pc,
-			Wg:         &wg,
-		},
-		)
+		go pop.Run(getWorker(pc, wg, getPort(defaultPopPort, potConfig.Pop)))
+		wg.Add(1)
+		go telnet.Run(getWorker(pc, wg, getPort(defaultTelnetPort, potConfig.Telnet)))
 	}
 	wg.Wait()
+}
+
+func getWorker(eq queue.EventQueue, wg sync.WaitGroup, port int) work.Worker {
+
+	return work.Worker{
+		Addr:       fmt.Sprintf("%s:%d", potConfig.Bind, port),
+		EventQueue: eq,
+		Wg:         wg,
+	}
 }
 
 func getPort(defaultPort int, customPort int) int {
