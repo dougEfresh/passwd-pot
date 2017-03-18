@@ -22,7 +22,7 @@ type EventTime time.Time
 func (et *EventTime) UnmarshalJSON(data []byte) (err error) {
 	ts, err := strconv.ParseInt(string(data), 10, 64)
 	if err != nil {
-		return errors.New(fmt.Sprintf("could not decode time %s err:%s", string(data), err))
+		return errors.New(fmt.Sprintf("could not decode time %s err:%s", data, err))
 	}
 	*et = EventTime(time.Unix(ts/1000, (ts%1000)*1000000).UTC())
 	return nil
@@ -148,8 +148,8 @@ func NewClient(server string, options ...func(*EventClient) error) (*EventClient
 	return ec, nil
 }
 
-func (t EventTime) String() string {
-	return fmt.Sprintf("%s", time.Time(t))
+func (et EventTime) String() string {
+	return fmt.Sprintf("%s", time.Time(et))
 }
 
 func (e Event) String() string {

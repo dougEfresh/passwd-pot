@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"fmt"
-	"github.com/gocraft/web"
 	"github.com/gorilla/websocket"
 	"net/http"
 	"strings"
@@ -122,7 +121,7 @@ func (c *Client) writePump() {
 	}
 }
 
-func (c *Context) streamEvents(w web.ResponseWriter, r *web.Request) {
+func streamEvents(w http.ResponseWriter, r *http.Request) {
 	if strings.Contains(r.URL.Path, "random") {
 		serveRandomWs(randomDataHub, w, r)
 	} else {
@@ -131,8 +130,8 @@ func (c *Context) streamEvents(w web.ResponseWriter, r *web.Request) {
 }
 
 // serveWs handles websocket requests from the peer.
-func serveRandomWs(hub *Hub, w web.ResponseWriter, r *web.Request) {
-	conn, err := upgrader.Upgrade(w, r.Request, nil)
+func serveRandomWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Error(err)
 		return
@@ -144,8 +143,8 @@ func serveRandomWs(hub *Hub, w web.ResponseWriter, r *web.Request) {
 }
 
 // serveWs handles websocket requests from the peer.
-func serveWs(hub *Hub, w web.ResponseWriter, r *web.Request) {
-	conn, err := upgrader.Upgrade(w, r.Request, nil)
+func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Error(err)
 		return

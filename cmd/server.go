@@ -21,7 +21,8 @@ import (
 	"github.com/Sirupsen/logrus/hooks/syslog"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/gocraft/health"
-	"github.com/gocraft/web"
+	"github.com/gorilla/mux"
+	"github.com/newrelic/go-agent"
 	"github.com/spf13/cobra"
 	"io/ioutil"
 	"log/syslog"
@@ -37,30 +38,23 @@ type Context struct {
 	eventTransporter
 }
 
-func handlers() *web.Router {
-	router := web.New(Context{}).
-		Middleware(loggerMiddleware).
-		Middleware(allowCors)
+var app newrelic.Application
 
-	if config.Debug {
-		router.Middleware(web.ShowErrorsMiddleware)
+func handlers() *mux.Router {
+	r := mux.NewRouter()
+	r.HandleFunc(getHandler(api.EventURL, handleEvent)).Methods("POST")
+	r.HandleFunc(getHandler(api.EventURL, listEvents)).Methods("GET")
+	r.HandleFunc(getHandler(api.StreamURL, streamEvents)).Methods("GET")
+	r.HandleFunc(getHandler(api.StreamURL+"/random", streamEvents)).Methods("GET")
+	return r
+}
+
+func getHandler(path string, h func(http.ResponseWriter, *http.Request)) (string, func(http.ResponseWriter, *http.Request)) {
+	if app != nil {
+		return newrelic.WrapHandleFunc(app, path, h)
+	} else {
+		return path, h
 	}
-	router.Middleware((*Context).initContext).
-		NotFound(notFound).
-		Post(api.EventURL, (*Context).handleEvent).
-		Get(api.EventURL, (*Context).listEvents).
-		Get(api.EventURL, (*Context).streamEvents).
-		Get(api.StreamURL+"/random", (*Context).streamEvents)
-	return router
-}
-
-func allowCors(w web.ResponseWriter, r *web.Request, next web.NextMiddlewareFunc) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	next(w, r)
-}
-func notFound(rw web.ResponseWriter, r *web.Request) {
-	rw.WriteHeader(http.StatusNotFound)
-	log.Infof("%s not found", r.URL.Path)
 }
 
 var serverCmd = &cobra.Command{
@@ -70,12 +64,7 @@ var serverCmd = &cobra.Command{
 	Run:   run,
 }
 
-func (c *Context) initContext(rw web.ResponseWriter, req *web.Request, next web.NextMiddlewareFunc) {
-	c.eventTransporter = defaultEventClient
-	next(rw, req)
-}
-
-func (c *Context) handleEvent(w web.ResponseWriter, r *web.Request) {
+func  handleEvent(w http.ResponseWriter, r *http.Request) {
 	job := stream.NewJob(fmt.Sprintf("%s", api.EventURL))
 	var event Event
 	b, err := ioutil.ReadAll(r.Body)
@@ -106,8 +95,8 @@ func (c *Context) handleEvent(w web.ResponseWriter, r *web.Request) {
 
 	}
 
-	err = c.eventTransporter.recordEvent(&event)
-	go c.eventTransporter.resolveGeoEvent(&event)
+	err = defaultEventClient.recordEvent(&event)
+	go  defaultEventClient.resolveGeoEvent(&event)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Errorf("Error writing %+v %s", &event, err)
@@ -122,8 +111,8 @@ func (c *Context) handleEvent(w web.ResponseWriter, r *web.Request) {
 	w.Write(j)
 }
 
-func (c *Context) listEvents(w web.ResponseWriter, r *web.Request) {
-	geoEvents := c.eventTransporter.list()
+func  listEvents(w http.ResponseWriter, r *http.Request) {
+	geoEvents := defaultEventClient.list()
 	j, _ := json.Marshal(geoEvents)
 	w.WriteHeader(http.StatusOK)
 	w.Header().Add("Content-type", "application/json")
@@ -140,6 +129,12 @@ func run(cmd *cobra.Command, args []string) {
 		geoClient: geoClient,
 	}
 	log.Debugf("Running %s with %s", cmd.Name(), args)
+	if config.NewRelic != "" {
+		config := newrelic.NewConfig("passwd-pot", config.NewRelic)
+		if app, err = newrelic.NewApplication(config); err != nil {
+			log.Errorf("Could not start new relic %s", err)
+		}
+	}
 	srv := &http.Server{
 		Handler:      handlers(),
 		Addr:         config.BindAddr,
@@ -164,6 +159,7 @@ func run(cmd *cobra.Command, args []string) {
 	if config.Pprof != "" {
 		go func() { log.Error(http.ListenAndServe(config.Pprof, nil)) }()
 	}
+
 	err = srv.ListenAndServe()
 	if err != nil {
 		log.Errorf("Caught error %s", err)
@@ -175,4 +171,5 @@ func init() {
 	RootCmd.AddCommand(serverCmd)
 	serverCmd.PersistentFlags().StringVar(&config.Dsn, "dsn", "postgres://postgres:@172.17.0.1/?sslmode=disable", "DSN database url")
 	serverCmd.PersistentFlags().StringVar(&config.BindAddr, "bind", "localhost:8080", "bind to this address:port")
+	serverCmd.PersistentFlags().StringVar(&config.NewRelic, "new-relic", "", "new relic api key")
 }

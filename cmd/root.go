@@ -32,6 +32,7 @@ var config struct {
 	Health   string
 	Statsd   string
 	Pprof    string
+	NewRelic string
 }
 
 var cfgFile string
