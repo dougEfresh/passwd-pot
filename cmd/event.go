@@ -78,27 +78,27 @@ func (c *eventClient) resolveGeoEvent(event *Event) error {
 		return err
 	}
 
+	id, err := c.resolveAddr(event.RemoteAddr)
 	sess := c.db.NewSession(nil)
-	geo, err := c.resolveAddr(event.RemoteAddr)
 	if err != nil {
 		log.Errorf("Error geting location for RemoteAddr %+v %s", event, err)
 		job.Complete(health.ValidationError)
 		return err
 	}
-	updateBuilder := sess.Update("event").Set("remote_geo_id", geo.ID).Where("id = ?", event.ID)
+	updateBuilder := sess.Update("event").Set("remote_geo_id", id).Where("id = ?", event.ID)
 	if _, err = updateBuilder.Exec(); err != nil {
-		log.Errorf("Error updating remote_addr_geo_id for id %d %s", event.ID, err)
+		log.Errorf("Error updating remote_geo_id for id %d %s", event.ID, err)
 		job.Complete(health.Error)
 		return err
 	}
 
-	geo, err = c.resolveAddr(event.OriginAddr)
+	id, err = c.resolveAddr(event.OriginAddr)
 	if err != nil {
 		log.Errorf("Errro getting location for origin %+v %s", event, err)
 		job.Complete(health.Error)
 		return err
 	}
-	updateBuilder = sess.Update("event").Set("origin_geo_id", geo.ID).Where("id = ?", event.ID)
+	updateBuilder = sess.Update("event").Set("origin_geo_id", id).Where("id = ?", event.ID)
 	if _, err = updateBuilder.Exec(); err != nil {
 		log.Errorf("Error updating origin for id %d %s", event.ID, err)
 		job.Complete(health.Error)
@@ -110,6 +110,9 @@ func (c *eventClient) resolveGeoEvent(event *Event) error {
 }
 
 func (c *eventClient) broadcastEvent(id int64, hub *Hub) *EventGeo {
+	if len(hub.clients) == 0 {
+		return nil
+	}
 	gEvent := c.get(id)
 	if gEvent == nil {
 		return nil

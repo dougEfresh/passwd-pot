@@ -64,7 +64,7 @@ var serverCmd = &cobra.Command{
 	Run:   run,
 }
 
-func  handleEvent(w http.ResponseWriter, r *http.Request) {
+func handleEvent(w http.ResponseWriter, r *http.Request) {
 	job := stream.NewJob(fmt.Sprintf("%s", api.EventURL))
 	var event Event
 	b, err := ioutil.ReadAll(r.Body)
@@ -96,7 +96,6 @@ func  handleEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = defaultEventClient.recordEvent(&event)
-	go  defaultEventClient.resolveGeoEvent(&event)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Errorf("Error writing %+v %s", &event, err)
@@ -104,6 +103,8 @@ func  handleEvent(w http.ResponseWriter, r *http.Request) {
 		job.Complete(health.Error)
 		return
 	}
+	log.Debug("Sending event to channel")
+	eventChan <- event
 	job.Complete(health.Success)
 	j, _ := json.Marshal(event)
 	w.WriteHeader(http.StatusAccepted)
@@ -111,7 +112,7 @@ func  handleEvent(w http.ResponseWriter, r *http.Request) {
 	w.Write(j)
 }
 
-func  listEvents(w http.ResponseWriter, r *http.Request) {
+func listEvents(w http.ResponseWriter, r *http.Request) {
 	geoEvents := defaultEventClient.list()
 	j, _ := json.Marshal(geoEvents)
 	w.WriteHeader(http.StatusOK)
@@ -134,6 +135,7 @@ func run(cmd *cobra.Command, args []string) {
 		if app, err = newrelic.NewApplication(config); err != nil {
 			log.Errorf("Could not start new relic %s", err)
 		}
+		log.Infof("Configured new relic agent")
 	}
 	srv := &http.Server{
 		Handler:      handlers(),
@@ -156,6 +158,7 @@ func run(cmd *cobra.Command, args []string) {
 	go hub.run()
 	go randomDataHub.run()
 	go startRandomHub(randomDataHub)
+	go runLookup()
 	if config.Pprof != "" {
 		go func() { log.Error(http.ListenAndServe(config.Pprof, nil)) }()
 	}
@@ -172,4 +175,5 @@ func init() {
 	serverCmd.PersistentFlags().StringVar(&config.Dsn, "dsn", "postgres://postgres:@172.17.0.1/?sslmode=disable", "DSN database url")
 	serverCmd.PersistentFlags().StringVar(&config.BindAddr, "bind", "localhost:8080", "bind to this address:port")
 	serverCmd.PersistentFlags().StringVar(&config.NewRelic, "new-relic", "", "new relic api key")
+	serverCmd.PersistentFlags().BoolVar(&config.UseCache, "use-cache", false, "cache geo ip results")
 }

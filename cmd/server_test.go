@@ -23,7 +23,8 @@ var endpoint = fmt.Sprintf("%s%s", ts.URL, api.EventURL)
 
 func init() {
 	defaultEventClient = testEventClient
-	log.SetLevel(log.WarnLevel)
+	log.SetLevel(log.DebugLevel)
+	go runLookup()
 }
 
 func TestServerRequest(t *testing.T) {

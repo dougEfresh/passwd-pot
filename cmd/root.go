@@ -33,6 +33,7 @@ var config struct {
 	Statsd   string
 	Pprof    string
 	NewRelic string
+	UseCache bool
 }
 
 var cfgFile string

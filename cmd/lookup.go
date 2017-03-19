@@ -22,6 +22,9 @@ import (
 	"time"
 )
 
+var eventChan = make(chan Event)
+var geoCache *Cache
+
 type mockGeoClient struct {
 }
 
@@ -41,7 +44,15 @@ func insertGeo(geo *Geo, session *dbr.Session) (int64, error) {
 	return geo.ID, nil
 }
 
-func (c *eventClient) resolveAddr(addr string) (*Geo, error) {
+func (c *eventClient) resolveAddr(addr string) (int64, error) {
+	if config.UseCache {
+		cachedGeo, found := geoCache.Get(addr)
+		if found {
+			log.Debugf("Found cache hit for %s %d %d", addr, cachedGeo, geoCache.Count())
+			return cachedGeo, nil
+		}
+	}
+
 	mutex.Lock()
 	defer mutex.Unlock()
 	sess := c.db.NewSession(nil)
@@ -55,42 +66,55 @@ func (c *eventClient) resolveAddr(addr string) (*Geo, error) {
 		Load(&geo)
 
 	if err != nil && err != sql.ErrNoRows {
-		return nil, err
+		return 0, err
 	}
 	if err == sql.ErrNoRows || rowCount == 0 {
 		log.Infof("New addr found %s", addr)
 		geo, err = c.geoClient.getLocationForAddr(addr)
 		if geo, err = c.geoClient.getLocationForAddr(addr); err != nil {
 			log.Errorf("Error looking up IP: %s  %s", addr, err)
-			return nil, err
+			return 0, err
 		}
 		if _, err = insertGeo(geo, sess); err != nil {
-			return nil, err
+			return 0, err
 		}
-
-		return geo, nil
 	}
 	if geo.LastUpdate.Before(expire) {
 		log.Infof("Found expired addr %s (%s) (%s)", addr, geo.LastUpdate, expire)
 		var newGeo = &Geo{}
 		newGeo, err = c.geoClient.getLocationForAddr(addr)
 		if err != nil {
-			return nil, err
+			return 0, err
 		}
 		if geo.equals(newGeo) {
 			log.Infof("Updating last_update for id %d ", geo.ID)
 			if _, err = sess.UpdateBySql("UPDATE geo SET last_update = now() WHERE id = ?", geo.ID).
 				Exec(); err != nil {
-				return nil, err
+				return 0, err
 			}
 		} else {
 			log.Infof("Inserting new record for id %d ", geo.ID)
 			if _, err := insertGeo(newGeo, sess); err != nil {
-				return nil, err
+				return 0, err
 			}
 			geo = newGeo
 
 		}
 	}
-	return geo, nil
+	geoCache.Set(addr, geo.ID)
+	return geo.ID, nil
+}
+
+func runLookup() {
+	log.Infof("Initalize lookup channel")
+	for {
+		select {
+		case event := <-eventChan:
+			go defaultEventClient.resolveGeoEvent(&event)
+		}
+	}
+}
+
+func init() {
+	geoCache = NewCache(5 * time.Minute)
 }
