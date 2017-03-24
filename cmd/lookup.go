@@ -110,7 +110,7 @@ func runLookup() {
 	for {
 		select {
 		case event := <-eventChan:
-			go defaultEventClient.resolveGeoEvent(&event)
+			go func (e Event) {defaultEventClient.resolveGeoEvent(&e)}(event)
 		}
 	}
 }
