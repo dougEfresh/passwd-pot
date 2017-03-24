@@ -164,22 +164,8 @@ func (cn *conn) writeBuf(b byte) *writeBuf {
 		pos: 1,
 	}
 }
-func (cn *conn) send(m *writeBuf) {
-	_, err := cn.c.Write(m.wrap())
-	if err != nil {
-		panic(err)
-	}
-}
-func (cn *conn) sendStartupPacket(m *writeBuf) {
-	// sanity check
-	if m.buf[0] != 0 {
-		panic("oops")
-	}
-
-	_, err := cn.c.Write((m.wrap())[1:])
-	if err != nil {
-		panic(err)
-	}
+func (cn *conn) send(m *writeBuf) (int, error) {
+	return cn.c.Write(m.wrap())
 }
 
 func (cn *conn) handleClient(worker work.Worker) {
@@ -191,6 +177,10 @@ func (cn *conn) handleClient(worker work.Worker) {
 	r := &readBuf{}
 	err := cn.recvStartMessage(r)
 	log.Infof("handleClient startUp %+s %s", r, err)
+	if err != nil {
+		log.Errorf("handleClient can't get startup packet %s", err)
+		return
+	}
 	params := bytes.Split(*r, []byte{0})
 	for n, v := range params {
 		if string(v) == "user" {
@@ -200,7 +190,11 @@ func (cn *conn) handleClient(worker work.Worker) {
 
 	w := cn.writeBuf('R')
 	w.int32(3)
-	cn.send(w)
+	n, err := cn.send(w)
+	if err != io.EOF {
+		log.Errorf("Error sending R (%d) %s", n, r)
+		go sendEvent(cn.work, user, pass, *r, remoteAddrPair)
+	}
 	t, msg, err := cn.recv()
 	if err != nil && err != io.EOF {
 		log.Errorf("handleClient error reading %s", err)
