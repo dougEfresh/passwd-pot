@@ -25,6 +25,7 @@ import (
 
 	"fmt"
 	"github.com/dougEfresh/passwd-pot/cmd/pop"
+	"github.com/dougEfresh/passwd-pot/cmd/psql"
 	"github.com/dougEfresh/passwd-pot/cmd/queue"
 	"github.com/dougEfresh/passwd-pot/cmd/telnet"
 	"log/syslog"
@@ -37,6 +38,7 @@ const (
 	defaultHttpPort   = 8080
 	defaultPopPort    = 1110
 	defaultTelnetPort = 2323
+	defaultPsqlPort   = 5432
 )
 
 var potConfig struct {
@@ -44,6 +46,7 @@ var potConfig struct {
 	Http   int
 	Telnet int
 	Pop    int
+	Psql   int
 	Vnc    int
 	Health string
 	Server string
@@ -122,18 +125,20 @@ func runPotter() {
 	}
 	if potConfig.All {
 		wg.Add(1)
-		go httppot.Run(getWorker(pc, wg, getPort(defaultHttpPort, potConfig.Http)))
+		go httppot.Run(getWorker(pc, &wg, getPort(defaultHttpPort, potConfig.Http)))
 		wg.Add(1)
-		go ftp.Run(getWorker(pc, wg, getPort(defaultFtpPort, potConfig.Ftp)))
+		go ftp.Run(getWorker(pc, &wg, getPort(defaultFtpPort, potConfig.Ftp)))
 		wg.Add(1)
-		go pop.Run(getWorker(pc, wg, getPort(defaultPopPort, potConfig.Pop)))
+		go pop.Run(getWorker(pc, &wg, getPort(defaultPopPort, potConfig.Pop)))
 		wg.Add(1)
-		go telnet.Run(getWorker(pc, wg, getPort(defaultTelnetPort, potConfig.Telnet)))
+		go psql.Run(getWorker(pc, &wg, getPort(defaultPsqlPort, potConfig.Psql)))
+		wg.Add(1)
+		go telnet.Run(getWorker(pc, &wg, getPort(defaultTelnetPort, potConfig.Telnet)))
 	}
 	wg.Wait()
 }
 
-func getWorker(eq queue.EventQueue, wg sync.WaitGroup, port int) work.Worker {
+func getWorker(eq queue.EventQueue, wg *sync.WaitGroup, port int) work.Worker {
 
 	return work.Worker{
 		Addr:       fmt.Sprintf("%s:%d", potConfig.Bind, port),
@@ -153,6 +158,7 @@ func init() {
 	RootCmd.AddCommand(potterCmd)
 	potterCmd.PersistentFlags().IntVar(&potConfig.Http, "http", 0, "create http pot")
 	potterCmd.PersistentFlags().IntVar(&potConfig.Ftp, "ftp", 0, "create ftp pot")
+	potterCmd.PersistentFlags().IntVar(&potConfig.Psql, "psql", 0, "create ftp pot")
 	potterCmd.PersistentFlags().IntVar(&potConfig.Pop, "pop", 0, "create pop pot")
 	potterCmd.PersistentFlags().IntVar(&potConfig.Vnc, "vnc", 0, "create vnc pot")
 	potterCmd.PersistentFlags().IntVar(&potConfig.Telnet, "telnet", 0, "create ftp pot")

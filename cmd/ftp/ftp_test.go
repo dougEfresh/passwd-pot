@@ -31,7 +31,7 @@ func TestServerRequest(t *testing.T) {
 	w := work.Worker{
 		Addr:       "localhost:2121",
 		EventQueue: mc,
-		Wg:         wg,
+		Wg:         &wg,
 	}
 	go Run(w)
 	time.Sleep(500 * time.Millisecond)

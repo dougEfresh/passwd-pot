@@ -73,14 +73,6 @@ func getCommand(line string) (string, []string) {
 	return cmd[0], cmd[1:]
 }
 
-func getSafeArg(args []string, nr int) (string, error) {
-	if nr < len(args) {
-		return args[nr], nil
-	}
-	log.Error("Out of range")
-	return "", nil
-}
-
 func (p *potHandler) handleConnection(conn net.Conn) {
 	defer conn.Close()
 	var user string

@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pop
+package psql
 
 import (
-	"bufio"
-	"github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
-	"net"
+	_ "github.com/lib/pq"
+	"gopkg.in/dougEfresh/dbr.v2"
 	"strings"
 	"sync"
 	"testing"
@@ -29,13 +29,14 @@ import (
 var submittedEvent *api.Event
 
 func init() {
-	logrus.SetLevel(logrus.DebugLevel)
+	log.SetLevel(log.InfoLevel)
 }
 
 type mockQueue struct {
 }
 
 func (mq *mockQueue) Send(e *api.Event) {
+	log.Infof("Sent %s", e)
 	submittedEvent = e
 }
 
@@ -43,59 +44,33 @@ func TestServerRequest(t *testing.T) {
 	mc := &mockQueue{}
 	var wg sync.WaitGroup
 	w := work.Worker{
-		Addr:       "localhost:1110",
+		Addr:       "localhost:5430",
 		EventQueue: mc,
 		Wg:         &wg,
 	}
 	go Run(w)
 	time.Sleep(500 * time.Millisecond)
-	conn, err := net.Dial("tcp", "localhost:1110")
-	if err != nil {
-		t.Fatalf("Error! %s", err)
-	}
-	msg, err := bufio.NewReader(conn).ReadString('\n')
-	if err != nil {
-		t.Fatalf("Error! %s", err)
-	}
-	defer conn.Close()
-	msg = strings.Replace(msg, "\r", "", 1)
 
-	if !strings.Contains(msg, "+OK POP3 server") {
-		t.Fatalf("+OK POP3 server (%s)", msg)
-	}
-	conn.Write([]byte("USER blah\r\n"))
-	msg, err = bufio.NewReader(conn).ReadString('\n')
+	//dbr, err := dbr.Open("postgres", "postgres://postgres:test@127.0.0.1:5431/?sslmode=require", nil)
+	conn, err := dbr.Open("postgres", "postgres://postgres:test@127.0.0.1:5430/?sslmode=disable", nil)
 	if err != nil {
-		t.Fatalf("Error! %s", err)
+		t.Fatalf("%s", err)
 	}
-	msg = strings.Trim(msg, "\r \n")
-	if !strings.Contains(msg, "+OK") {
-		t.Fatalf("331 not there (%s)", msg)
-	}
-	conn.Write([]byte("PASS ugh\r\n"))
-	msg, err = bufio.NewReader(conn).ReadString('\n')
-	if err != nil {
-		t.Fatalf("Error! %s", err)
-	}
+	conn.Ping()
+	time.Sleep(250 * time.Millisecond)
 
-	msg = strings.Trim(msg, "\r \n")
-	if !strings.Contains(msg, "-ERR Password incorrect") {
-		t.Fatalf("530 not there (%s)", msg)
-	}
-	conn.Write([]byte("QUIT\r\n"))
-	time.Sleep(200 * time.Millisecond)
 	if submittedEvent == nil {
-		t.Fatal("Submitted event is null")
+		t.Fatal("Event not sent")
 	}
-	if submittedEvent.User != "blah" {
+	if submittedEvent.User != "postgres" {
 		t.Fatalf("Wrong event sent %s", submittedEvent)
 	}
 
-	if submittedEvent.Passwd != "ugh" {
+	if submittedEvent.Passwd != "test" {
 		t.Fatalf("Wrong event sent %s", submittedEvent)
 	}
 
-	if !strings.Contains(submittedEvent.RemoteVersion, "") {
+	if submittedEvent.RemoteVersion == "" {
 		t.Fatalf("Wrong event sent %s", submittedEvent)
 	}
 
@@ -103,11 +78,11 @@ func TestServerRequest(t *testing.T) {
 		t.Fatalf("Wrong event sent %s", submittedEvent)
 	}
 
-	if !strings.Contains(submittedEvent.Protocol, "pop") {
+	if !strings.Contains(submittedEvent.Protocol, "psql") {
 		t.Fatalf("Wrong event sent %s", submittedEvent)
 	}
 
-	if !strings.Contains(submittedEvent.Application, "pop-passwd-pot") {
+	if !strings.Contains(submittedEvent.Application, "psql-passwd-pot") {
 		t.Fatalf("Wrong event sent %s", submittedEvent)
 	}
 
@@ -118,5 +93,18 @@ func TestServerRequest(t *testing.T) {
 	if submittedEvent.RemoteName == "" {
 		t.Fatalf("Wrong event sent %s", submittedEvent)
 	}
+	submittedEvent = nil
+	/*
+		conn, err = dbr.Open("postgres", "postgres://ssl:ssl@127.0.0.1:5431/?sslmode=require", nil)
+		if err != nil {
+			t.Fatalf("%s", err)
+		}
+		err = conn.Ping()
+		log.Debugf("%s", err)
+		time.Sleep(250 * time.Millisecond)
 
+		if submittedEvent == nil {
+			t.Fatal("Event not sent")
+		}
+	*/
 }
