@@ -86,6 +86,6 @@ func streamEvents() {
 func init() {
 	RootCmd.AddCommand(streamCmd)
 	streamCmd.Flags().StringVarP(&streamingEndpoint, "server", "s",
-		fmt.Sprintf("ws://localhost:8080%s", api.StreamURL),
+		fmt.Sprintf("ws://localhost:8080%s/random", api.StreamURL),
 		"server endpoint")
 }

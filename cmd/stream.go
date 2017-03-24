@@ -1,16 +1,36 @@
+// Copyright © 2017 Douglas Chimento <dchimento@gmail.com>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package cmd
 
 import (
-	"bytes"
+	"github.com/spf13/cobra"
+
 	log "github.com/Sirupsen/logrus"
 	"time"
 
+	"bytes"
 	"fmt"
+	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"net/http"
+	"os"
 	"strings"
 )
 
+// streamCmd represents the stream command
 const (
 	// Time allowed to write a message to the peer.
 	writeWait = 10 * time.Second
@@ -35,6 +55,37 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
 		return true
+	},
+}
+
+var streamCmd = &cobra.Command{
+	Use:   "stream",
+	Short: "Stream events to websocket clients",
+	Long:  "",
+	Run: func(cmd *cobra.Command, args []string) {
+		var err error
+		setup(cmd, args)
+		r := mux.NewRouter()
+		r.HandleFunc(getHandler(api.StreamURL, streamEvents)).Methods("GET")
+		r.HandleFunc(getHandler(api.StreamURL+"/random", streamEvents)).Methods("GET")
+
+		srv := &http.Server{
+			Handler:      r,
+			Addr:         config.BindAddr,
+			WriteTimeout: 10 * time.Second,
+			ReadTimeout:  10 * time.Second,
+		}
+
+		log.Infof("Listing on %s", config.BindAddr)
+		//websocket requests
+		go hub.run()
+		go randomDataHub.run()
+		go startRandomHub(randomDataHub)
+		err = srv.ListenAndServe()
+		if err != nil {
+			log.Errorf("Caught error %s", err)
+			os.Exit(-1)
+		}
 	},
 }
 
@@ -187,4 +238,11 @@ func startRandomHub(hub *Hub) {
 			lastRandomEvent = defaultEventClient.broadcastEvent(id, hub)
 		}
 	}
+}
+
+func init() {
+	RootCmd.AddCommand(streamCmd)
+	streamCmd.PersistentFlags().StringVar(&config.Dsn, "dsn", "postgres://postgres:@172.17.0.1/?sslmode=disable", "DSN database url")
+	streamCmd.PersistentFlags().StringVar(&config.BindAddr, "bind", "localhost:8080", "bind to this address:port")
+	streamCmd.PersistentFlags().StringVar(&config.NewRelic, "new-relic", "", "new relic api key")
 }

@@ -18,14 +18,12 @@ import (
 	"encoding/json"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
-	"github.com/Sirupsen/logrus/hooks/syslog"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/gocraft/health"
 	"github.com/gorilla/mux"
 	"github.com/newrelic/go-agent"
 	"github.com/spf13/cobra"
 	"io/ioutil"
-	"log/syslog"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -44,8 +42,6 @@ func handlers() *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc(getHandler(api.EventURL, handleEvent)).Methods("POST")
 	r.HandleFunc(getHandler(api.EventURL, listEvents)).Methods("GET")
-	r.HandleFunc(getHandler(api.StreamURL, streamEvents)).Methods("GET")
-	r.HandleFunc(getHandler(api.StreamURL+"/random", streamEvents)).Methods("GET")
 	return r
 }
 
@@ -122,47 +118,17 @@ func listEvents(w http.ResponseWriter, r *http.Request) {
 
 func run(cmd *cobra.Command, args []string) {
 	var err error
-	if config.Debug {
-		log.SetLevel(log.DebugLevel)
-	}
-	defaultEventClient = &eventClient{
-		db:        loadDSN(config.Dsn),
-		geoClient: geoClient,
-	}
-	log.Debugf("Running %s with %s", cmd.Name(), args)
-	if config.NewRelic != "" {
-		config := newrelic.NewConfig("passwd-pot", config.NewRelic)
-		if app, err = newrelic.NewApplication(config); err != nil {
-			log.Errorf("Could not start new relic %s", err)
-		}
-		log.Infof("Configured new relic agent")
-	}
+	setup(cmd, args)
 	srv := &http.Server{
 		Handler:      handlers(),
 		Addr:         config.BindAddr,
 		WriteTimeout: 10 * time.Second,
 		ReadTimeout:  10 * time.Second,
 	}
-	if config.Syslog != "" {
-		if syslogHook, err = logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, "passwd-pot"); err != nil {
-			log.Error("Unable to connect to local syslog daemon")
-		} else {
-			log.AddHook(syslogHook)
-		}
-	}
-	defaultDbEventLogger.Debug = config.Debug
-	healthMonitor(cmd.Name())
+
 	log.Infof("Listing on %s", config.BindAddr)
-
-	//websocket requests
-	go hub.run()
-	go randomDataHub.run()
-	go startRandomHub(randomDataHub)
+	//Geo Lookup
 	go runLookup()
-	if config.Pprof != "" {
-		go func() { log.Error(http.ListenAndServe(config.Pprof, nil)) }()
-	}
-
 	err = srv.ListenAndServe()
 	if err != nil {
 		log.Errorf("Caught error %s", err)
