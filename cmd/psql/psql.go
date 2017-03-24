@@ -192,7 +192,7 @@ func (cn *conn) handleClient(worker work.Worker) {
 	w.int32(3)
 	n, err := cn.send(w)
 	if err != io.EOF {
-		log.Errorf("Error sending R (%d) %s", n, r)
+		log.Errorf("Error sending R (%d) %s", n, *r)
 		go sendEvent(cn.work, user, pass, *r, remoteAddrPair)
 	}
 	t, msg, err := cn.recv()
