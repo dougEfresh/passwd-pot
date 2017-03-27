@@ -86,3 +86,11 @@ func (g Geo) String() string {
 	}
 	return string(b)
 }
+
+func (g EventGeo) String() string {
+	b, err := json.Marshal(g)
+	if err != nil {
+		return fmt.Sprintf("%s", err)
+	}
+	return string(b)
+}

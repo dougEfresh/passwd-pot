@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
@@ -113,13 +114,60 @@ func TestServerRequestWithOrigin(t *testing.T) {
 
 func BenchmarkServer(b *testing.B) {
 	b.ReportAllocs()
+	rw := httptest.NewRecorder()
 	for i := 0; i < b.N; i++ {
-		res, err := http.Post(endpoint,
-			"application/json",
-			strings.NewReader(requestBodyOrigin))
-		if err != nil {
-			b.Fatal(err)
+		handleEvent(rw, req(b))
+		if rw.Result().StatusCode != 202 {
+			b.Fatal("bad request")
 		}
-		res.Body.Close()
+		reset(rw)
 	}
+}
+
+func BenchmarkEvent(b *testing.B) {
+	var event Event
+	b.ReportAllocs()
+	if err := json.Unmarshal([]byte(requestBodyOrigin), &event); err != nil {
+		b.Fatal(err)
+	}
+	for i := 0; i < b.N; i++ {
+		defaultEventClient.recordEvent(event)
+	}
+}
+
+func BenchmarkLookup(b *testing.B) {
+	var event Event
+	b.ReportAllocs()
+	if err := json.Unmarshal([]byte(requestBodyOrigin), &event); err != nil {
+		b.Fatal(err)
+	}
+	id, _ := defaultEventClient.recordEvent(event)
+	event.ID = id
+	for i := 0; i < b.N; i++ {
+		defaultEventClient.resolveGeoEvent(event)
+	}
+}
+
+func req(t *testing.B) *http.Request {
+	//t.Log("\n" + v + "\n")
+	req, err := http.NewRequest("POST", api.EventURL, bufio.NewReader(strings.NewReader(requestBodyOrigin)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return req
+}
+
+func reset(rw *httptest.ResponseRecorder) {
+	m := rw.HeaderMap
+	for k := range m {
+		delete(m, k)
+	}
+	body := rw.Body
+	body.Reset()
+	*rw = httptest.ResponseRecorder{
+		Body:      body,
+		HeaderMap: m,
+	}
+
 }

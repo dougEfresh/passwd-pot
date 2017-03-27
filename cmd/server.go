@@ -66,14 +66,14 @@ func handleEvent(w http.ResponseWriter, r *http.Request) {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Error(err)
+		log.Errorf("Error reading body %s", err)
 		job.EventErr("handle_event_invalid_body", err)
 		job.Complete(health.ValidationError)
 		return
 	}
 	if err = json.Unmarshal(b, &event); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		log.Errorf("Error reading %s", err)
+		log.Errorf("Error unmarshal %s", err)
 		job.EventErr("handle_event_invalid_json", err)
 		job.Complete(health.ValidationError)
 		return
@@ -88,10 +88,9 @@ func handleEvent(w http.ResponseWriter, r *http.Request) {
 			log.Debugf("Using RemoteAddr as OriginAddr %s", r.RemoteAddr)
 			event.OriginAddr = strings.Split(r.RemoteAddr, ":")[0]
 		}
-
 	}
 
-	err = defaultEventClient.recordEvent(&event)
+	id, err := defaultEventClient.recordEvent(event)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Errorf("Error writing %+v %s", &event, err)
@@ -99,13 +98,14 @@ func handleEvent(w http.ResponseWriter, r *http.Request) {
 		job.Complete(health.Error)
 		return
 	}
+	event.ID = id
 	log.Debug("Sending event to channel")
-	eventChan <- event
 	job.Complete(health.Success)
 	j, _ := json.Marshal(event)
 	w.WriteHeader(http.StatusAccepted)
 	w.Header().Add("Content-type", "application/json")
 	w.Write(j)
+	eventChan <- &event
 }
 
 func listEvents(w http.ResponseWriter, r *http.Request) {

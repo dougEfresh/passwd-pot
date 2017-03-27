@@ -1,8 +1,8 @@
 package cmd
 
 import (
+	"database/sql"
 	log "github.com/Sirupsen/logrus"
-	"gopkg.in/dougEfresh/dbr.v2"
 	"strings"
 )
 
@@ -12,15 +12,15 @@ const (
 	geoTable      = "geo"
 )
 
-func loadDSN(dsn string) *dbr.Connection {
-	var db *dbr.Connection
+func loadDSN(dsn string) *sql.DB {
+	var db *sql.DB
 	var err error
 	if strings.Contains(dsn, "postgres") {
 		log.Debug("Using pq driver")
-		db, err = dbr.Open("postgres", dsn, defaultDbEventLogger)
+		db, err = sql.Open("postgres", dsn)
 	} else {
 		log.Debug("Using mysql driver")
-		db, err = dbr.Open("mysql", dsn, defaultDbEventLogger)
+		db, err = sql.Open("mysql", dsn)
 	}
 
 	if err != nil {

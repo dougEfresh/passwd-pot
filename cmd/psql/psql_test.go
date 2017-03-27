@@ -15,11 +15,11 @@
 package psql
 
 import (
+	"database/sql"
 	log "github.com/Sirupsen/logrus"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	_ "github.com/lib/pq"
-	"gopkg.in/dougEfresh/dbr.v2"
 	"strings"
 	"sync"
 	"testing"
@@ -51,8 +51,7 @@ func TestServerRequest(t *testing.T) {
 	go Run(w)
 	time.Sleep(500 * time.Millisecond)
 
-	//dbr, err := dbr.Open("postgres", "postgres://postgres:test@127.0.0.1:5431/?sslmode=require", nil)
-	conn, err := dbr.Open("postgres", "postgres://postgres:test@127.0.0.1:5430/?sslmode=disable", nil)
+	conn, err := sql.Open("postgres", "postgres://postgres:test@127.0.0.1:5430/?sslmode=disable")
 	if err != nil {
 		t.Fatalf("%s", err)
 	}
@@ -94,17 +93,4 @@ func TestServerRequest(t *testing.T) {
 		t.Fatalf("Wrong event sent %s", submittedEvent)
 	}
 	submittedEvent = nil
-	/*
-		conn, err = dbr.Open("postgres", "postgres://ssl:ssl@127.0.0.1:5431/?sslmode=require", nil)
-		if err != nil {
-			t.Fatalf("%s", err)
-		}
-		err = conn.Ping()
-		log.Debugf("%s", err)
-		time.Sleep(250 * time.Millisecond)
-
-		if submittedEvent == nil {
-			t.Fatal("Event not sent")
-		}
-	*/
 }

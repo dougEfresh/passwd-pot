@@ -1,9 +1,10 @@
 package cmd
 
 import (
+	"database/sql"
 	"encoding/json"
+	"github.com/Sirupsen/logrus"
 	"github.com/dougEfresh/passwd-pot/api"
-	"gopkg.in/dougEfresh/dbr.v2"
 	"testing"
 	"time"
 )
@@ -33,12 +34,11 @@ var testEventClient = &eventClient{
 	geoClient: geoClientTransporter(&mockGeoClient{}),
 }
 
-func clearDb(db *dbr.Connection, t *testing.T) {
-	sess := db.NewSession(nil)
-	if _, err := sess.DeleteFrom("event").Exec(); err != nil {
+func clearDb(db *sql.DB, t *testing.T) {
+	if _, err := db.Exec("DELETE FROM event"); err != nil {
 		t.Fatalf("Error deletiing %s", err)
 	}
-	if _, err := sess.DeleteFrom("geo").Exec(); err != nil {
+	if _, err := db.Exec("DELETE FROM geo"); err != nil {
 		t.Fatalf("Error deletiing %s", err)
 	}
 }
@@ -58,16 +58,16 @@ var testEvent = Event{
 }
 
 func createEvent(event *Event) error {
-	sess := testEventClient.db.NewSession(nil)
-	err := testEventClient.recordEvent(event)
+	id, err := testEventClient.recordEvent(*event)
 	if err != nil {
 		return err
 	}
-	var eventGeo EventGeo
-	_, err = sess.Select("*").From(eventGeoTable).Where("id = ?", event.ID).Load(&eventGeo)
+	r := testEventClient.db.QueryRow(`SELECT id FROM event_geo WHERE id = $1 LIMIT 1`, id)
+	err = r.Scan(&id)
 	if err != nil {
 		return err
 	}
+	event.ID = id
 	return nil
 }
 
@@ -86,6 +86,7 @@ func TestRecordEvent(t *testing.T) {
 
 func TestLookup(t *testing.T) {
 	clearDb(testEventClient.db, t)
+	logrus.SetLevel(logrus.DebugLevel)
 	err := createEvent(&testEvent)
 	if err != nil {
 		t.Fatalf("Error creting event %s", err)
@@ -95,7 +96,10 @@ func TestLookup(t *testing.T) {
 		t.Fatalf("Event id should be > 0 %+v", &testEvent)
 	}
 
-	testEventClient.resolveGeoEvent(&testEvent)
+	err = testEventClient.resolveGeoEvent(testEvent)
+	if err != nil {
+		t.Fatalf("Error with getting geo %s", err)
+	}
 	geoEvent := testEventClient.get(testEvent.ID)
 
 	if geoEvent == nil {
@@ -127,7 +131,7 @@ func TestLookup(t *testing.T) {
 	}
 
 	if geoEvent.RemoteCountry != "CA" {
-		t.Fatalf("%s != CA", geoEvent.RemoteCountry)
+		t.Fatalf("%s != CA (%s)", geoEvent.RemoteCountry, geoEvent)
 	}
 
 	if geoEvent.RemoteCity != "Singapore" {
@@ -175,38 +179,31 @@ func TestExpire(t *testing.T) {
 		t.Fatalf("Event id should be > 0 %+v", &testEvent)
 	}
 
-	testEventClient.resolveGeoEvent(&testEvent)
+	testEventClient.resolveGeoEvent(testEvent)
 	geoEvent := testEventClient.get(testEvent.ID)
 
 	if geoEvent == nil {
 		t.Fatalf("Could not find id %d", testEvent.ID)
 	}
 
-	sess := testEventClient.db.NewSession(nil)
 	var oldlastUpdate time.Time
 	var newerLastUpdate time.Time
+	r := testEventClient.db.QueryRow("select last_update from geo where ip = $1 LIMIT 1", testEvent.RemoteAddr)
+	err = r.Scan(&oldlastUpdate)
 
-	if err = sess.Select("last_update").
-		From("geo").Where("ip = ?", testEvent.RemoteAddr).
-		Limit(1).
-		LoadValue(&oldlastUpdate); err != nil {
+	if err != nil {
 		t.Fatalf("Error updating time %s", err)
 	}
-
-	if _, err = sess.Update("geo").
-		Set("last_update", time.Now().Add(time.Hour*24*-100)).
-		Exec(); err != nil {
+	_, err = testEventClient.db.Exec("UPDATE geo SET last_update = $1", time.Now().Add(time.Hour*24*-100))
+	if err != nil {
 		t.Fatalf("Error updating time %s", err)
 	}
-
 	createEvent(&testEvent)
-	testEventClient.resolveGeoEvent(&testEvent)
+	testEventClient.resolveGeoEvent(testEvent)
+	r = testEventClient.db.QueryRow("select last_update from geo where ip = $1 LIMIT 1", testEvent.RemoteAddr)
+	err = r.Scan(&newerLastUpdate)
 
-	if err = sess.Select("last_update").
-		From("geo").
-		Where("ip = ?", testEvent.RemoteAddr).
-		Limit(1).
-		LoadValue(&newerLastUpdate); err != nil {
+	if err != nil {
 		t.Fatalf("Error updating time %s", err)
 	}
 	if oldlastUpdate.After(newerLastUpdate) {
@@ -226,27 +223,22 @@ func TestExpireAndChangedGeo(t *testing.T) {
 		t.Fatalf("Event id should be > 0 %+v", &testEvent)
 	}
 
-	testEventClient.resolveGeoEvent(&testEvent)
+	testEventClient.resolveGeoEvent(testEvent)
 	geoEvent := testEventClient.get(testEvent.ID)
 
 	if geoEvent == nil {
 		t.Fatalf("Could not find id %d", testEvent.ID)
 	}
-	debugLogger := &DbEvent{Debug: true}
-	sess := testEventClient.db.NewSession(debugLogger)
 	var oldlastUpdate time.Time
 	var newerLastUpdate time.Time
-
-	if err = sess.Select("last_update").
-		From("geo").Where("ip = ?", testEvent.RemoteAddr).
-		Limit(1).
-		LoadValue(&oldlastUpdate); err != nil {
+	r := testEventClient.db.QueryRow("SELECT last_update FROM geo WHERE ip = $1 LIMIT 1", testEvent.RemoteAddr)
+	err = r.Scan(&oldlastUpdate)
+	if err != nil {
 		t.Fatalf("Error updating time %s", err)
 	}
 
-	if _, err = sess.Update("geo").
-		Set("last_update", time.Now().Add(time.Hour*24*-100)).
-		Exec(); err != nil {
+	_, err = testEventClient.db.Exec("UPDATE geo SET last_update = $1", time.Now().Add(time.Hour*24*-100))
+	if err != nil {
 		t.Fatalf("Error updating time %s", err)
 	}
 	oldGeo := localGeo["1.2.3.4"]
@@ -256,29 +248,25 @@ func TestExpireAndChangedGeo(t *testing.T) {
 		t.Fatalf("can't create event %s", err)
 	}
 
-	testEventClient.resolveGeoEvent(&testEvent)
+	testEventClient.resolveGeoEvent(testEvent)
 	geoEvent = testEventClient.get(testEvent.ID)
 	if geoEvent == nil {
 		t.Fatalf("Could not find id %d", testEvent.ID)
 	}
 
+	//reset to original geo
 	defer func() {
 		localGeo["1.2.3.4"] = oldGeo
 	}()
-
-	if err = sess.Select("last_update").
-		From("geo").
-		Where("ip = ?", geoEvent.RemoteAddr).
-		Limit(1).
-		LoadValue(&newerLastUpdate); err != nil {
+	r = testEventClient.db.QueryRow("select last_update from geo where ip = $1 LIMIT 1", testEvent.RemoteAddr)
+	err = r.Scan(&newerLastUpdate)
+	if err != nil {
 		t.Fatalf("Error getting  %s", err)
 	}
 	if oldlastUpdate.After(newerLastUpdate) {
 		t.Fatalf("old is afer new %s > %s", oldlastUpdate, newerLastUpdate)
 	}
-
 	if geoEvent.RemoteCountry != "DE" {
 		t.Fatalf("Country code not DE (%s)", geoEvent.RemoteCountry)
 	}
-
 }

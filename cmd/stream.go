@@ -210,9 +210,9 @@ var lastRandomEvent *EventGeo
 
 func startRandomHub(hub *Hub) {
 	log.Info("Starting random hub")
+
 	var id int64
-	sess := defaultEventClient.db.NewSession(nil)
-	whereClause := fmt.Sprintf("id != ? and remote_latitude != ? and remote_longitude != ? and id >= (select max(id) * RANDOM()  from %s) ", eventTable)
+	query := fmt.Sprintf("SELECT id FROM %s WHERE id != $1 and remote_latitude != $2 and remote_longitude != ? and id >= (SELECT max(id) * RANDOM() FROM %s) ORDER BY id LIMIT 1 ", eventGeoTable, eventTable)
 	for {
 		time.Sleep(1 * time.Second)
 		if len(hub.clients) == 0 {
@@ -220,16 +220,15 @@ func startRandomHub(hub *Hub) {
 		}
 
 		if lastRandomEvent == nil {
-			if err := sess.Select("max(id)").From(eventGeoTable).LoadValue(&id); err != nil {
+			r := defaultEventClient.db.QueryRow("SELECT max(id) FROM event_geo")
+			err := r.Scan(&id)
+			if err != nil {
 				log.Error("Error getting max id")
+				continue
 			}
 		} else {
-			sess.Select("id").
-				From(eventGeoTable).
-				Where(whereClause, lastRandomEvent.ID, lastRandomEvent.RemoteLatitude, lastRandomEvent.RemoteLongitude).
-				Limit(1).
-				OrderBy("id").
-				LoadValue(&id)
+			r := defaultEventClient.db.QueryRow(query, lastRandomEvent.ID, lastRandomEvent.RemoteLatitude, lastRandomEvent.RemoteLongitude)
+			r.Scan(id)
 		}
 		if id == 0 {
 			log.Error("Could not find an random event!")
