@@ -23,7 +23,6 @@ import (
 )
 
 var eventChan = make(chan Event)
-var geoCache *Cache
 
 type mockGeoClient struct {
 }
@@ -45,14 +44,6 @@ func insertGeo(geo *Geo, session *dbr.Session) (int64, error) {
 }
 
 func (c *eventClient) resolveAddr(addr string) (int64, error) {
-	if config.UseCache {
-		cachedGeo, found := geoCache.Get(addr)
-		if found {
-			log.Debugf("Found cache hit for %s %d %d", addr, cachedGeo, geoCache.Count())
-			return cachedGeo, nil
-		}
-	}
-
 	mutex.Lock()
 	defer mutex.Unlock()
 	sess := c.db.NewSession(nil)
@@ -101,7 +92,6 @@ func (c *eventClient) resolveAddr(addr string) (int64, error) {
 
 		}
 	}
-	geoCache.Set(addr, geo.ID)
 	return geo.ID, nil
 }
 
@@ -113,8 +103,4 @@ func runLookup() {
 			go func(e Event) { defaultEventClient.resolveGeoEvent(&e) }(event)
 		}
 	}
-}
-
-func init() {
-	geoCache = NewCache(5 * time.Minute)
 }
