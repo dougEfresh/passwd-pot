@@ -149,7 +149,6 @@ func BenchmarkLookup(b *testing.B) {
 }
 
 func req(t *testing.B) *http.Request {
-	//t.Log("\n" + v + "\n")
 	req, err := http.NewRequest("POST", api.EventURL, bufio.NewReader(strings.NewReader(requestBodyOrigin)))
 	if err != nil {
 		t.Fatal(err)

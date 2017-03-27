@@ -191,15 +191,15 @@ func (cn *conn) handleClient(worker work.Worker) {
 	w := cn.writeBuf('R')
 	w.int32(3)
 	n, err := cn.send(w)
-	if err != io.EOF {
+	if err == io.EOF {
 		log.Errorf("Error sending R (%d) %s", n, *r)
 		go sendEvent(cn.work, user, pass, *r, remoteAddrPair)
+		return
 	}
 	t, msg, err := cn.recv()
-	if err != nil && err != io.EOF {
+	if err != nil {
 		log.Errorf("handleClient error reading %s", err)
-	}
-	if err == io.EOF {
+		go sendEvent(cn.work, user, pass, *r, remoteAddrPair)
 		return
 	}
 	log.Debugf("handleClient got %+s %s", t, msg)

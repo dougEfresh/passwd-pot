@@ -3,7 +3,6 @@ package cmd
 import (
 	"database/sql"
 	"encoding/json"
-	"github.com/Sirupsen/logrus"
 	"github.com/dougEfresh/passwd-pot/api"
 	"testing"
 	"time"
@@ -86,7 +85,6 @@ func TestRecordEvent(t *testing.T) {
 
 func TestLookup(t *testing.T) {
 	clearDb(testEventClient.db, t)
-	logrus.SetLevel(logrus.DebugLevel)
 	err := createEvent(&testEvent)
 	if err != nil {
 		t.Fatalf("Error creting event %s", err)
@@ -236,29 +234,26 @@ func TestExpireAndChangedGeo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error updating time %s", err)
 	}
-
-	_, err = testEventClient.db.Exec("UPDATE geo SET last_update = $1", time.Now().Add(time.Hour*24*-100))
+	_, err = testEventClient.db.Exec("UPDATE geo SET last_update = $1 WHERE ip = $2", time.Now().Add(time.Hour*24*-100), testEvent.RemoteAddr)
 	if err != nil {
 		t.Fatalf("Error updating time %s", err)
 	}
 	oldGeo := localGeo["1.2.3.4"]
 	localGeo["1.2.3.4"] = `{"ip":"1.2.3.4","country_code":"DE","country_name":"Singapore","region_code":"01","region_name":"Central Singapore Community Development Council","city":"Singapore","zip_code":"","time_zone":"Asia/Singapore","latitude":1.1,"longitude":101.00,"metro_code":0}`
+	//reset to original geo
+	defer func() {
+		localGeo["1.2.3.4"] = oldGeo
+	}()
 
-	if err = createEvent(&testEvent); err != nil {
-		t.Fatalf("can't create event %s", err)
-	}
-
+	createEvent(&testEvent)
 	testEventClient.resolveGeoEvent(testEvent)
 	geoEvent = testEventClient.get(testEvent.ID)
 	if geoEvent == nil {
 		t.Fatalf("Could not find id %d", testEvent.ID)
 	}
 
-	//reset to original geo
-	defer func() {
-		localGeo["1.2.3.4"] = oldGeo
-	}()
-	r = testEventClient.db.QueryRow("select last_update from geo where ip = $1 LIMIT 1", testEvent.RemoteAddr)
+
+	r = testEventClient.db.QueryRow("SELECT last_update FROM geo WHERE ip = $1 ORDER BY last_update DESC LIMIT 1", testEvent.RemoteAddr)
 	err = r.Scan(&newerLastUpdate)
 	if err != nil {
 		t.Fatalf("Error getting  %s", err)

@@ -84,13 +84,12 @@ func (c *eventClient) resolveAddr(addr string) (int64, error) {
 		}
 		if geo.equals(newGeo) {
 			log.Infof("Updating last_update for id %d ", geo.ID)
-			if _, err = c.db.Exec("UPDATE geo set last_update = now() where id  = $1", geo.ID); err != nil {
+			if _, err = c.db.Exec("UPDATE geo SET last_update = now() WHERE id  = $1", geo.ID); err != nil {
 				return 0, err
 			}
 		} else {
 			log.Infof("Inserting new record for id %d ", geo.ID)
 			return insertGeo(newGeo, c.db)
-			geo = newGeo
 		}
 	}
 	return geo.ID, nil
