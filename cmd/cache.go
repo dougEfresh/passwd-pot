@@ -52,7 +52,7 @@ func (cache *Cache) startCleanupTimer() {
 // NewCache is a helper to create instance of the Cache struct
 func NewCache() *Cache {
 	cache := &Cache{
-		cm:    cmap.New(),
+		cm: cmap.New(),
 	}
 	cache.startCleanupTimer()
 	return cache

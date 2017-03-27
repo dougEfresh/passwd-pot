@@ -175,7 +175,6 @@ func BenchmarkCache(b *testing.B) {
 	config.UseCache = false
 }
 
-
 func req(t *testing.B) *http.Request {
 	req, err := http.NewRequest("POST", api.EventURL, bufio.NewReader(strings.NewReader(requestBodyOrigin)))
 	if err != nil {
