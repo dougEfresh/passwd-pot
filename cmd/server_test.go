@@ -159,6 +159,23 @@ func BenchmarkLookup(b *testing.B) {
 	}
 }
 
+func BenchmarkCache(b *testing.B) {
+	var event Event
+	clearDb(defaultEventClient.db, nil)
+	b.ReportAllocs()
+	if err := json.Unmarshal([]byte(requestBodyOrigin), &event); err != nil {
+		b.Fatal(err)
+	}
+	config.UseCache = true
+	id, _ := defaultEventClient.recordEvent(event)
+	event.ID = id
+	for i := 0; i < b.N; i++ {
+		defaultEventClient.resolveGeoEvent(event)
+	}
+	config.UseCache = false
+}
+
+
 func req(t *testing.B) *http.Request {
 	req, err := http.NewRequest("POST", api.EventURL, bufio.NewReader(strings.NewReader(requestBodyOrigin)))
 	if err != nil {

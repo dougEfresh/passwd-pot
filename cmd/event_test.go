@@ -15,6 +15,7 @@ func init() {
 	localGeo["127.0.0.1"] = `{"ip":"127.0.0.1","country_code":"US","country_name":"USA","region_code":"05","region_name":"America","city":"New York","zip_code":"","time_zone":"Asia/Singapore","latitude":2.2,"longitude":102.00,"metro_code":0}`
 	localGeo["192.168.1.1"] = `{"ip":"192.168.1.1","country_code":"ZZ","country_name":"USA","region_code":"05","region_name":"America","city":"New York","zip_code":"","time_zone":"Asia/Singapore","latitude":2.2,"longitude":102.00,"metro_code":0}`
 	localGeo["10.0.0.1"] = `{"ip":"10.0.0.1","country_code":"ZX","country_name":"USA","region_code":"05","region_name":"America","city":"New York","zip_code":"","time_zone":"Asia/Singapore","latitude":2.2,"longitude":102.00,"metro_code":0}`
+	config.UseCache = true
 }
 
 func (c *mockGeoClient) getLocationForAddr(ip string) (*Geo, error) {
@@ -34,6 +35,9 @@ var testEventClient = &eventClient{
 }
 
 func clearDb(db *sql.DB, t *testing.T) {
+	for k, _ := range localGeo {
+		geoCache.Delete(k)
+	}
 	if _, err := db.Exec("DELETE FROM event"); err != nil {
 		t.Fatalf("Error deletiing %s", err)
 	}
@@ -183,12 +187,11 @@ func TestExpire(t *testing.T) {
 	if geoEvent == nil {
 		t.Fatalf("Could not find id %d", testEvent.ID)
 	}
-
+	geoCache.Delete(testEvent.RemoteAddr)
 	var oldlastUpdate time.Time
 	var newerLastUpdate time.Time
 	r := testEventClient.db.QueryRow("select last_update from geo where ip = $1 LIMIT 1", testEvent.RemoteAddr)
 	err = r.Scan(&oldlastUpdate)
-
 	if err != nil {
 		t.Fatalf("Error updating time %s", err)
 	}
@@ -234,6 +237,8 @@ func TestExpireAndChangedGeo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error updating time %s", err)
 	}
+
+	geoCache.Delete(testEvent.RemoteAddr)
 	_, err = testEventClient.db.Exec("UPDATE geo SET last_update = $1 WHERE ip = $2", time.Now().Add(time.Hour*24*-100), testEvent.RemoteAddr)
 	if err != nil {
 		t.Fatalf("Error updating time %s", err)

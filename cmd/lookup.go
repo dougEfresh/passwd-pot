@@ -24,6 +24,7 @@ import (
 )
 
 var eventChan = make(chan *Event)
+var geoCache *Cache
 
 type mockGeoClient struct {
 }
@@ -53,10 +54,16 @@ func insertGeo(geo *Geo, db *sql.DB) (int64, error) {
 }
 
 func (c *eventClient) resolveAddr(addr string) (int64, error) {
-	geo := geoPool.Get().(*Geo)
-	defer geoPool.Put(geo)
+	if config.UseCache {
+		cachedGeo, found := geoCache.Get(addr)
+		if found {
+			return cachedGeo, nil
+		}
+	}
 	mutex.Lock()
 	defer mutex.Unlock()
+	geo := geoPool.Get().(*Geo)
+	defer geoPool.Put(geo)
 	expire := time.Now().AddDate(0, -1, 0)
 	r := c.db.QueryRow(`SELECT
 	id, ip, country_code, region_code, region_name, city, time_zone, latitude, longitude, metro_code, last_update
@@ -68,15 +75,18 @@ func (c *eventClient) resolveAddr(addr string) (int64, error) {
 		return 0, err
 	}
 	if err == sql.ErrNoRows {
-		log.Infof("New addr found %s", addr)
+		log.Infof("New addr found %s\n", addr)
 		geo, err = c.geoClient.getLocationForAddr(addr)
 		if err != nil {
 			return 0, err
 		}
-		return insertGeo(geo, c.db)
-	}
-	if geo.LastUpdate.Before(expire) {
-		log.Infof("Found expired addr %s (%s) (%s)", addr, geo.LastUpdate, expire)
+		id, err := insertGeo(geo, c.db)
+		if err != nil {
+			return 0, err
+		}
+		geo.ID = id
+	} else if geo.LastUpdate.Before(expire) {
+		log.Infof("Found expired addr %s (%s) (%s)\n", addr, geo.LastUpdate, expire)
 		var newGeo = &Geo{}
 		newGeo, err = c.geoClient.getLocationForAddr(addr)
 		if err != nil {
@@ -89,9 +99,14 @@ func (c *eventClient) resolveAddr(addr string) (int64, error) {
 			}
 		} else {
 			log.Infof("Inserting new record for id %d ", geo.ID)
-			return insertGeo(newGeo, c.db)
+			id, err := insertGeo(newGeo, c.db)
+			if err != nil {
+				return 0, err
+			}
+			geo.ID = id
 		}
 	}
+	geoCache.Set(addr, geo.ID)
 	return geo.ID, nil
 }
 
@@ -109,4 +124,5 @@ func init() {
 	for i := 0; i < 100; i++ {
 		geoPool.Put(&Geo{})
 	}
+	geoCache = NewCache()
 }
