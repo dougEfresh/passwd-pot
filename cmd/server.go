@@ -90,7 +90,7 @@ func handleEvent(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	id, err := defaultEventClient.recordEvent(event)
+	id, err := processEvent(event)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Errorf("Error writing %+v %s", &event, err)
@@ -99,13 +99,23 @@ func handleEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	event.ID = id
-	log.Debug("Sending event to channel")
 	job.Complete(health.Success)
 	j, _ := json.Marshal(event)
 	w.WriteHeader(http.StatusAccepted)
 	w.Header().Add("Content-type", "application/json")
 	w.Write(j)
+
+}
+
+func processEvent(event Event) (int64, error) {
+	id, err := defaultEventClient.recordEvent(event)
+	if err != nil {
+		return 0, err
+	}
+	event.ID = id
+	log.Debug("Sending event to channel")
 	eventChan <- &event
+	return id, nil
 }
 
 func listEvents(w http.ResponseWriter, r *http.Request) {

@@ -124,6 +124,17 @@ func BenchmarkServer(b *testing.B) {
 	}
 }
 
+func BenchmarkProcessEvent(b *testing.B) {
+	var event Event
+	b.ReportAllocs()
+	if err := json.Unmarshal([]byte(requestBodyOrigin), &event); err != nil {
+		b.Fatal(err)
+	}
+	for i := 0; i < b.N; i++ {
+		processEvent(event)
+	}
+}
+
 func BenchmarkEvent(b *testing.B) {
 	var event Event
 	b.ReportAllocs()
