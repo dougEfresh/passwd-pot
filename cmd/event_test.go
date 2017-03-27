@@ -252,7 +252,6 @@ func TestExpireAndChangedGeo(t *testing.T) {
 		t.Fatalf("Could not find id %d", testEvent.ID)
 	}
 
-
 	r = testEventClient.db.QueryRow("SELECT last_update FROM geo WHERE ip = $1 ORDER BY last_update DESC LIMIT 1", testEvent.RemoteAddr)
 	err = r.Scan(&newerLastUpdate)
 	if err != nil {
