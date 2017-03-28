@@ -75,7 +75,7 @@ func (c *eventClient) resolveAddr(addr string) (int64, error) {
 		return 0, err
 	}
 	if err == sql.ErrNoRows {
-		log.Infof("New addr found %s\n", addr)
+		log.Infof("New addr found %s", addr)
 		geo, err = c.geoClient.getLocationForAddr(addr)
 		if err != nil {
 			return 0, err
@@ -115,7 +115,7 @@ func runLookup() {
 	for {
 		select {
 		case event := <-eventChan:
-			defaultEventClient.resolveGeoEvent(*event)
+			go defaultEventClient.resolveGeoEvent(*event)
 		}
 	}
 }

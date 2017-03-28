@@ -66,24 +66,23 @@ func (c *eventClient) resolveGeoEvent(event Event) error {
 		job.Complete(health.ValidationError)
 		return err
 	}
-	id, err := c.resolveAddr(event.RemoteAddr)
-	if err != nil {
+	var err error
+	var id int64
+	if id, err = c.resolveAddr(event.RemoteAddr); err != nil {
 		job.Complete(health.ValidationError)
 		return err
 	}
-	_, err = c.db.Exec(`UPDATE event SET remote_geo_id = $1 where id = $2`, id, event.ID)
-	if err != nil {
+	if _, err = c.db.Exec(`UPDATE event SET remote_geo_id = $1 where id = $2`, id, event.ID);  err != nil {
 		job.Complete(health.Error)
 		return err
 	}
 
-	id, err = c.resolveAddr(event.OriginAddr)
-	if err != nil {
+	if id, err = c.resolveAddr(event.OriginAddr); err != nil {
 		job.Complete(health.Error)
 		return err
 	}
-	_, err = c.db.Exec(`UPDATE event SET origin_geo_id = $1 where id = $2`, id, event.ID)
-	if err != nil {
+
+	if _, err = c.db.Exec(`UPDATE event SET origin_geo_id = $1 where id = $2`, id, event.ID) ; err != nil {
 		job.Complete(health.Error)
 		return err
 	}
