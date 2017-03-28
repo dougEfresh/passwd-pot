@@ -46,10 +46,12 @@ func insertGeo(geo *Geo, db *sql.DB) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+	defer r.Close()
 	if !r.Next() {
 		return 0, errors.New(fmt.Sprintf("Failed inserting %s", geo))
 	}
 	err = r.Scan(&id)
+
 	return id, err
 }
 
@@ -86,7 +88,7 @@ func (c *eventClient) resolveAddr(addr string) (int64, error) {
 		}
 		geo.ID = id
 	} else if geo.LastUpdate.Before(expire) {
-		log.Infof("Found expired addr %s (%s) (%s)\n", addr, geo.LastUpdate, expire)
+		log.Infof("Found expired addr %s (%s) (%s)", addr, geo.LastUpdate, expire)
 		var newGeo = &Geo{}
 		newGeo, err = c.geoClient.getLocationForAddr(addr)
 		if err != nil {
