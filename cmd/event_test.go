@@ -9,13 +9,14 @@ import (
 )
 
 var localGeo = make(map[string]string)
+type mockGeoClient struct {
+}
 
 func init() {
 	localGeo["1.2.3.4"] = `{"ip":"1.2.3.4","country_code":"CA","country_name":"Singapore","region_code":"01","region_name":"Central Singapore Community Development Council","city":"Singapore","zip_code":"","time_zone":"Asia/Singapore","latitude":1.1,"longitude":101.00,"metro_code":0}`
 	localGeo["127.0.0.1"] = `{"ip":"127.0.0.1","country_code":"US","country_name":"USA","region_code":"05","region_name":"America","city":"New York","zip_code":"","time_zone":"Asia/Singapore","latitude":2.2,"longitude":102.00,"metro_code":0}`
 	localGeo["192.168.1.1"] = `{"ip":"192.168.1.1","country_code":"ZZ","country_name":"USA","region_code":"05","region_name":"America","city":"New York","zip_code":"","time_zone":"Asia/Singapore","latitude":2.2,"longitude":102.00,"metro_code":0}`
 	localGeo["10.0.0.1"] = `{"ip":"10.0.0.1","country_code":"ZX","country_name":"USA","region_code":"05","region_name":"America","city":"New York","zip_code":"","time_zone":"Asia/Singapore","latitude":2.2,"longitude":102.00,"metro_code":0}`
-	config.UseCache = true
 }
 
 func (c *mockGeoClient) getLocationForAddr(ip string) (*Geo, error) {
@@ -61,7 +62,7 @@ var testEvent = Event{
 }
 
 func createEvent(event *Event) error {
-	id, err := testEventClient.recordEvent(*event)
+	id, _, err := testEventClient.recordEvent(*event)
 	if err != nil {
 		return err
 	}

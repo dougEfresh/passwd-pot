@@ -108,13 +108,14 @@ func handleEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func processEvent(event Event) (int64, error) {
-	id, err := defaultEventClient.recordEvent(event)
+	id, resolved, err := defaultEventClient.recordEvent(event)
 	if err != nil {
 		return 0, err
 	}
 	event.ID = id
-	log.Debug("Sending event to channel")
-	eventChan <- &event
+	if !resolved {
+		eventChan <- &event
+	}
 	return id, nil
 }
 
@@ -151,5 +152,5 @@ func init() {
 	serverCmd.PersistentFlags().StringVar(&config.Dsn, "dsn", "postgres://postgres:@172.17.0.1/?sslmode=disable", "DSN database url")
 	serverCmd.PersistentFlags().StringVar(&config.BindAddr, "bind", "localhost:8080", "bind to this address:port")
 	serverCmd.PersistentFlags().StringVar(&config.NewRelic, "new-relic", "", "new relic api key")
-	serverCmd.PersistentFlags().BoolVar(&config.UseCache, "use-cache", false, "cache geo ip results")
+	serverCmd.PersistentFlags().BoolVar(&config.NoCache, "no-cache", false, "don't cache geo ip results")
 }

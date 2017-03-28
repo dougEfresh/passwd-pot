@@ -9,7 +9,7 @@ import (
 )
 
 type eventRecorder interface {
-	recordEvent(event Event) (int64, error)
+	recordEvent(event Event) (int64, bool, error)
 	resolveGeoEvent(event Event) error
 }
 
@@ -35,26 +35,40 @@ func (c *eventClient) list() []EventGeo {
 	return geoEvents
 }
 
-func (c *eventClient) recordEvent(event Event) (int64, error) {
+func (c *eventClient) recordEvent(event Event) (int64, bool, error) {
 	job := stream.NewJob("record_event")
-	r, err := c.db.Query(`INSERT INTO event
+	var r *sql.Rows
+	var rId int64
+	var oId int64
+	var err error
+	rId, _ = geoCache.Get(event.RemoteAddr)
+	oId, _ = geoCache.Get(event.OriginAddr)
+	if rId > 0 && oId > 0 {
+		r, err = c.db.Query(`INSERT INTO event
+	(dt, username, passwd, remote_addr, remote_geo_id, remote_port, remote_name, remote_version, origin_addr, origin_geo_id, application, protocol)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+        RETURNING ID`,
+			event.Time, event.User, event.Passwd, event.RemoteAddr, rId, event.RemotePort, event.RemoteName, event.RemoteVersion, event.OriginAddr, oId, event.Application, event.Protocol)
+	} else {
+		r, err = c.db.Query(`INSERT INTO event
 	(dt, username, passwd, remote_addr, remote_port, remote_name, remote_version, origin_addr, application, protocol)
         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
         RETURNING ID`,
-		event.Time, event.User, event.Passwd, event.RemoteAddr, event.RemotePort, event.RemoteName, event.RemoteVersion, event.OriginAddr, event.Application, event.Protocol)
-	var id int64
+			event.Time, event.User, event.Passwd, event.RemoteAddr, event.RemotePort, event.RemoteName, event.RemoteVersion, event.OriginAddr, event.Application, event.Protocol)
+	}
 	if err != nil {
 		job.Complete(health.Error)
-		return 0, err
+		return 0, false, err
 	}
+	var id int64
 	defer r.Close()
 	r.Next()
 	err = r.Scan(&id)
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
 	job.Complete(health.Success)
-	return id, nil
+	return id, rId > 0 && oId > 0, nil
 }
 
 func (c *eventClient) resolveGeoEvent(event Event) error {
@@ -72,7 +86,7 @@ func (c *eventClient) resolveGeoEvent(event Event) error {
 		job.Complete(health.ValidationError)
 		return err
 	}
-	if _, err = c.db.Exec(`UPDATE event SET remote_geo_id = $1 where id = $2`, id, event.ID);  err != nil {
+	if _, err = c.db.Exec(`UPDATE event SET remote_geo_id = $1 where id = $2`, id, event.ID); err != nil {
 		job.Complete(health.Error)
 		return err
 	}
@@ -82,7 +96,7 @@ func (c *eventClient) resolveGeoEvent(event Event) error {
 		return err
 	}
 
-	if _, err = c.db.Exec(`UPDATE event SET origin_geo_id = $1 where id = $2`, id, event.ID) ; err != nil {
+	if _, err = c.db.Exec(`UPDATE event SET origin_geo_id = $1 where id = $2`, id, event.ID); err != nil {
 		job.Complete(health.Error)
 		return err
 	}
@@ -116,7 +130,8 @@ func (c *eventClient) get(id int64) *EventGeo {
 	FROM event_geo WHERE id = $1 LIMIT 1`, id)
 	var event EventGeo
 	err := r.Scan(&event.ID, &event.Time, &event.User, &event.Passwd,
-		&event.RemoteAddr, &event.RemoteName, &event.RemoteVersion, &event.RemotePort, &event.RemoteCountry, &event.RemoteCity,
+		&event.RemoteAddr, &event.RemoteName, &event.RemoteVersion,
+		&event.RemotePort, &event.RemoteCountry, &event.RemoteCity,
 		&event.OriginAddr, &event.OriginCountry, &event.OriginCity,
 		&event.RemoteLatitude, &event.RemoteLongitude,
 		&event.OriginLatitude, &event.OriginLongitude)
