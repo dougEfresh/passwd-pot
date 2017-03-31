@@ -2,7 +2,6 @@ package api
 
 import (
 	"bytes"
-	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,10 +9,19 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	"database/sql/driver"
 )
 
 const EventURL = "/api/v1/event"
 const StreamURL = "/api/v1/event/stream"
+
+const (
+	DefaultInitialInterval     = 500 * time.Millisecond
+	DefaultRandomizationFactor = 0.5
+	DefaultMultiplier          = 1.5
+	DefaultMaxInterval         = 60 * time.Second
+	DefaultMaxElapsedTime      = 15 * time.Minute
+)
 
 //Custom Serializer
 type EventTime time.Time

@@ -56,7 +56,6 @@ func setup(cmd *cobra.Command, args []string) {
 		go func() { log.Error(http.ListenAndServe(config.Pprof, nil)) }()
 	}
 
-	defaultDbEventLogger.Debug = config.Debug
 	healthMonitor(cmd.Name())
 }
 

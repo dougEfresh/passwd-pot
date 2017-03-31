@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"github.com/OneOfOne/cmap"
+	"time"
 )
 
 // Cache is a synchronised map of items that auto-expire once stale
@@ -42,11 +43,15 @@ func (cache *Cache) Delete(key string) {
 	cache.cm.Delete(key)
 }
 
-func (cache *Cache) cleanup() {
-
-}
-
 func (cache *Cache) startCleanupTimer() {
+	for {
+		time.Sleep(48 * time.Hour)
+		cache.cm.Foreach(func(key string, val interface{}) (BreakEarly bool) {
+			BreakEarly = false
+			cache.cm.Delete(key)
+			return
+		})
+	}
 }
 
 // NewCache is a helper to create instance of the Cache struct
@@ -54,6 +59,6 @@ func NewCache() *Cache {
 	cache := &Cache{
 		cm: cmap.New(),
 	}
-	cache.startCleanupTimer()
+	go cache.startCleanupTimer()
 	return cache
 }

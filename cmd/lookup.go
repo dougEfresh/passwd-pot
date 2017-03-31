@@ -19,9 +19,9 @@ import (
 	"errors"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
+	"github.com/gocraft/health"
 	"sync"
 	"time"
-	"github.com/gocraft/health"
 )
 
 var eventChan = make(chan *Event)

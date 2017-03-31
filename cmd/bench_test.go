@@ -15,8 +15,8 @@
 package cmd
 
 import (
-	"testing"
 	"encoding/json"
+	"testing"
 )
 
 func BenchmarkEvent(b *testing.B) {

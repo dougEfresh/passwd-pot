@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-
 //EventGeo event with location
 type EventGeo struct {
 	ID              int64     `db:"id"`

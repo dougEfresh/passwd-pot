@@ -102,7 +102,7 @@ func handleEvent(w http.ResponseWriter, r *http.Request) {
 	job.Complete(health.Success)
 	j, _ := json.Marshal(event)
 	w.WriteHeader(http.StatusAccepted)
-	w.Header().Add("Content-type", "application/json")
+	w.Header().Add("Content-Type", "application/json")
 	w.Write(j)
 
 }
