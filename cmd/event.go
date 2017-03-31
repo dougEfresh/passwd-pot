@@ -36,6 +36,9 @@ func (c *eventClient) list() []EventGeo {
 }
 
 func (c *eventClient) recordEvent(event Event) (int64, bool, error) {
+	if log.GetLevel() == log.DebugLevel {
+		log.Debugf("Processing %s", event)
+	}
 	job := stream.NewJob("record_event")
 	var r *sql.Rows
 	var rId int64

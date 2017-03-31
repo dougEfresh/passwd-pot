@@ -2,26 +2,19 @@ package api
 
 import (
 	"bytes"
+	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gopkg.in/olivere/elastic.v2/backoff"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
-	"database/sql/driver"
 )
 
 const EventURL = "/api/v1/event"
 const StreamURL = "/api/v1/event/stream"
-
-const (
-	DefaultInitialInterval     = 500 * time.Millisecond
-	DefaultRandomizationFactor = 0.5
-	DefaultMultiplier          = 1.5
-	DefaultMaxInterval         = 60 * time.Second
-	DefaultMaxElapsedTime      = 15 * time.Minute
-)
 
 //Custom Serializer
 type EventTime time.Time
@@ -96,8 +89,11 @@ func (e *EventClient) SendEvent(event *Event) (*Event, error) {
 	if err != nil {
 		return nil, err
 	}
-	body, err := e.transport("POST", EventURL, b)
-
+	var body []byte
+	err = backoff.Retry(func() error {
+		body, err = e.transport("POST", EventURL, b)
+		return err
+	}, backoff.NewExponentialBackoff(15*time.Second, 15*time.Minute))
 	if err != nil {
 		return nil, err
 	}

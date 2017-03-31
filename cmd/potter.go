@@ -134,7 +134,13 @@ func runPotter() {
 		go psql.Run(getWorker(pc, &wg, getPort(defaultPsqlPort, potConfig.Psql)))
 		wg.Add(1)
 		go telnet.Run(getWorker(pc, &wg, getPort(defaultTelnetPort, potConfig.Telnet)))
+	} else {
+		if potConfig.Http > 0 {
+			wg.Add(1)
+			go httppot.Run(getWorker(pc, &wg, getPort(defaultHttpPort, potConfig.Http)))
+		}
 	}
+
 	wg.Wait()
 }
 
