@@ -214,7 +214,7 @@ func startRandomHub(hub *Hub) {
 	var id int64
 	query := fmt.Sprintf("SELECT id FROM %s WHERE id != $1 and remote_latitude != $2 and remote_longitude != ? and id >= (SELECT max(id) * RANDOM() FROM %s) ORDER BY id LIMIT 1 ", eventGeoTable, eventTable)
 	for {
-		time.Sleep(1 * time.Second)
+		time.Sleep(1250 * time.Millisecond)
 		if len(hub.clients) == 0 {
 			continue
 		}
@@ -228,7 +228,7 @@ func startRandomHub(hub *Hub) {
 			}
 		} else {
 			r := defaultEventClient.db.QueryRow(query, lastRandomEvent.ID, lastRandomEvent.RemoteLatitude, lastRandomEvent.RemoteLongitude)
-			r.Scan(id)
+			r.Scan(&id)
 		}
 		if id == 0 {
 			log.Error("Could not find an random event!")
