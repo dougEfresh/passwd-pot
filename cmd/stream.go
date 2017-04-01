@@ -229,7 +229,9 @@ func startRandomHub(hub *Hub) {
 		} else {
 			r := defaultEventClient.db.QueryRow(query, lastRandomEvent.ID, lastRandomEvent.RemoteLatitude, lastRandomEvent.RemoteLongitude)
 			err := r.Scan(&id)
-			log.Errorf("Error getting next id %s", err)
+			if err != nil {
+				log.Errorf("Error getting next id %s", err)
+			}
 		}
 		if id == 0 {
 			log.Error("Could not find an random event!")
