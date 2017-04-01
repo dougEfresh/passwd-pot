@@ -20,13 +20,12 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/Sirupsen/logrus/hooks/syslog"
 	"github.com/spf13/cobra"
-	"gopkg.in/olivere/elastic.v2/backoff"
 	"log/syslog"
 	"net"
 	"net/http"
 	"os"
 	"sync"
-	"time"
+	"github.com/cenkalti/backoff"
 )
 
 var socketResponse []byte = []byte("HTTP/1.1 202 Accepted\r\n\r\n")
@@ -116,7 +115,7 @@ func sendEvent(request []byte, sr socketRelayer) {
 	}
 	err := backoff.Retry(func() error {
 		return sr.Send(request)
-	}, backoff.NewExponentialBackoff(1*time.Minute, 30*time.Minute))
+	}, backoff.NewExponentialBackOff())
 
 	if err != nil {
 		log.Errorf("Error sending %s (%s)", string(request), err)

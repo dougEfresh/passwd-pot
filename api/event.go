@@ -6,11 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gopkg.in/olivere/elastic.v2/backoff"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
+	"github.com/cenkalti/backoff"
 )
 
 const EventURL = "/api/v1/event"
@@ -93,7 +93,7 @@ func (e *EventClient) SendEvent(event *Event) (*Event, error) {
 	err = backoff.Retry(func() error {
 		body, err = e.transport("POST", EventURL, b)
 		return err
-	}, backoff.NewExponentialBackoff(15*time.Second, 15*time.Minute))
+	}, backoff.NewExponentialBackOff())
 	if err != nil {
 		return nil, err
 	}
