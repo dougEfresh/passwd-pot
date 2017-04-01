@@ -18,6 +18,7 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	//DB driver
+	"github.com/Sirupsen/logrus/hooks/syslog"
 	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -35,6 +36,7 @@ var config struct {
 	NewRelic string
 	NoCache  bool
 }
+var syslogHook *logrus_syslog.SyslogHook
 
 var cfgFile string
 

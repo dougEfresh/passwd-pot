@@ -44,3 +44,4 @@ bin/
 .DS_Store
 
 ssh-password-pot
+prof.*

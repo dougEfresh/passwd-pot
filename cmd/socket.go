@@ -19,13 +19,13 @@ import (
 	"crypto/tls"
 	log "github.com/Sirupsen/logrus"
 	"github.com/Sirupsen/logrus/hooks/syslog"
+	"github.com/cenkalti/backoff"
 	"github.com/spf13/cobra"
 	"log/syslog"
 	"net"
 	"net/http"
 	"os"
 	"sync"
-	"github.com/cenkalti/backoff"
 )
 
 var socketResponse []byte = []byte("HTTP/1.1 202 Accepted\r\n\r\n")
