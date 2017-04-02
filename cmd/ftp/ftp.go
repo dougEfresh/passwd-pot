@@ -22,6 +22,7 @@ import (
 
 	"bufio"
 	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/cmd/listen"
 	"github.com/dougEfresh/passwd-pot/cmd/queue"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"io"
@@ -59,22 +60,19 @@ type potHandler struct {
 	eventQueue queue.EventQueue
 }
 
-func (p *potHandler) handleNewConnection(conn net.Conn) {
-	if _, err := conn.Write([]byte("220 This is a private system - No anonymous login\r\n")); err != nil {
-		log.Errorf("Error sending 220 %s", err)
-		conn.Close()
-		return
-	}
-	p.handleConnection(conn)
-}
 func getCommand(line string) (string, []string) {
 	line = strings.Trim(line, "\r \n")
 	cmd := strings.Split(line, " ")
 	return cmd[0], cmd[1:]
 }
 
-func (p *potHandler) handleConnection(conn net.Conn) {
+func (p *potHandler) HandleConnection(conn net.Conn) {
 	defer conn.Close()
+	if _, err := conn.Write([]byte("220 This is a private system - No anonymous login\r\n")); err != nil {
+		log.Errorf("Error sending 220 %s", err)
+		conn.Close()
+		return
+	}
 	var user string
 	var pass string
 	remoteAddrPair := strings.Split(conn.RemoteAddr().String(), ":")
@@ -122,22 +120,8 @@ func readCommand(conn net.Conn) (string, []string, error) {
 }
 
 func Run(worker work.Worker) {
-	defer worker.Wg.Done()
-	if worker.Addr == "" {
-		log.Warn("Not starting ftp pot")
-		return
-	}
-	ln, err := net.Listen("tcp", worker.Addr)
-	if err != nil {
-		log.Errorf("Cannot bind to %s %s", worker.Addr, err)
-		return
-	}
-	log.Infof("Started ftp pot on %s", worker.Addr)
 	p := &potHandler{
 		eventQueue: worker.EventQueue,
 	}
-	for {
-		conn, _ := ln.Accept()
-		go p.handleNewConnection(conn)
-	}
+	listen.Run(worker, p)
 }

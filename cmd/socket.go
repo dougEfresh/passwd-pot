@@ -20,6 +20,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/Sirupsen/logrus/hooks/syslog"
 	"github.com/cenkalti/backoff"
+	"github.com/dougEfresh/passwd-pot/cmd/listen"
 	"github.com/spf13/cobra"
 	"log/syslog"
 	"net"
@@ -122,16 +123,6 @@ func sendEvent(request []byte, sr socketRelayer) {
 	}
 }
 
-func acceptConnection(listener net.Listener, listen chan<- net.Conn) {
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			continue
-		}
-		listen <- conn
-	}
-}
-
 func runSocketServer(sr socketRelayer) {
 
 	f, err := os.Open(socketConfig.Socket)
@@ -144,19 +135,18 @@ func runSocketServer(sr socketRelayer) {
 		log.Errorf("listen error %s", err)
 		return
 	}
-	listen := make(chan net.Conn, 100)
-	go acceptConnection(l, listen)
+	lc := make(chan net.Conn, 100)
+	go listen.AcceptConnection(l, lc)
 	defer func() {
 		l.Close()
 		os.Remove(socketConfig.Socket)
 	}()
 	for {
 		select {
-		case conn := <-listen:
+		case conn := <-lc:
 			go handleSocketRequest(conn, sr)
 		}
 	}
-
 }
 
 func init() {

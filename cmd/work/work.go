@@ -24,4 +24,5 @@ type Worker struct {
 	Addr       string
 	EventQueue queue.EventQueue
 	Wg         *sync.WaitGroup
+	Name       string
 }

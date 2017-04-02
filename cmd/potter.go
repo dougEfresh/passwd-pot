@@ -125,31 +125,32 @@ func runPotter() {
 	}
 	if potConfig.All {
 		wg.Add(1)
-		go httppot.Run(getWorker(pc, &wg, getPort(defaultHttpPort, potConfig.Http)))
+		go httppot.Run(getWorker(pc, &wg, getPort(defaultHttpPort, potConfig.Http), "http"))
 		wg.Add(1)
-		go ftp.Run(getWorker(pc, &wg, getPort(defaultFtpPort, potConfig.Ftp)))
+		go ftp.Run(getWorker(pc, &wg, getPort(defaultFtpPort, potConfig.Ftp), "ftp"))
 		wg.Add(1)
-		go pop.Run(getWorker(pc, &wg, getPort(defaultPopPort, potConfig.Pop)))
+		go pop.Run(getWorker(pc, &wg, getPort(defaultPopPort, potConfig.Pop), "pop"))
 		wg.Add(1)
-		go psql.Run(getWorker(pc, &wg, getPort(defaultPsqlPort, potConfig.Psql)))
+		go psql.Run(getWorker(pc, &wg, getPort(defaultPsqlPort, potConfig.Psql), "psql"))
 		wg.Add(1)
-		go telnet.Run(getWorker(pc, &wg, getPort(defaultTelnetPort, potConfig.Telnet)))
+		go telnet.Run(getWorker(pc, &wg, getPort(defaultTelnetPort, potConfig.Telnet), "telnet"))
 	} else {
 		if potConfig.Http > 0 {
 			wg.Add(1)
-			go httppot.Run(getWorker(pc, &wg, getPort(defaultHttpPort, potConfig.Http)))
+			go httppot.Run(getWorker(pc, &wg, getPort(defaultHttpPort, potConfig.Http), "http"))
 		}
 	}
 
 	wg.Wait()
 }
 
-func getWorker(eq queue.EventQueue, wg *sync.WaitGroup, port int) work.Worker {
+func getWorker(eq queue.EventQueue, wg *sync.WaitGroup, port int, name string) work.Worker {
 
 	return work.Worker{
 		Addr:       fmt.Sprintf("%s:%d", potConfig.Bind, port),
 		EventQueue: eq,
 		Wg:         wg,
+		Name:       name,
 	}
 }
 

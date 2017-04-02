@@ -22,6 +22,7 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/cmd/listen"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"io"
 	"net"
@@ -66,7 +67,7 @@ func nullTermToStrings(b []byte) (s []string) {
 	return
 }
 
-type conn struct {
+type handler struct {
 	c       net.Conn
 	buf     *bufio.Reader
 	namei   int
@@ -74,7 +75,7 @@ type conn struct {
 	work    work.Worker
 }
 
-func (cn *conn) recvMessage(r *readBuf) (byte, error) {
+func (cn *handler) recvMessage(r *readBuf) (byte, error) {
 	x := make([]byte, 5)
 	_, err := io.ReadFull(cn.buf, x)
 	if err != nil {
@@ -99,7 +100,7 @@ func (cn *conn) recvMessage(r *readBuf) (byte, error) {
 	return t, nil
 }
 
-func (cn *conn) recvStartMessage(r *readBuf) error {
+func (cn *handler) recvStartMessage(r *readBuf) error {
 	x := cn.scratch[0:4]
 	_, err := io.ReadFull(cn.buf, x)
 	if err != nil {
@@ -137,7 +138,7 @@ func (cn *conn) recvStartMessage(r *readBuf) error {
 	return nil
 }
 
-func (cn *conn) recv() (t byte, r *readBuf, err error) {
+func (cn *handler) recv() (t byte, r *readBuf, err error) {
 	for {
 		r = &readBuf{}
 		t, err = cn.recvMessage(r)
@@ -157,18 +158,18 @@ func (cn *conn) recv() (t byte, r *readBuf, err error) {
 	}
 }
 
-func (cn *conn) writeBuf(b byte) *writeBuf {
+func (cn *handler) writeBuf(b byte) *writeBuf {
 	cn.scratch[0] = b
 	return &writeBuf{
 		buf: cn.scratch[:5],
 		pos: 1,
 	}
 }
-func (cn *conn) send(m *writeBuf) (int, error) {
+func (cn *handler) send(m *writeBuf) (int, error) {
 	return cn.c.Write(m.wrap())
 }
 
-func (cn *conn) handleClient(worker work.Worker) {
+func (cn *handler) handleClient() {
 	// read start packet
 	defer cn.c.Close()
 	remoteAddrPair := strings.Split(cn.c.RemoteAddr().String(), ":")
@@ -217,29 +218,19 @@ func (cn *conn) handleClient(worker work.Worker) {
 	cn.send(w)
 }
 
-func Run(worker work.Worker) {
-	defer worker.Wg.Done()
-	if worker.Addr == "" {
-		log.Warn("Not starting psql pot")
-		return
-	}
-	ln, err := net.Listen("tcp", worker.Addr)
-	if err != nil {
-		log.Errorf("Cannot bind to %s %s", worker.Addr, err)
-		return
-	}
-	log.Infof("Started psql pot on %s", worker.Addr)
+type server struct {
+	work.Worker
+}
 
-	for {
-		connection, err := ln.Accept()
-		if err != nil {
-			continue
-		}
-		cn := &conn{
-			c:    connection,
-			buf:  bufio.NewReader(connection),
-			work: worker,
-		}
-		go cn.handleClient(worker)
+func (s server) HandleConnection(conn net.Conn) {
+	cn := &handler{
+		c:    conn,
+		buf:  bufio.NewReader(conn),
+		work: s.Worker,
 	}
+	cn.handleClient()
+}
+
+func Run(worker work.Worker) {
+	listen.Run(worker, server{worker})
 }

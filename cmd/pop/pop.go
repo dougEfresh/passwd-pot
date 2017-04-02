@@ -20,6 +20,8 @@ import (
 	"bufio"
 	log "github.com/Sirupsen/logrus"
 	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/cmd/listen"
+	"github.com/dougEfresh/passwd-pot/cmd/queue"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"io"
 	"net"
@@ -32,7 +34,7 @@ var helloMsg = []byte("+OK POP3 server\r\n")
 var okMsg = []byte("+OK\r\n")
 var unAuthMsg = []byte("-ERR Password incorrect\r\n")
 
-func sendEvent(user string, password string, remoteAddrPair []string, worker work.Worker) {
+func (p server) sendEvent(user string, password string, remoteAddrPair []string) {
 	remotePort, err := strconv.Atoi(remoteAddrPair[1])
 	if err != nil {
 		remotePort = 0
@@ -51,10 +53,28 @@ func sendEvent(user string, password string, remoteAddrPair []string, worker wor
 	if names, err := net.LookupAddr(e.RemoteAddr); err == nil && len(names) > 0 {
 		e.RemoteName = names[0]
 	}
-	worker.EventQueue.Send(e)
+	p.Send(e)
 }
 
-func handleClient(conn net.Conn, worker work.Worker) {
+func getCommand(line string) (string, []string) {
+	line = strings.Trim(line, "\r \n")
+	cmd := strings.Split(line, " ")
+	return cmd[0], cmd[1:]
+}
+
+func getSafeArg(args []string, nr int) (string, error) {
+	if nr < len(args) {
+		return args[nr], nil
+	}
+	log.Error("Out of range")
+	return "", nil
+}
+
+type server struct {
+	queue.EventQueue
+}
+
+func (p server) HandleConnection(conn net.Conn) {
 	defer conn.Close()
 	conn.Write(helloMsg)
 	reader := bufio.NewReader(conn)
@@ -81,7 +101,7 @@ func handleClient(conn net.Conn, worker work.Worker) {
 
 		} else if cmd == "PASS" {
 			password, _ = getSafeArg(args, 0)
-			go sendEvent(user, password, remoteAddrPair, worker)
+			go p.sendEvent(user, password, remoteAddrPair)
 			conn.Write(unAuthMsg)
 
 		} else if cmd == "QUIT" {
@@ -92,39 +112,8 @@ func handleClient(conn net.Conn, worker work.Worker) {
 	}
 }
 
-func getCommand(line string) (string, []string) {
-	line = strings.Trim(line, "\r \n")
-	cmd := strings.Split(line, " ")
-	return cmd[0], cmd[1:]
-}
-
-func getSafeArg(args []string, nr int) (string, error) {
-	if nr < len(args) {
-		return args[nr], nil
-	}
-	log.Error("Out of range")
-	return "", nil
-}
-
 func Run(worker work.Worker) {
-	defer worker.Wg.Done()
-	if worker.Addr == "" {
-		log.Warn("Not starting pop pot")
-		return
-	}
-	ln, err := net.Listen("tcp", worker.Addr)
-	if err != nil {
-		log.Errorf("Cannot bind to %s %s", worker.Addr, err)
-		return
-	}
-	log.Infof("Started pop pot on %s", worker.Addr)
-
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			continue
-		}
-		// run as goroutine
-		go handleClient(conn, worker)
-	}
+	listen.Run(worker, server{
+		worker.EventQueue,
+	})
 }

@@ -117,5 +117,6 @@ func TestServerRequest(t *testing.T) {
 	if submittedEvent.RemoteName == "" {
 		t.Fatalf("Wrong event sent %s", submittedEvent)
 	}
+	t.Log("Done ")
 
 }
