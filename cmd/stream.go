@@ -66,8 +66,8 @@ var streamCmd = &cobra.Command{
 		var err error
 		setup(cmd, args)
 		r := mux.NewRouter()
-		r.HandleFunc(getHandler(api.StreamURL, streamEvents)).Methods("GET")
-		r.HandleFunc(getHandler(api.StreamURL+"/random", streamEvents)).Methods("GET")
+		r.HandleFunc(api.StreamURL, streamEvents).Methods("GET")
+		r.HandleFunc(api.StreamURL+"/random", streamEvents).Methods("GET")
 
 		srv := &http.Server{
 			Handler:      r,

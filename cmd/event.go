@@ -23,7 +23,7 @@ import (
 )
 
 type eventRecorder interface {
-	recordEvent(event Event) (int64, bool, error)
+	recordEvent(event Event) (int64, error)
 	resolveGeoEvent(event Event) error
 }
 
@@ -49,7 +49,7 @@ func (c *eventClient) list() []EventGeo {
 	return geoEvents
 }
 
-func (c *eventClient) recordEvent(event Event) (int64, bool, error) {
+func (c *eventClient) recordEvent(event Event) (int64, error) {
 	if log.GetLevel() == log.DebugLevel {
 		log.Debugf("Processing %s", event)
 	}
@@ -75,17 +75,22 @@ func (c *eventClient) recordEvent(event Event) (int64, bool, error) {
 	}
 	if err != nil {
 		job.Complete(health.Error)
-		return 0, false, err
+		return 0, err
 	}
 	var id int64
 	defer r.Close()
 	r.Next()
 	err = r.Scan(&id)
 	if err != nil {
-		return 0, false, err
+		return 0, err
 	}
+	event.ID = id
 	job.Complete(health.Success)
-	return id, rId > 0 && oId > 0, nil
+	if rId == 0 || oId == 0 {
+		eventChan <- &event
+	}
+
+	return id, nil
 }
 
 func (c *eventClient) resolveGeoEvent(event Event) error {

@@ -17,21 +17,30 @@ package cmd
 import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/Sirupsen/logrus/hooks/syslog"
+	klog "github.com/go-kit/kit/log"
 	"github.com/gocraft/health"
 	"github.com/newrelic/go-agent"
 	"github.com/spf13/cobra"
+	"io"
 	"log/syslog"
 	"net/http"
 	"os"
-	"time"
 )
 
 var stream = health.NewStream()
 
 func setup(cmd *cobra.Command, args []string) {
 	var err error
+	var writer io.Writer
 	if config.Debug {
 		log.SetLevel(log.DebugLevel)
+	}
+	if config.Syslog != "" {
+		if syslogHook, err = logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, "passwd-pot"); err != nil {
+			log.Error("Unable to connect to local syslog daemon")
+		} else {
+			log.AddHook(syslogHook)
+		}
 	}
 	defaultEventClient = &eventClient{
 		db:        loadDSN(config.Dsn),
@@ -45,47 +54,23 @@ func setup(cmd *cobra.Command, args []string) {
 		}
 		log.Infof("Configured new relic agent")
 	}
+	if config.Pprof != "" {
+		go func() { log.Error(http.ListenAndServe(config.Pprof, nil)) }()
+	}
 	if config.Syslog != "" {
 		if syslogHook, err = logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, "passwd-pot"); err != nil {
 			log.Error("Unable to connect to local syslog daemon")
 		} else {
 			log.AddHook(syslogHook)
 		}
-	}
-	if config.Pprof != "" {
-		go func() { log.Error(http.ListenAndServe(config.Pprof, nil)) }()
+		writer, err = syslog.Dial("tcp", config.Syslog, syslog.LOG_LOCAL0, cmd.Name())
 	}
 
-	healthMonitor(cmd.Name())
-}
-
-func healthMonitor(name string) {
-	if config.Debug {
-		if syslogHook != nil {
-			log.Infof("Configuring syslog sinker")
-			stream.AddSink(&health.WriterSink{syslogHook.Writer})
-		} else {
-			stream.AddSink(&health.WriterSink{os.Stdout})
-		}
+	if writer != nil {
+		logger = klog.NewJSONLogger(writer)
+	} else {
+		logger = klog.NewJSONLogger(os.Stdout)
 	}
-	if config.Health != "" {
-		log.Infof("Configuring health enpoint at %s", config.Health)
-		jsonSink := health.NewJsonPollingSink(time.Minute, time.Minute*5)
-		stream.AddSink(jsonSink)
-		jsonSink.StartServer(config.Health)
-	}
-
-	if config.Statsd != "" {
-		statsdOptions := &health.StatsDSinkOptions{
-			Prefix: name,
-		}
-		statsdSink, err := health.NewStatsDSink(config.Statsd, statsdOptions)
-
-		if err != nil {
-			stream.EventErr("new_statsd_sink", err)
-		} else {
-			log.Infof("Configuring statsd at %s", config.Statsd)
-			stream.AddSink(statsdSink)
-		}
-	}
+	logger = klog.With(logger, "ts", klog.DefaultTimestampUTC)
+	logger = klog.With(logger, "caller", klog.DefaultCaller)
 }

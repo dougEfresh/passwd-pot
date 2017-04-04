@@ -20,39 +20,15 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/gocraft/health"
-	"github.com/gorilla/mux"
-	"github.com/newrelic/go-agent"
 	"github.com/spf13/cobra"
 	"io/ioutil"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"os/signal"
 	"strings"
-	"time"
+	"syscall"
 )
-
-//Context for http requests
-type Context struct {
-	eventTransporter
-}
-
-var app newrelic.Application
-
-func handlers() *mux.Router {
-	r := mux.NewRouter()
-	r.HandleFunc(getHandler(api.EventURL, handleEvent)).Methods("POST")
-	r.HandleFunc(getHandler(api.EventURL, listEvents)).Methods("GET")
-	r.HandleFunc(getHandler("/api/v1/cache", deleteCache)).Methods("DELETE")
-	return r
-}
-
-func getHandler(path string, h func(http.ResponseWriter, *http.Request)) (string, func(http.ResponseWriter, *http.Request)) {
-	if app != nil {
-		return newrelic.WrapHandleFunc(app, path, h)
-	} else {
-		return path, h
-	}
-}
 
 var serverCmd = &cobra.Command{
 	Use:   "server",
@@ -68,6 +44,7 @@ func deleteCache(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleEvent(w http.ResponseWriter, r *http.Request) {
+
 	job := stream.NewJob(fmt.Sprintf("%s", api.EventURL))
 	var event Event
 	b, err := ioutil.ReadAll(r.Body)
@@ -111,17 +88,12 @@ func handleEvent(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 	w.Header().Add("Content-Type", "application/json")
 	w.Write(j)
-
 }
 
 func processEvent(event Event) (int64, error) {
-	id, resolved, err := defaultEventClient.recordEvent(event)
+	id, err := defaultEventClient.recordEvent(event)
 	if err != nil {
 		return 0, err
-	}
-	event.ID = id
-	if !resolved {
-		eventChan <- &event
 	}
 	return id, nil
 }
@@ -134,24 +106,34 @@ func listEvents(w http.ResponseWriter, r *http.Request) {
 	w.Write(j)
 }
 
-func run(cmd *cobra.Command, args []string) {
-	var err error
-	setup(cmd, args)
-	srv := &http.Server{
-		Handler:      handlers(),
-		Addr:         config.BindAddr,
-		WriteTimeout: 10 * time.Second,
-		ReadTimeout:  10 * time.Second,
+func getHandler(er eventRecorder) (http.Handler, chan error) {
+	var s EventService
+	{
+		s = NewEventService(er)
+		s = LoggingMiddleware(logger)(s)
 	}
+	var h http.Handler
+	{
+		h = MakeHTTPHandler(s, logger)
+	}
+	errs := make(chan error)
 
-	log.Infof("Listing on %s", config.BindAddr)
-	//Geo Lookup
-	go runLookup()
-	err = srv.ListenAndServe()
-	if err != nil {
-		log.Errorf("Caught error %s", err)
-		os.Exit(-1)
-	}
+	go func() {
+		c := make(chan os.Signal)
+		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+		errs <- fmt.Errorf("%s", <-c)
+	}()
+	go func() {
+		errs <- http.ListenAndServe(config.BindAddr, h)
+	}()
+	go runLookup(er)
+	return h, errs
+}
+
+func run(cmd *cobra.Command, args []string) {
+	setup(cmd, args)
+	_, errs := getHandler(defaultEventClient)
+	log.Infof("exit %s", <-errs)
 }
 
 func init() {

@@ -15,37 +15,23 @@
 package cmd
 
 import (
-	"encoding/json"
-	"testing"
+	"context"
+	"github.com/go-kit/kit/endpoint"
 )
 
-func BenchmarkEvent(b *testing.B) {
-	var event Event
-	b.ReportAllocs()
-	if err := json.Unmarshal([]byte(requestBodyOrigin), &event); err != nil {
-		b.Fatal(err)
-	}
-	for i := 0; i < b.N; i++ {
-		defaultEventClient.recordEvent(event)
+type Endpoints struct {
+	RecordEndpoint endpoint.Endpoint
+}
+
+func MakeServerEndpoints(s EventService) Endpoints {
+	return Endpoints{
+		MakeRecordEndpoint(s),
 	}
 }
 
-func BenchmarkLookup(b *testing.B) {
-	var event Event
-	b.ReportAllocs()
-	if err := json.Unmarshal([]byte(requestBodyOrigin), &event); err != nil {
-		b.Fatal(err)
-	}
-	id, _ := defaultEventClient.recordEvent(event)
-	event.ID = id
-	for i := 0; i < b.N; i++ {
-		defaultEventClient.resolveGeoEvent(event)
-	}
-
-}
-
-func BenchGeoCache(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-
+func MakeRecordEndpoint(s EventService) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(Event)
+		return s.Record(ctx, req)
 	}
 }

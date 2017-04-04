@@ -15,37 +15,12 @@
 package cmd
 
 import (
-	"encoding/json"
-	"testing"
+	"github.com/go-kit/kit/log"
+	"os"
 )
 
-func BenchmarkEvent(b *testing.B) {
-	var event Event
-	b.ReportAllocs()
-	if err := json.Unmarshal([]byte(requestBodyOrigin), &event); err != nil {
-		b.Fatal(err)
-	}
-	for i := 0; i < b.N; i++ {
-		defaultEventClient.recordEvent(event)
-	}
-}
+var logger log.Logger
 
-func BenchmarkLookup(b *testing.B) {
-	var event Event
-	b.ReportAllocs()
-	if err := json.Unmarshal([]byte(requestBodyOrigin), &event); err != nil {
-		b.Fatal(err)
-	}
-	id, _ := defaultEventClient.recordEvent(event)
-	event.ID = id
-	for i := 0; i < b.N; i++ {
-		defaultEventClient.resolveGeoEvent(event)
-	}
-
-}
-
-func BenchGeoCache(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-
-	}
+func init() {
+	logger = log.NewJSONLogger(os.Stdout)
 }

@@ -15,37 +15,28 @@
 package cmd
 
 import (
-	"encoding/json"
-	"testing"
+	"context"
+	"github.com/go-kit/kit/log"
 )
 
-func BenchmarkEvent(b *testing.B) {
-	var event Event
-	b.ReportAllocs()
-	if err := json.Unmarshal([]byte(requestBodyOrigin), &event); err != nil {
-		b.Fatal(err)
-	}
-	for i := 0; i < b.N; i++ {
-		defaultEventClient.recordEvent(event)
+// Middleware describes a service (as opposed to endpoint) middleware.
+type Middleware func(EventService) EventService
+
+func LoggingMiddleware(logger log.Logger) Middleware {
+	return func(next EventService) EventService {
+		return &loggingMiddleware{
+			next:   next,
+			logger: logger,
+		}
 	}
 }
 
-func BenchmarkLookup(b *testing.B) {
-	var event Event
-	b.ReportAllocs()
-	if err := json.Unmarshal([]byte(requestBodyOrigin), &event); err != nil {
-		b.Fatal(err)
-	}
-	id, _ := defaultEventClient.recordEvent(event)
-	event.ID = id
-	for i := 0; i < b.N; i++ {
-		defaultEventClient.resolveGeoEvent(event)
-	}
-
+type loggingMiddleware struct {
+	next   EventService
+	logger log.Logger
 }
 
-func BenchGeoCache(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-
-	}
+func (mw loggingMiddleware) Record(ctx context.Context, event Event) (int64, error) {
+	logger.Log("msg", "Processing new event")
+	return mw.next.Record(ctx, event)
 }

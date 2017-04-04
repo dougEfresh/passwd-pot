@@ -65,6 +65,9 @@ func (c *eventClient) resolveAddr(addr string) (int64, error) {
 	geo := geoPool.Get().(*Geo)
 	defer geoPool.Put(geo)
 	expire := time.Now().AddDate(0, -1, 0)
+	if c == nil {
+		panic("no!")
+	}
 	r := c.db.QueryRow(`SELECT
 	id, ip, country_code, region_code, region_name, city, time_zone, latitude, longitude, metro_code, last_update
 	FROM geo
@@ -112,12 +115,12 @@ func (c *eventClient) resolveAddr(addr string) (int64, error) {
 	return geo.ID, nil
 }
 
-func runLookup() {
-	log.Infof("Initalize lookup channel")
+func runLookup(er eventRecorder) {
+	logger.Log("msg", "Initalize lookup channel")
 	for {
 		select {
 		case event := <-eventChan:
-			go defaultEventClient.resolveGeoEvent(*event)
+			go er.resolveGeoEvent(*event)
 		}
 	}
 }

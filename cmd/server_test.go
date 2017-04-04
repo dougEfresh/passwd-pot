@@ -32,17 +32,18 @@ const (
 	requestBodyOrigin = `{"time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "192.168.1.1", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51" , "originAddr" : "10.0.0.1", "application": "OpenSSH" , "protocol": "ssh" }`
 )
 
-var ts = httptest.NewServer(handlers())
-var endpoint = fmt.Sprintf("%s%s", ts.URL, api.EventURL)
+var ts *httptest.Server
+var eventEndpoint string
 
 func init() {
-	defaultEventClient = testEventClient
+	h, _ := getHandler(testEventClient)
+	ts = httptest.NewServer(h)
+	eventEndpoint = fmt.Sprintf("%s%s", ts.URL, api.EventURL)
 	log.SetLevel(log.WarnLevel)
-	go runLookup()
 }
 
 func TestServerRequest(t *testing.T) {
-	res, err := http.Post(fmt.Sprintf("%s%s", ts.URL, api.EventURL),
+	res, err := http.Post(eventEndpoint,
 		"application/json",
 		strings.NewReader(requestBody))
 
@@ -60,37 +61,29 @@ func TestServerRequest(t *testing.T) {
 		t.Fatal("No Body")
 	}
 
-	var event Event
+	var id int64
 	if err != nil {
 		t.Fatalf("Error reading body %s", err)
 	}
-	err = json.Unmarshal(b, &event)
+	err = json.Unmarshal(b, &id)
 	if err != nil {
 		t.Fatalf("%s %s", string(b), err)
 	}
-
-	if event.ID == 0 {
-		t.Fatalf("Event has id of 0 %+v", event)
-	}
-
 	time.Sleep(1 * time.Second)
-
-	eventGeo := testEventClient.get(event.ID)
+	eventGeo := testEventClient.get(id)
 	if eventGeo == nil {
-		t.Fatalf("Not not find id %d", event.ID)
+		t.Fatalf("Not not find id %d", id)
 	}
-
 	if eventGeo.OriginCountry == "" {
 		t.Fatal("Origin Country is null")
 	}
-
 	if eventGeo.RemoteCountry == "" {
 		t.Fatal("Remote Country is null")
 	}
 }
 
 func TestServerRequestWithOrigin(t *testing.T) {
-	res, err := http.Post(endpoint,
+	res, err := http.Post(eventEndpoint,
 		"application/json",
 		strings.NewReader(requestBodyOrigin))
 
@@ -98,22 +91,20 @@ func TestServerRequestWithOrigin(t *testing.T) {
 		t.Error(err)
 	}
 
-	var event Event
 	b, _ := ioutil.ReadAll(res.Body)
-	err = json.Unmarshal(b, &event)
+	var id int64
+	if err != nil {
+		t.Fatalf("Error reading body %s", err)
+	}
+	err = json.Unmarshal(b, &id)
 	if err != nil {
 		t.Fatalf("%s %s", string(b), err)
 	}
 
-	if event.ID == 0 {
-		t.Fatalf("Event has id of 0 %+v", event)
-	}
-
-	time.Sleep(1 * time.Second)
-
-	eventGeo := testEventClient.get(event.ID)
+	time.Sleep(500 * time.Millisecond)
+	eventGeo := testEventClient.get(id)
 	if eventGeo == nil {
-		t.Fatalf("Not not find id %d", event.ID)
+		t.Fatalf("Not not find id %d", id)
 	}
 
 	if eventGeo.OriginCountry != "ZX" {

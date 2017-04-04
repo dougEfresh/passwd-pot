@@ -77,7 +77,7 @@ var testEvent = Event{
 }
 
 func createEvent(event *Event) error {
-	id, _, err := testEventClient.recordEvent(*event)
+	id, err := testEventClient.recordEvent(*event)
 	if err != nil {
 		return err
 	}
