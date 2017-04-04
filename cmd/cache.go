@@ -15,13 +15,14 @@
 package cmd
 
 import (
-	"github.com/OneOfOne/cmap"
+	log "github.com/Sirupsen/logrus"
+	"github.com/orcaman/concurrent-map"
 	"time"
 )
 
 // Cache is a synchronised map of items that auto-expire once stale
 type Cache struct {
-	cm cmap.CMap
+	cm cmap.ConcurrentMap
 }
 
 // Set is a thread-safe way to add new items to the map
@@ -33,24 +34,27 @@ func (cache *Cache) Set(key string, data int64) {
 // Every lookup, also touches the item, hence extending it's life
 func (cache *Cache) Get(key string) (data int64, found bool) {
 	if cache.cm.Has(key) {
-		v := cache.cm.Get(key)
-		return v.(int64), true
+		v, found := cache.cm.Get(key)
+		return v.(int64), found
 	}
 	return 0, false
 }
 
 func (cache *Cache) Delete(key string) {
-	cache.cm.Delete(key)
+	cache.cm.Remove(key)
+}
+
+func (cache *Cache) Clear() {
+	for item := range cache.cm.IterBuffered() {
+		log.Infof("Removing cached item %s", item.Key)
+		cache.cm.Remove(item.Key)
+	}
 }
 
 func (cache *Cache) startCleanupTimer() {
 	for {
 		time.Sleep(48 * time.Hour)
-		cache.cm.Foreach(func(key string, val interface{}) (BreakEarly bool) {
-			BreakEarly = false
-			cache.cm.Delete(key)
-			return
-		})
+		cache.Clear()
 	}
 }
 

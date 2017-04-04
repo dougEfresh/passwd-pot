@@ -285,3 +285,16 @@ func TestExpireAndChangedGeo(t *testing.T) {
 		t.Fatalf("Country code not DE (%s)", geoEvent.RemoteCountry)
 	}
 }
+
+func TestCacheDelete(t *testing.T) {
+	geoCache.Set("blah", 1)
+	id, _ := geoCache.Get("blah")
+	if id == 0 {
+		t.Fatal("id is zero")
+	}
+	geoCache.Clear()
+	id, _ = geoCache.Get("blah")
+	if id != 0 {
+		t.Fatal("id is NOT zero")
+	}
+}

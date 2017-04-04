@@ -42,6 +42,7 @@ func handlers() *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc(getHandler(api.EventURL, handleEvent)).Methods("POST")
 	r.HandleFunc(getHandler(api.EventURL, listEvents)).Methods("GET")
+	r.HandleFunc(getHandler("/api/v1/cache", deleteCache)).Methods("DELETE")
 	return r
 }
 
@@ -58,6 +59,12 @@ var serverCmd = &cobra.Command{
 	Short: "",
 	Long:  "",
 	Run:   run,
+}
+
+func deleteCache(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
+	geoCache.Clear()
 }
 
 func handleEvent(w http.ResponseWriter, r *http.Request) {
