@@ -44,8 +44,10 @@ func BenchmarkLookup(b *testing.B) {
 
 }
 
-func BenchGeoCache(b *testing.B) {
+func BenchmarkGeoCache(b *testing.B) {
+	b.ReportAllocs()
+	geoCache.set("blah", 1)
 	for i := 0; i < b.N; i++ {
-
+		geoCache.get("blah")
 	}
 }

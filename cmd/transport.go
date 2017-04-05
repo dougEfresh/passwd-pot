@@ -73,8 +73,6 @@ type errorer interface {
 
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	if e, ok := response.(errorer); ok && e.error() != nil {
-		// Not a Go kit transport error, but a business-logic error.
-		// Provide those as HTTP errors.
 		encodeError(ctx, e.error(), w)
 		return nil
 	}

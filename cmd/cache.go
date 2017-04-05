@@ -25,14 +25,11 @@ type Cache struct {
 	cm cmap.ConcurrentMap
 }
 
-// Set is a thread-safe way to add new items to the map
-func (cache *Cache) Set(key string, data int64) {
+func (cache *Cache) set(key string, data int64) {
 	cache.cm.Set(key, data)
 }
 
-// Get is a thread-safe way to lookup items
-// Every lookup, also touches the item, hence extending it's life
-func (cache *Cache) Get(key string) (data int64, found bool) {
+func (cache *Cache) get(key string) (data int64, found bool) {
 	if cache.cm.Has(key) {
 		v, found := cache.cm.Get(key)
 		return v.(int64), found

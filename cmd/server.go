@@ -15,18 +15,13 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
-	"github.com/dougEfresh/passwd-pot/api"
-	"github.com/gocraft/health"
 	"github.com/spf13/cobra"
-	"io/ioutil"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 )
 
@@ -35,75 +30,6 @@ var serverCmd = &cobra.Command{
 	Short: "",
 	Long:  "",
 	Run:   run,
-}
-
-func deleteCache(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
-	geoCache.Clear()
-}
-
-func handleEvent(w http.ResponseWriter, r *http.Request) {
-
-	job := stream.NewJob(fmt.Sprintf("%s", api.EventURL))
-	var event Event
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Errorf("Error reading body %s", err)
-		job.EventErr("handle_event_invalid_body", err)
-		job.Complete(health.ValidationError)
-		return
-	}
-	if err = json.Unmarshal(b, &event); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		log.Errorf("Error unmarshal %s", err)
-		job.EventErr("handle_event_invalid_json", err)
-		job.Complete(health.ValidationError)
-		return
-	}
-
-	if event.OriginAddr == "" {
-		if r.Header.Get("X-Forwarded-For") != "" {
-			log.Debug("Using RemoteAddr from  X-Forwarded-For")
-			event.OriginAddr = r.Header.Get("X-Forwarded-For")
-		} else {
-			//IP:Port
-			log.Debugf("Using RemoteAddr as OriginAddr %s", r.RemoteAddr)
-			event.OriginAddr = strings.Split(r.RemoteAddr, ":")[0]
-		}
-	}
-
-	id, err := processEvent(event)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Errorf("Error writing %+v %s", &event, err)
-		job.EventErr("handle_event_event_error", err)
-		job.Complete(health.Error)
-		return
-	}
-	event.ID = id
-	job.Complete(health.Success)
-	j, _ := json.Marshal(event)
-	w.WriteHeader(http.StatusAccepted)
-	w.Header().Add("Content-Type", "application/json")
-	w.Write(j)
-}
-
-func processEvent(event Event) (int64, error) {
-	id, err := defaultEventClient.recordEvent(event)
-	if err != nil {
-		return 0, err
-	}
-	return id, nil
-}
-
-func listEvents(w http.ResponseWriter, r *http.Request) {
-	geoEvents := defaultEventClient.list()
-	j, _ := json.Marshal(geoEvents)
-	w.WriteHeader(http.StatusOK)
-	w.Header().Add("Content-type", "application/json")
-	w.Write(j)
 }
 
 func getHandler(er eventRecorder) (http.Handler, chan error) {
@@ -123,16 +49,16 @@ func getHandler(er eventRecorder) (http.Handler, chan error) {
 		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 		errs <- fmt.Errorf("%s", <-c)
 	}()
-	go func() {
-		errs <- http.ListenAndServe(config.BindAddr, h)
-	}()
 	go runLookup(er)
 	return h, errs
 }
 
 func run(cmd *cobra.Command, args []string) {
 	setup(cmd, args)
-	_, errs := getHandler(defaultEventClient)
+	h, errs := getHandler(defaultEventClient)
+	go func() {
+		errs <- http.ListenAndServe(config.BindAddr, h)
+	}()
 	log.Infof("exit %s", <-errs)
 }
 

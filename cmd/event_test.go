@@ -287,13 +287,13 @@ func TestExpireAndChangedGeo(t *testing.T) {
 }
 
 func TestCacheDelete(t *testing.T) {
-	geoCache.Set("blah", 1)
-	id, _ := geoCache.Get("blah")
+	geoCache.set("blah", 1)
+	id, _ := geoCache.get("blah")
 	if id == 0 {
 		t.Fatal("id is zero")
 	}
 	geoCache.Clear()
-	id, _ = geoCache.Get("blah")
+	id, _ = geoCache.get("blah")
 	if id != 0 {
 		t.Fatal("id is NOT zero")
 	}

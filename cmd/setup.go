@@ -36,7 +36,7 @@ func setup(cmd *cobra.Command, args []string) {
 		log.SetLevel(log.DebugLevel)
 	}
 	if config.Syslog != "" {
-		if syslogHook, err = logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, "passwd-pot"); err != nil {
+		if syslogHook, err = logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, cmd.Name()); err != nil {
 			log.Error("Unable to connect to local syslog daemon")
 		} else {
 			log.AddHook(syslogHook)
@@ -58,7 +58,7 @@ func setup(cmd *cobra.Command, args []string) {
 		go func() { log.Error(http.ListenAndServe(config.Pprof, nil)) }()
 	}
 	if config.Syslog != "" {
-		if syslogHook, err = logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, "passwd-pot"); err != nil {
+		if syslogHook, err = logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, cmd.Name()); err != nil {
 			log.Error("Unable to connect to local syslog daemon")
 		} else {
 			log.AddHook(syslogHook)

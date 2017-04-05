@@ -50,16 +50,13 @@ func (c *eventClient) list() []EventGeo {
 }
 
 func (c *eventClient) recordEvent(event Event) (int64, error) {
-	if log.GetLevel() == log.DebugLevel {
-		log.Debugf("Processing %s", event)
-	}
 	job := stream.NewJob("record_event")
 	var r *sql.Rows
 	var rId int64
 	var oId int64
 	var err error
-	rId, _ = geoCache.Get(event.RemoteAddr)
-	oId, _ = geoCache.Get(event.OriginAddr)
+	rId, _ = geoCache.get(event.RemoteAddr)
+	oId, _ = geoCache.get(event.OriginAddr)
 	if rId > 0 && oId > 0 {
 		r, err = c.db.Query(`INSERT INTO event
 	(dt, username, passwd, remote_addr, remote_geo_id, remote_port, remote_name, remote_version, origin_addr, origin_geo_id, application, protocol)

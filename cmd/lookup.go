@@ -56,7 +56,7 @@ func insertGeo(geo *Geo, db *sql.DB) (int64, error) {
 }
 
 func (c *eventClient) resolveAddr(addr string) (int64, error) {
-	cachedGeo, found := geoCache.Get(addr)
+	cachedGeo, found := geoCache.get(addr)
 	if found {
 		return cachedGeo, nil
 	}
@@ -110,13 +110,12 @@ func (c *eventClient) resolveAddr(addr string) (int64, error) {
 		}
 	}
 	if !config.NoCache {
-		geoCache.Set(addr, geo.ID)
+		geoCache.set(addr, geo.ID)
 	}
 	return geo.ID, nil
 }
 
 func runLookup(er eventRecorder) {
-	logger.Log("msg", "Initalize lookup channel")
 	for {
 		select {
 		case event := <-eventChan:
