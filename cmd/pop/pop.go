@@ -93,7 +93,7 @@ func (p server) HandleConnection(conn net.Conn) {
 
 		// Parses the command
 		cmd, args := getCommand(raw_line)
-		log.Debugf("RECV: cmd:%s  args: %s", cmd, args)
+		log.Infof("RECV: cmd:%s  args: %s", cmd, args)
 
 		if cmd == "USER" {
 			user, _ = getSafeArg(args, 0)

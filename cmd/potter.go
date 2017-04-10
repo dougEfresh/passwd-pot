@@ -22,7 +22,7 @@ import (
 	httppot "github.com/dougEfresh/passwd-pot/cmd/http"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"github.com/spf13/cobra"
-
+	"github.com/bshuster-repo/logruzio"
 	"fmt"
 	"github.com/dougEfresh/passwd-pot/cmd/pop"
 	"github.com/dougEfresh/passwd-pot/cmd/psql"
@@ -118,7 +118,18 @@ func runPotter() {
 	if err != nil {
 		log.Panicf("Error creating eventCLient %s %s", potConfig.Server, err)
 	}
-
+	if config.Logz != "" {
+		ctx := log.Fields{
+			"ID": "12adebacd8",
+			"Version" : "1.0.0",
+		}
+		hook, err := logruzio.New(config.Logz, "passwd-potter", ctx)
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			log.AddHook(hook)
+		}
+	}
 	var wg sync.WaitGroup
 	pc = &potterClient{
 		eventClient: c,

@@ -37,6 +37,5 @@ type loggingMiddleware struct {
 }
 
 func (mw loggingMiddleware) Record(ctx context.Context, event Event) (int64, error) {
-	logger.Log("msg", "Processing new event")
 	return mw.next.Record(ctx, event)
 }

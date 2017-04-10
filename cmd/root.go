@@ -35,6 +35,7 @@ var config struct {
 	Pprof    string
 	NewRelic string
 	NoCache  bool
+	Logz     string
 }
 var syslogHook *logrus_syslog.SyslogHook
 
@@ -61,8 +62,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.passwd-pot.yaml)")
 	RootCmd.PersistentFlags().BoolVar(&config.Debug, "debug", false, "Enable Debug")
 	RootCmd.PersistentFlags().StringVar(&config.Syslog, "syslog", "", "use syslog server")
-	RootCmd.PersistentFlags().StringVar(&config.Health, "health", "", "create health server")
-	RootCmd.PersistentFlags().StringVar(&config.Statsd, "statsd", "", "push stats to statsd (localhost:8125)")
+	RootCmd.PersistentFlags().StringVar(&config.Logz, "logz", "", "use syslog server")
 	RootCmd.PersistentFlags().StringVar(&config.Pprof, "pprof", "", "pprof endpoint (localhost:6060)")
 	//log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
