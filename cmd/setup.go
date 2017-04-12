@@ -84,4 +84,5 @@ var logger log.Logger
 
 func init() {
 	logger = log.Logger{}
+	logger.SetLevel(log.InfoLevel)
 }
