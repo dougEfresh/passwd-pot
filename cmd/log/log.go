@@ -70,8 +70,8 @@ func (logger *Logger) GetLevel() Level {
 }
 
 func (logger *Logger) With(key string, value interface{}) {
-	for i, l := range logger.loggers {
-		logger.loggers[i] = klog.With(l, key, value)
+	for i, _ := range logger.loggers {
+		logger.loggers[i] = klog.With(logger.loggers[i], key, value)
 	}
 }
 
@@ -82,7 +82,7 @@ func (logger *Logger) AddLogger(l klog.Logger) {
 	} else {
 		logger.loggers = append(logger.loggers, l)
 	}
-
+	fmt.Println("Adding logger")
 }
 
 func (logger *Logger) Debugf(format string, args ...interface{}) {

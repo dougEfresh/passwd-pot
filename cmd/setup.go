@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/dougEfresh/kitz"
 	"github.com/dougEfresh/passwd-pot/cmd/log"
 	klog "github.com/go-kit/kit/log"
@@ -55,19 +56,22 @@ func setupLogger(name string) {
 	}
 	if config.Syslog != "" {
 		writer, err := syslog.Dial("tcp", config.Syslog, syslog.LOG_LOCAL0, name)
-		if err == nil {
-			slogger := klog.NewJSONLogger(writer)
-			logger.AddLogger(slogger)
-		} else {
+		if err != nil {
 			logger.AddLogger(klog.NewJSONLogger(os.Stdout))
 			logger.Errorf("syslog failed %s", err)
+		} else {
+			logger.AddLogger(klog.NewJSONLogger(writer))
 		}
 	} else {
 		logger.AddLogger(klog.NewJSONLogger(os.Stdout))
 	}
 	if config.Logz != "" {
-		lz, _ := kitz.New(config.Logz)
-		logger.AddLogger(lz.Build())
+		lz, err := kitz.New(config.Logz)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error connecting to logz %s\n", err)
+		} else {
+			logger.AddLogger(lz.Build())
+		}
 	}
 
 	logger.With("app", name)

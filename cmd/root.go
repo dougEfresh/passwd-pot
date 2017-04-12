@@ -28,7 +28,6 @@ var config struct {
 	Debug    bool
 	Syslog   string
 	Dsn      string
-	Statsd   string
 	Pprof    string
 	NewRelic string
 	NoCache  bool
@@ -56,9 +55,9 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.passwd-pot.yaml)")
-	RootCmd.PersistentFlags().BoolVar(&config.Debug, "debug", false, "Enable Debug")
+	RootCmd.PersistentFlags().BoolVar(&config.Debug, "debug", false, "debug mode")
 	RootCmd.PersistentFlags().StringVar(&config.Syslog, "syslog", "", "use syslog server")
-	RootCmd.PersistentFlags().StringVar(&config.Logz, "logz", "", "use syslog server")
+	RootCmd.PersistentFlags().StringVar(&config.Logz, "logz", "", "key for logz.io")
 	RootCmd.PersistentFlags().StringVar(&config.Pprof, "pprof", "", "pprof endpoint (localhost:6060)")
 }
 
