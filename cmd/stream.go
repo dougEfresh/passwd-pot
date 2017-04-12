@@ -17,7 +17,6 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	log "github.com/Sirupsen/logrus"
 	"time"
 
 	"bytes"
@@ -76,14 +75,14 @@ var streamCmd = &cobra.Command{
 			ReadTimeout:  10 * time.Second,
 		}
 
-		log.Infof("Listing on %s", config.BindAddr)
+		logger.Infof("Listing on %s", config.BindAddr)
 		//websocket requests
 		go hub.run()
 		go randomDataHub.run()
 		go startRandomHub(randomDataHub)
 		err = srv.ListenAndServe()
 		if err != nil {
-			log.Errorf("Caught error %s", err)
+			logger.Errorf("Caught error %s", err)
 			os.Exit(-1)
 		}
 	},
@@ -117,7 +116,7 @@ func (c *Client) readPump() {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
-				log.Printf("error: %v", err)
+				logger.Infof("error: %v", err)
 			}
 			break
 		}
@@ -184,7 +183,7 @@ func streamEvents(w http.ResponseWriter, r *http.Request) {
 func serveRandomWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Error(err)
+		logger.Error(err)
 		return
 	}
 	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 512)}
@@ -197,7 +196,7 @@ func serveRandomWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Error(err)
+		logger.Error(err)
 		return
 	}
 	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 512)}
@@ -209,7 +208,7 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 var lastRandomEvent *EventGeo
 
 func startRandomHub(hub *Hub) {
-	log.Info("Starting random hub")
+	logger.Info("Starting random hub")
 
 	var id int64
 	query := fmt.Sprintf("SELECT id FROM %s WHERE id != $1 and remote_latitude != $2 and remote_longitude != $3 and id >= (SELECT max(id) * RANDOM() FROM %s) ORDER BY id LIMIT 1 ", eventGeoTable, eventTable)
@@ -223,18 +222,18 @@ func startRandomHub(hub *Hub) {
 			r := defaultEventClient.db.QueryRow("SELECT max(id) FROM event_geo")
 			err := r.Scan(&id)
 			if err != nil {
-				log.Error("Error getting max id")
+				logger.Error("Error getting max id")
 				continue
 			}
 		} else {
 			r := defaultEventClient.db.QueryRow(query, lastRandomEvent.ID, lastRandomEvent.RemoteLatitude, lastRandomEvent.RemoteLongitude)
 			err := r.Scan(&id)
 			if err != nil {
-				log.Errorf("Error getting next id %s", err)
+				logger.Errorf("Error getting next id %s", err)
 			}
 		}
 		if id == 0 {
-			log.Error("Could not find an random event!")
+			logger.Error("Could not find an random event!")
 		}
 		if id != 0 {
 			lastRandomEvent = defaultEventClient.broadcastEvent(id, hub)

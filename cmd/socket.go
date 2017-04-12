@@ -17,12 +17,10 @@ package cmd
 import (
 	"bytes"
 	"crypto/tls"
-	log "github.com/Sirupsen/logrus"
-	"github.com/Sirupsen/logrus/hooks/syslog"
 	"github.com/cenkalti/backoff"
 	"github.com/dougEfresh/passwd-pot/cmd/listen"
+	"github.com/dougEfresh/passwd-pot/cmd/log"
 	"github.com/spf13/cobra"
-	"log/syslog"
 	"net"
 	"net/http"
 	"os"
@@ -62,8 +60,8 @@ func (s socketRelay) Send(r []byte) error {
 	if err != nil {
 		return err
 	}
-	if log.GetLevel() == log.DebugLevel {
-		log.Debugf("Response %s", string(resp[:bytes.IndexByte(resp, 0)]))
+	if logger.GetLevel() == log.DebugLevel {
+		logger.Debugf("Response %s", string(resp[:bytes.IndexByte(resp, 0)]))
 	}
 	return nil
 }
@@ -80,19 +78,9 @@ var socketCmd = &cobra.Command{
 	Short: "A brief description of your command",
 	Long:  "",
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Infof("starting %s %v", cmd.Name(), socketConfig)
-		if config.Debug {
-			log.SetLevel(log.DebugLevel)
-		}
-		if config.Syslog != "" {
-			if syslogHook, err := logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, "passwd-potter"); err != nil {
-				log.Error("Unable to connect to local syslog daemon")
-			} else {
-				log.AddHook(syslogHook)
-			}
-		}
+		setupLogger(cmd.Name())
 		if config.Pprof != "" {
-			go func() { log.Error(http.ListenAndServe(config.Pprof, nil)) }()
+			go func() { logger.Error(http.ListenAndServe(config.Pprof, nil)) }()
 		}
 		runSocketServer(socketRelay{})
 	},
@@ -104,22 +92,22 @@ func handleSocketRequest(c net.Conn, sr socketRelayer) {
 	defer bufferPool.Put(request)
 	_, err := c.Read(request)
 	if err != nil {
-		log.Errorf("Error reading %s", err)
+		logger.Errorf("Error reading %s", err)
 	}
 	go sendEvent(request[:bytes.IndexByte(request, 0)], sr)
 	c.Write(socketResponse)
 }
 
 func sendEvent(request []byte, sr socketRelayer) {
-	if log.GetLevel() == log.DebugLevel {
-		log.Debugf("Socket Request %s", string(request))
+	if logger.GetLevel() == log.DebugLevel {
+		logger.Debugf("Socket Request %s", string(request))
 	}
 	err := backoff.Retry(func() error {
 		return sr.Send(request)
 	}, backoff.NewExponentialBackOff())
 
 	if err != nil {
-		log.Errorf("Error sending %s (%s)", string(request), err)
+		logger.Errorf("Error sending %s (%s)", string(request), err)
 	}
 }
 
@@ -132,7 +120,7 @@ func runSocketServer(sr socketRelayer) {
 	}
 	l, err := net.Listen("unix", socketConfig.Socket)
 	if err != nil {
-		log.Errorf("listen error %s", err)
+		logger.Errorf("listen error %s", err)
 		return
 	}
 	lc := make(chan net.Conn, 100)

@@ -16,8 +16,8 @@ package psql
 
 import (
 	"database/sql"
-	log "github.com/Sirupsen/logrus"
 	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/cmd/log"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	_ "github.com/lib/pq"
 	"strings"
@@ -29,14 +29,14 @@ import (
 var submittedEvent *api.Event
 
 func init() {
-	log.SetLevel(log.InfoLevel)
+	logger = log.Logger{}
 }
 
 type mockQueue struct {
 }
 
 func (mq *mockQueue) Send(e *api.Event) {
-	log.Infof("Sent %s", e)
+	logger.Infof("Sent %s", e)
 	submittedEvent = e
 }
 
@@ -48,7 +48,7 @@ func TestServerRequest(t *testing.T) {
 		EventQueue: mc,
 		Wg:         &wg,
 	}
-	go Run(w)
+	go Run(w, logger)
 	time.Sleep(500 * time.Millisecond)
 
 	conn, err := sql.Open("postgres", "postgres://postgres:test@127.0.0.1:5430/?sslmode=disable")

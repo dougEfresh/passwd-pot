@@ -18,7 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/dougEfresh/passwd-pot/api"
-	"github.com/go-kit/kit/log"
+	"github.com/dougEfresh/passwd-pot/cmd/log"
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 	"github.com/newrelic/go-agent"
@@ -56,11 +56,11 @@ func decodeEvent(_ context.Context, r *http.Request) (request interface{}, err e
 	}
 	if event.OriginAddr == "" {
 		if r.Header.Get("X-Forwarded-For") != "" {
-			logger.Log("msg", "Using RemoteAddr from  X-Forwarded-For")
+			logger.Debug("Using RemoteAddr from  X-Forwarded-For")
 			event.OriginAddr = r.Header.Get("X-Forwarded-For")
 		} else {
 			//IP:Port
-			logger.Log("msg", "Using RemoteAddr as OriginAddr ")
+			logger.Debug("Using RemoteAddr as OriginAddr ")
 			event.OriginAddr = strings.Split(r.RemoteAddr, ":")[0]
 		}
 	}

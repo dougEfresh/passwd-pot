@@ -15,7 +15,6 @@
 package ftp
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"strings"
 
 	"time"
@@ -23,6 +22,7 @@ import (
 	"bufio"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/cmd/listen"
+	"github.com/dougEfresh/passwd-pot/cmd/log"
 	"github.com/dougEfresh/passwd-pot/cmd/queue"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"io"
@@ -34,7 +34,7 @@ var unAuthorized []byte = []byte("530 Login authentication failed\r\n")
 var userOk []byte = []byte("331 User OK\r\n")
 
 func (p *potHandler) sendEvent(user string, password string, remoteAddrPair []string) {
-	log.Debugf("processing request %s %s", user, password)
+	logger.Debugf("processing request %s %s", user, password)
 	remotePort, err := strconv.Atoi(remoteAddrPair[1])
 	if err != nil {
 		remotePort = 0
@@ -69,7 +69,7 @@ func getCommand(line string) (string, []string) {
 func (p *potHandler) HandleConnection(conn net.Conn) {
 	defer conn.Close()
 	if _, err := conn.Write([]byte("220 This is a private system - No anonymous login\r\n")); err != nil {
-		log.Errorf("Error sending 220 %s", err)
+		logger.Errorf("Error sending 220 %s", err)
 		conn.Close()
 		return
 	}
@@ -82,12 +82,12 @@ func (p *potHandler) HandleConnection(conn net.Conn) {
 			return
 		}
 		if err != nil {
-			log.Errorf("Error reading cmd %s", err)
+			logger.Errorf("Error reading cmd %s", err)
 			return
 		}
 		if cmd == "USER" {
 			if _, err := conn.Write(userOk); err != nil {
-				log.Error("Error writing 331 User")
+				logger.Error("Error writing 331 User")
 				return
 			}
 			user = args[0]
@@ -98,7 +98,7 @@ func (p *potHandler) HandleConnection(conn net.Conn) {
 			pass = args[0]
 			go p.sendEvent(user, pass, remoteAddrPair)
 			if conn.Write(unAuthorized); err != nil {
-				log.Errorf("Error sending unauthorized")
+				logger.Errorf("Error sending unauthorized")
 				return
 			}
 			continue
@@ -106,7 +106,7 @@ func (p *potHandler) HandleConnection(conn net.Conn) {
 		if cmd == "QUIT" {
 			return
 		}
-		log.Errorf("Unknown command! %s %s", cmd, args)
+		logger.Errorf("Unknown command! %s %s", cmd, args)
 	}
 }
 
@@ -119,9 +119,12 @@ func readCommand(conn net.Conn) (string, []string, error) {
 	return cmd, args, nil
 }
 
-func Run(worker work.Worker) {
+func Run(worker work.Worker, l log.Logger) {
+	logger = l
 	p := &potHandler{
 		eventQueue: worker.EventQueue,
 	}
 	listen.Run(worker, p)
 }
+
+var logger log.Logger

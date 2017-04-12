@@ -16,13 +16,13 @@ package http
 
 import (
 	"encoding/base64"
-	log "github.com/Sirupsen/logrus"
 	"net/http"
 	"strings"
 
 	"time"
 
 	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/cmd/log"
 	"github.com/dougEfresh/passwd-pot/cmd/queue"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"net"
@@ -32,7 +32,7 @@ import (
 var unAuthorieds []byte = []byte("401 Unauthorized\n")
 
 func sendEvent(user string, password string, r *http.Request, p *potHttpHandler) {
-	log.Debugf("processing request %s %s", user, password)
+	logger.Debugf("processing request %s %s", user, password)
 	remoteAddrPair := strings.Split(r.RemoteAddr, ":")
 	remotePort, err := strconv.Atoi(remoteAddrPair[1])
 	if err != nil {
@@ -51,7 +51,7 @@ func sendEvent(user string, password string, r *http.Request, p *potHttpHandler)
 	}
 
 	if r.Header.Get("X-Forwarded-For") != "" {
-		log.Debug("Using RemoteAddr from X-Forwarded-For")
+		logger.Debug("Using RemoteAddr from X-Forwarded-For")
 		e.RemoteAddr = r.Header.Get("X-Forwarded-For")
 		e.RemoteName = e.RemoteAddr
 	}
@@ -63,14 +63,14 @@ func sendEvent(user string, password string, r *http.Request, p *potHttpHandler)
 
 func processAuth(r *http.Request, p *potHttpHandler) {
 	s := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
-	log.Debugf("HEADER %s", s)
+	logger.Debugf("HEADER %s", s)
 	if len(s) != 2 {
 		return
 	}
 
 	b, err := base64.StdEncoding.DecodeString(s[1])
 	if err != nil {
-		log.Errorf("Error decoding %s %s", s[1], err)
+		logger.Errorf("Error decoding %s %s", s[1], err)
 		return
 	}
 
@@ -98,10 +98,11 @@ func (p *potHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Run the worker
-func Run(worker work.Worker) {
+func Run(worker work.Worker, l log.Logger) {
+	logger = l
 	defer worker.Wg.Done()
 	if worker.Addr == "" {
-		log.Warn("Not starting http pot")
+		logger.Warn("Not starting http pot")
 		return
 	}
 	srv := &http.Server{
@@ -112,8 +113,10 @@ func Run(worker work.Worker) {
 		WriteTimeout: 10 * time.Second,
 		ReadTimeout:  10 * time.Second,
 	}
-	log.Infof("Started http pot on %s", worker.Addr)
+	logger.Infof("Started http pot on %s", worker.Addr)
 	if err := srv.ListenAndServe(); err != nil {
-		log.Errorf("Error starting server %v", err)
+		logger.Errorf("Error starting server %v", err)
 	}
 }
+
+var logger log.Logger

@@ -18,9 +18,9 @@ package pop
 
 import (
 	"bufio"
-	log "github.com/Sirupsen/logrus"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/cmd/listen"
+	"github.com/dougEfresh/passwd-pot/cmd/log"
 	"github.com/dougEfresh/passwd-pot/cmd/queue"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"io"
@@ -66,7 +66,7 @@ func getSafeArg(args []string, nr int) (string, error) {
 	if nr < len(args) {
 		return args[nr], nil
 	}
-	log.Error("Out of range")
+	logger.Error("Out of range")
 	return "", nil
 }
 
@@ -84,7 +84,7 @@ func (p server) HandleConnection(conn net.Conn) {
 	for {
 		raw_line, err := reader.ReadString('\n')
 		if err != nil && err != io.EOF {
-			log.Errorf("Error reading from client %s", err.Error())
+			logger.Errorf("Error reading from client %s", err.Error())
 			return
 		}
 		if err == io.EOF {
@@ -93,7 +93,7 @@ func (p server) HandleConnection(conn net.Conn) {
 
 		// Parses the command
 		cmd, args := getCommand(raw_line)
-		log.Infof("RECV: cmd:%s  args: %s", cmd, args)
+		logger.Infof("RECV: cmd:%s  args: %s", cmd, args)
 
 		if cmd == "USER" {
 			user, _ = getSafeArg(args, 0)
@@ -107,13 +107,16 @@ func (p server) HandleConnection(conn net.Conn) {
 		} else if cmd == "QUIT" {
 			return
 		} else {
-			log.Warnf("Unknown CMD %s", cmd)
+			logger.Warnf("Unknown CMD %s", cmd)
 		}
 	}
 }
 
-func Run(worker work.Worker) {
+func Run(worker work.Worker, l log.Logger) {
+	logger = l
 	listen.Run(worker, server{
 		worker.EventQueue,
 	})
 }
+
+var logger log.Logger

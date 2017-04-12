@@ -16,9 +16,7 @@ package cmd
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	//DB driver
-	"github.com/Sirupsen/logrus/hooks/syslog"
 	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -37,7 +35,6 @@ var config struct {
 	NoCache  bool
 	Logz     string
 }
-var syslogHook *logrus_syslog.SyslogHook
 
 var cfgFile string
 
@@ -64,9 +61,6 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&config.Syslog, "syslog", "", "use syslog server")
 	RootCmd.PersistentFlags().StringVar(&config.Logz, "logz", "", "use syslog server")
 	RootCmd.PersistentFlags().StringVar(&config.Pprof, "pprof", "", "pprof endpoint (localhost:6060)")
-	//log.SetFormatter(&log.JSONFormatter{})
-	log.SetOutput(os.Stdout)
-	log.SetLevel(log.InfoLevel)
 }
 
 // initConfig reads in config file and ENV variables if set.

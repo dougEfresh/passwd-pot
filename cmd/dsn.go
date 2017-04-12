@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"database/sql"
-	log "github.com/Sirupsen/logrus"
 	"strings"
 )
 
@@ -30,10 +29,10 @@ func loadDSN(dsn string) *sql.DB {
 	var db *sql.DB
 	var err error
 	if strings.Contains(dsn, "postgres") {
-		log.Debug("Using pq driver")
+		logger.Debug("Using pq driver")
 		db, err = sql.Open("postgres", dsn)
 	} else {
-		log.Debug("Using mysql driver")
+		logger.Debug("Using mysql driver")
 		db, err = sql.Open("mysql", dsn)
 	}
 

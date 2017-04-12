@@ -18,7 +18,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"github.com/gocraft/health"
 	"sync"
 	"time"
@@ -78,7 +77,7 @@ func (c *eventClient) resolveAddr(addr string) (int64, error) {
 		return 0, err
 	}
 	if err == sql.ErrNoRows {
-		log.Infof("New addr found %s", addr)
+		logger.Infof("New addr found %s", addr)
 		geo, err = c.geoClient.getLocationForAddr(addr)
 		if err != nil {
 			return 0, err
@@ -89,19 +88,19 @@ func (c *eventClient) resolveAddr(addr string) (int64, error) {
 		}
 		geo.ID = id
 	} else if geo.LastUpdate.Before(expire) {
-		log.Infof("Found expired addr %s (%s) (%s)", addr, geo.LastUpdate, expire)
+		logger.Infof("Found expired addr %s (%s) (%s)", addr, geo.LastUpdate, expire)
 		var newGeo = &Geo{}
 		newGeo, err = c.geoClient.getLocationForAddr(addr)
 		if err != nil {
 			return 0, err
 		}
 		if geo.equals(newGeo) {
-			log.Infof("Updating last_update for id %d ", geo.ID)
+			logger.Infof("Updating last_update for id %d ", geo.ID)
 			if _, err = c.db.Exec("UPDATE geo SET last_update = now() WHERE id  = $1", geo.ID); err != nil {
 				return 0, err
 			}
 		} else {
-			log.Infof("Inserting new record for id %d ", geo.ID)
+			logger.Infof("Inserting new record for id %d ", geo.ID)
 			id, err := insertGeo(newGeo, c.db)
 			if err != nil {
 				return 0, err

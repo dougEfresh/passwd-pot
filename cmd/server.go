@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"net/http"
 	_ "net/http/pprof"
@@ -59,7 +58,7 @@ func run(cmd *cobra.Command, args []string) {
 	go func() {
 		errs <- http.ListenAndServe(config.BindAddr, h)
 	}()
-	log.Infof("exit %s", <-errs)
+	logger.Infof("exit %s", <-errs)
 }
 
 func init() {

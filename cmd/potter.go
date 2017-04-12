@@ -15,20 +15,15 @@
 package cmd
 
 import (
-	log "github.com/Sirupsen/logrus"
-	"github.com/Sirupsen/logrus/hooks/syslog"
+	"fmt"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/cmd/ftp"
 	httppot "github.com/dougEfresh/passwd-pot/cmd/http"
-	"github.com/dougEfresh/passwd-pot/cmd/work"
-	"github.com/spf13/cobra"
-	"github.com/bshuster-repo/logruzio"
-	"fmt"
 	"github.com/dougEfresh/passwd-pot/cmd/pop"
 	"github.com/dougEfresh/passwd-pot/cmd/psql"
 	"github.com/dougEfresh/passwd-pot/cmd/queue"
-	"github.com/dougEfresh/passwd-pot/cmd/telnet"
-	"log/syslog"
+	"github.com/dougEfresh/passwd-pot/cmd/work"
+	"github.com/spf13/cobra"
 	"net/http"
 	"sync"
 )
@@ -65,9 +60,9 @@ type dryRunClient struct {
 
 func (p *potterClient) Send(event *api.Event) {
 	go func(e *api.Event) {
-		log.Infof("Sending %s", e)
+		logger.Infof("Sending %s", e)
 		if _, err := p.eventClient.SendEvent(e); err != nil {
-			log.Errorf("Error sending event %s %s", e, err)
+			logger.Errorf("Error sending event %s %s", e, err)
 		}
 	}(event)
 }
@@ -88,25 +83,16 @@ var potterCmd = &cobra.Command{
 	Short: "potter",
 	Long:  "",
 	Run: func(cmd *cobra.Command, args []string) {
-		if config.Debug {
-			log.SetLevel(log.DebugLevel)
-		}
-		if config.Syslog != "" {
-			if syslogHook, err := logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, "passwd-potter"); err != nil {
-				log.Error("Unable to connect to local syslog daemon")
-			} else {
-				log.AddHook(syslogHook)
-			}
-		}
+		setupLogger("passwd-potter")
 		if config.Pprof != "" {
-			go func() { log.Error(http.ListenAndServe(config.Pprof, nil)) }()
+			go func() { logger.Error(http.ListenAndServe(config.Pprof, nil)) }()
 		}
 		runPotter()
 	},
 }
 
 func runPotter() {
-	log.Infof("Running pot client with %+v", potConfig)
+	logger.Infof("Running pot client with %+v", potConfig)
 	var pc *potterClient
 	var err error
 	var c api.Transporter
@@ -116,19 +102,7 @@ func runPotter() {
 		c, err = api.NewClient(potConfig.Server)
 	}
 	if err != nil {
-		log.Panicf("Error creating eventCLient %s %s", potConfig.Server, err)
-	}
-	if config.Logz != "" {
-		ctx := log.Fields{
-			"ID": "12adebacd8",
-			"Version" : "1.0.0",
-		}
-		hook, err := logruzio.New(config.Logz, "passwd-potter", ctx)
-		if err != nil {
-			log.Fatal(err)
-		} else {
-			log.AddHook(hook)
-		}
+		logger.Errorf("Error creating eventCLient %s %s", potConfig.Server, err)
 	}
 	var wg sync.WaitGroup
 	pc = &potterClient{
@@ -136,19 +110,17 @@ func runPotter() {
 	}
 	if potConfig.All {
 		wg.Add(1)
-		go httppot.Run(getWorker(pc, &wg, getPort(defaultHttpPort, potConfig.Http), "http"))
+		go httppot.Run(getWorker(pc, &wg, getPort(defaultHttpPort, potConfig.Http), "http"), logger)
 		wg.Add(1)
-		go ftp.Run(getWorker(pc, &wg, getPort(defaultFtpPort, potConfig.Ftp), "ftp"))
+		go ftp.Run(getWorker(pc, &wg, getPort(defaultFtpPort, potConfig.Ftp), "ftp"), logger)
 		wg.Add(1)
-		go pop.Run(getWorker(pc, &wg, getPort(defaultPopPort, potConfig.Pop), "pop"))
+		go pop.Run(getWorker(pc, &wg, getPort(defaultPopPort, potConfig.Pop), "pop"), logger)
 		wg.Add(1)
-		go psql.Run(getWorker(pc, &wg, getPort(defaultPsqlPort, potConfig.Psql), "psql"))
-		wg.Add(1)
-		go telnet.Run(getWorker(pc, &wg, getPort(defaultTelnetPort, potConfig.Telnet), "telnet"))
+		go psql.Run(getWorker(pc, &wg, getPort(defaultPsqlPort, potConfig.Psql), "psql"), logger)
 	} else {
 		if potConfig.Http > 0 {
 			wg.Add(1)
-			go httppot.Run(getWorker(pc, &wg, getPort(defaultHttpPort, potConfig.Http), "http"))
+			go httppot.Run(getWorker(pc, &wg, getPort(defaultHttpPort, potConfig.Http), "http"), logger)
 		}
 	}
 

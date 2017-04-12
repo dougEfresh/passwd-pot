@@ -16,7 +16,7 @@ package cmd
 
 import (
 	"context"
-	"github.com/go-kit/kit/log"
+	"github.com/dougEfresh/passwd-pot/cmd/log"
 )
 
 // Middleware describes a service (as opposed to endpoint) middleware.

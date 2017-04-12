@@ -17,7 +17,6 @@ package http
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/Sirupsen/logrus"
 	"github.com/dougEfresh/passwd-pot/api"
 	"net/http"
 	"net/http/httptest"
@@ -29,7 +28,7 @@ import (
 var submittedEvent *api.Event
 
 func init() {
-	logrus.SetLevel(logrus.DebugLevel)
+
 }
 
 type BasicAuthTransport struct {
@@ -121,8 +120,6 @@ func BenchmarkRunHttpPot(b *testing.B) {
 	var ts = httptest.NewServer(&potHttpHandler{
 		eventQueue: &mockQueue{},
 	})
-	logrus.SetLevel(logrus.InfoLevel)
-	defer logrus.SetLevel(logrus.DebugLevel)
 	for i := 0; i < b.N; i++ {
 		res, err := http.Post(fmt.Sprintf("%s%s", ts.URL, api.EventURL),
 			"application/json",

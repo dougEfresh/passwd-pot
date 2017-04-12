@@ -20,9 +20,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/cmd/listen"
+	"github.com/dougEfresh/passwd-pot/cmd/log"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"io"
 	"net"
@@ -32,7 +32,7 @@ import (
 )
 
 func sendEvent(worker work.Worker, user string, password string, params []byte, remoteAddrPair []string) {
-	log.Debugf("processing request %s %s", user, password)
+	logger.Debugf("processing request %s %s", user, password)
 	remotePort, err := strconv.Atoi(remoteAddrPair[1])
 	if err != nil {
 		remotePort = 0
@@ -84,7 +84,7 @@ func (cn *handler) recvMessage(r *readBuf) (byte, error) {
 
 	// read the type and length of the message that follows
 	t := x[0]
-	log.Debugf("recvMessage %c", t)
+	logger.Debugf("recvMessage %c", t)
 	n := int(binary.BigEndian.Uint32(x[1:])) - 4
 	var y []byte
 	if n <= len(cn.scratch) {
@@ -106,27 +106,27 @@ func (cn *handler) recvStartMessage(r *readBuf) error {
 	if err != nil {
 		return err
 	}
-	log.Debugf("recvStartMessage read %s", x)
+	logger.Debugf("recvStartMessage read %s", x)
 	// read the type and length of the message that follows
 
 	n := int(binary.BigEndian.Uint32(x)) - 8
-	log.Debugf("recvStartMessage size is %d", n)
+	logger.Debugf("recvStartMessage size is %d", n)
 	x = make([]byte, 4)
 	_, err = io.ReadFull(cn.buf, x)
 	if err != nil {
 		return err
 	}
 	version := int(binary.BigEndian.Uint32(x))
-	log.Debugf("recvStartMessage got protocol %d", version)
+	logger.Debugf("recvStartMessage got protocol %d", version)
 	if version == 80877103 {
-		log.Info("recvStartMessage got ssl request")
+		logger.Info("recvStartMessage got ssl request")
 		_, err := cn.c.Write([]byte{'N'})
 		if err != nil {
 			return err
 		}
 		return cn.recvStartMessage(r)
 	} else {
-		log.Info("recvStartMessage got non-ssl request")
+		logger.Info("recvStartMessage got non-ssl request")
 	}
 	var y []byte
 	y = make([]byte, n)
@@ -177,9 +177,9 @@ func (cn *handler) handleClient() {
 	var pass string
 	r := &readBuf{}
 	err := cn.recvStartMessage(r)
-	log.Infof("handleClient startUp %+s %s", r, err)
+	logger.Infof("handleClient startUp %+s %s", r, err)
 	if err != nil {
-		log.Errorf("handleClient can't get startup packet %s", err)
+		logger.Errorf("handleClient can't get startup packet %s", err)
 		return
 	}
 	params := bytes.Split(*r, []byte{0})
@@ -193,17 +193,17 @@ func (cn *handler) handleClient() {
 	w.int32(3)
 	n, err := cn.send(w)
 	if err == io.EOF {
-		log.Errorf("Error sending R (%d) %s", n, *r)
+		logger.Errorf("Error sending R (%d) %s", n, *r)
 		go sendEvent(cn.work, user, pass, *r, remoteAddrPair)
 		return
 	}
 	t, msg, err := cn.recv()
 	if err != nil {
-		log.Errorf("handleClient error reading %s", err)
+		logger.Errorf("handleClient error reading %s", err)
 		go sendEvent(cn.work, user, pass, *r, remoteAddrPair)
 		return
 	}
-	log.Debugf("handleClient got %+s %s", t, msg)
+	logger.Debugf("handleClient got %+s %s", t, msg)
 	// strip \0
 	pass = string([]byte(*msg)[:len(*msg)-1])
 	go sendEvent(cn.work, user, pass, *r, remoteAddrPair)
@@ -231,6 +231,9 @@ func (s server) HandleConnection(conn net.Conn) {
 	cn.handleClient()
 }
 
-func Run(worker work.Worker) {
+func Run(worker work.Worker, l log.Logger) {
+	logger = l
 	listen.Run(worker, server{worker})
 }
+
+var logger log.Logger

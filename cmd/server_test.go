@@ -17,8 +17,8 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/cmd/log"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -39,7 +39,7 @@ func init() {
 	h, _ := getHandler(testEventClient)
 	ts = httptest.NewServer(h)
 	eventEndpoint = fmt.Sprintf("%s%s", ts.URL, api.EventURL)
-	log.SetLevel(log.WarnLevel)
+	logger.SetLevel(log.WarnLevel)
 }
 
 func TestServerRequest(t *testing.T) {

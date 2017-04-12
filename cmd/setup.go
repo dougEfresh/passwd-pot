@@ -15,13 +15,12 @@
 package cmd
 
 import (
-	log "github.com/Sirupsen/logrus"
-	"github.com/Sirupsen/logrus/hooks/syslog"
+	"github.com/dougEfresh/kitz"
+	"github.com/dougEfresh/passwd-pot/cmd/log"
 	klog "github.com/go-kit/kit/log"
 	"github.com/gocraft/health"
 	"github.com/newrelic/go-agent"
 	"github.com/spf13/cobra"
-	"io"
 	"log/syslog"
 	"net/http"
 	"os"
@@ -31,46 +30,50 @@ var stream = health.NewStream()
 
 func setup(cmd *cobra.Command, args []string) {
 	var err error
-	var writer io.Writer
-	if config.Debug {
-		log.SetLevel(log.DebugLevel)
-	}
-	if config.Syslog != "" {
-		if syslogHook, err = logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, cmd.Name()); err != nil {
-			log.Error("Unable to connect to local syslog daemon")
-		} else {
-			log.AddHook(syslogHook)
+	if config.NewRelic != "" {
+		config := newrelic.NewConfig("passwd-pot", config.NewRelic)
+		if app, err = newrelic.NewApplication(config); err != nil {
+			logger.Errorf("Could not start new relic %s", err)
 		}
+		logger.Infof("Configured new relic agent")
+	}
+	if config.Pprof != "" {
+		go func() { logger.Error(http.ListenAndServe(config.Pprof, nil)) }()
 	}
 	defaultEventClient = &eventClient{
 		db:        loadDSN(config.Dsn),
 		geoClient: geoClient,
 	}
-	log.Debugf("Running %s with %s", cmd.Name(), args)
-	if config.NewRelic != "" {
-		config := newrelic.NewConfig("passwd-pot", config.NewRelic)
-		if app, err = newrelic.NewApplication(config); err != nil {
-			log.Errorf("Could not start new relic %s", err)
-		}
-		log.Infof("Configured new relic agent")
-	}
-	if config.Pprof != "" {
-		go func() { log.Error(http.ListenAndServe(config.Pprof, nil)) }()
+
+	logger.Infof("Running %s with %s", cmd.Name(), args)
+}
+
+func setupLogger(name string) {
+	h, _ := os.Hostname()
+	if config.Debug {
+		logger.SetLevel(log.DebugLevel)
 	}
 	if config.Syslog != "" {
-		if syslogHook, err = logrus_syslog.NewSyslogHook("tcp", config.Syslog, syslog.LOG_LOCAL0, cmd.Name()); err != nil {
-			log.Error("Unable to connect to local syslog daemon")
-		} else {
-			log.AddHook(syslogHook)
+		writer, err := syslog.Dial("tcp", config.Syslog, syslog.LOG_LOCAL0, name)
+		if err != nil {
+			slogger := klog.NewJSONLogger(writer)
+			slogger = klog.With(slogger, "caller", klog.DefaultCaller)
+			logger.AddLogger(slogger)
 		}
-		writer, err = syslog.Dial("tcp", config.Syslog, syslog.LOG_LOCAL0, cmd.Name())
-	}
-
-	if writer != nil {
-		logger = klog.NewJSONLogger(writer)
 	} else {
-		logger = klog.NewJSONLogger(os.Stdout)
+		ologger := klog.NewJSONLogger(os.Stdout)
+		ologger = klog.With(ologger, "ts", klog.DefaultTimestampUTC)
+		ologger = klog.With(ologger, "caller", klog.DefaultCaller)
+		logger.AddLogger(ologger)
 	}
-	logger = klog.With(logger, "ts", klog.DefaultTimestampUTC)
-	logger = klog.With(logger, "caller", klog.DefaultCaller)
+	if config.Logz != "" {
+		lz, _ := kitz.New(config.Logz)
+		logger.AddLogger(klog.With(lz.Build(), "host", h))
+	}
+}
+
+var logger log.Logger
+
+func init() {
+	logger = log.Logger{}
 }

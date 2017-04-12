@@ -17,7 +17,6 @@ package psql
 import (
 	"bytes"
 	"encoding/binary"
-	log "github.com/Sirupsen/logrus"
 	"github.com/lib/pq/oid"
 )
 
@@ -44,9 +43,6 @@ func (b *readBuf) int16() (n int) {
 
 func (b *readBuf) string() string {
 	i := bytes.IndexByte(*b, 0)
-	if i < 0 {
-		log.Error("invalid message format; expected string terminator")
-	}
 	s := (*b)[:i]
 	*b = (*b)[i+1:]
 	return string(s)

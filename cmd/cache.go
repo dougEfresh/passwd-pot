@@ -15,7 +15,6 @@
 package cmd
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"github.com/orcaman/concurrent-map"
 	"time"
 )
@@ -43,7 +42,7 @@ func (cache *Cache) Delete(key string) {
 
 func (cache *Cache) Clear() {
 	for item := range cache.cm.IterBuffered() {
-		log.Infof("Removing cached item %s", item.Key)
+		logger.Infof("Removing cached item %s", item.Key)
 		cache.cm.Remove(item.Key)
 	}
 }

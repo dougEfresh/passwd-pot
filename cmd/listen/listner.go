@@ -15,7 +15,7 @@
 package listen
 
 import (
-	log "github.com/Sirupsen/logrus"
+	"github.com/dougEfresh/passwd-pot/cmd/log"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"net"
 )
@@ -28,7 +28,7 @@ func AcceptConnection(listener net.Listener, listen chan<- net.Conn) {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Errorf("Error getting connection %s", err)
+			logger.Errorf("Error getting connection %s", err)
 			continue
 		}
 		listen <- conn
@@ -38,15 +38,15 @@ func AcceptConnection(listener net.Listener, listen chan<- net.Conn) {
 func Run(worker work.Worker, h Handler) {
 	defer worker.Wg.Done()
 	if worker.Addr == "" {
-		log.Warnf("Not starting %s pot", worker.Name)
+		logger.Warnf("Not starting %s pot", worker.Name)
 		return
 	}
 	ln, err := net.Listen("tcp", worker.Addr)
 	if err != nil {
-		log.Errorf("Cannot bind to %s %s", worker.Addr, err)
+		logger.Errorf("Cannot bind to %s %s", worker.Addr, err)
 		return
 	}
-	log.Infof("Started pot %s on %s", worker.Name, worker.Addr)
+	logger.Infof("Started pot %s on %s", worker.Name, worker.Addr)
 	lc := make(chan net.Conn)
 	go AcceptConnection(ln, lc)
 	defer ln.Close()
@@ -57,3 +57,5 @@ func Run(worker work.Worker, h Handler) {
 		}
 	}
 }
+
+var logger log.Logger

@@ -16,8 +16,8 @@ package pop
 
 import (
 	"bufio"
-	"github.com/Sirupsen/logrus"
 	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/cmd/log"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"net"
 	"strings"
@@ -29,7 +29,7 @@ import (
 var submittedEvent *api.Event
 
 func init() {
-	logrus.SetLevel(logrus.DebugLevel)
+	logger = log.Logger{}
 }
 
 type mockQueue struct {
@@ -47,7 +47,7 @@ func TestServerRequest(t *testing.T) {
 		EventQueue: mc,
 		Wg:         &wg,
 	}
-	go Run(w)
+	go Run(w, logger)
 	time.Sleep(500 * time.Millisecond)
 	conn, err := net.Dial("tcp", "localhost:1110")
 	if err != nil {

@@ -18,7 +18,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	log "github.com/Sirupsen/logrus"
 	"github.com/gocraft/health"
 )
 
@@ -94,7 +93,7 @@ func (c *eventClient) resolveGeoEvent(event Event) error {
 	job := stream.NewJob("resolve_geo_event")
 	if event.ID == 0 {
 		err := errors.New("Bad event recv")
-		log.Errorf("Got bad event %s", event)
+		logger.Errorf("Got bad event %s", event)
 		job.EventErr("resolve_geo_event_invalid", err)
 		job.Complete(health.ValidationError)
 		return err
@@ -132,7 +131,7 @@ func (c *eventClient) broadcastEvent(id int64, hub *Hub) *EventGeo {
 		return nil
 	}
 	if b, err := json.Marshal(gEvent); err != nil {
-		log.Errorf("Error decoding geo event %d %s", id, err)
+		logger.Errorf("Error decoding geo event %d %s", id, err)
 	} else {
 		hub.broadcast <- b
 	}
@@ -155,7 +154,7 @@ func (c *eventClient) get(id int64) *EventGeo {
 		&event.RemoteLatitude, &event.RemoteLongitude,
 		&event.OriginLatitude, &event.OriginLongitude)
 	if err != nil {
-		log.Errorf("Error getting event id %d %s", id, err)
+		logger.Errorf("Error getting event id %d %s", id, err)
 		job.Complete(health.Error)
 		return nil
 	}
