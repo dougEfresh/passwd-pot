@@ -15,7 +15,6 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/dougEfresh/kitz"
 	"github.com/dougEfresh/passwd-pot/cmd/log"
 	klog "github.com/go-kit/kit/log"
@@ -61,7 +60,7 @@ func setupLogger(name string) {
 			logger.AddLogger(slogger)
 		} else {
 			logger.AddLogger(klog.NewJSONLogger(os.Stdout))
-			fmt.Fprintf(os.Stderr, "syslog failed %s", err)
+			logger.Errorf("syslog failed %s", err)
 		}
 	} else {
 		logger.AddLogger(klog.NewJSONLogger(os.Stdout))
