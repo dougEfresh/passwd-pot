@@ -82,7 +82,6 @@ func (logger *Logger) AddLogger(l klog.Logger) {
 	} else {
 		logger.loggers = append(logger.loggers, l)
 	}
-	fmt.Println("Adding logger")
 }
 
 func (logger *Logger) Debugf(format string, args ...interface{}) {
