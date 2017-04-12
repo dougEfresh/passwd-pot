@@ -53,6 +53,7 @@ func getHandler(er eventRecorder) (http.Handler, chan error) {
 }
 
 func run(cmd *cobra.Command, args []string) {
+	setupLogger(cmd.Name())
 	setup(cmd, args)
 	h, errs := getHandler(defaultEventClient)
 	go func() {

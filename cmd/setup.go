@@ -44,8 +44,11 @@ func setup(cmd *cobra.Command, args []string) {
 		db:        loadDSN(config.Dsn),
 		geoClient: geoClient,
 	}
-
-	logger.Infof("Running %s with %s", cmd.Name(), args)
+	if len(args) > 0 {
+		logger.Infof("Running %s with %s", cmd.Name(), args)
+	} else {
+		logger.Infof("Running %s", cmd.Name())
+	}
 }
 
 func setupLogger(name string) {
@@ -57,19 +60,21 @@ func setupLogger(name string) {
 		writer, err := syslog.Dial("tcp", config.Syslog, syslog.LOG_LOCAL0, name)
 		if err != nil {
 			slogger := klog.NewJSONLogger(writer)
-			slogger = klog.With(slogger, "caller", klog.DefaultCaller)
 			logger.AddLogger(slogger)
 		}
 	} else {
 		ologger := klog.NewJSONLogger(os.Stdout)
-		ologger = klog.With(ologger, "ts", klog.DefaultTimestampUTC)
-		ologger = klog.With(ologger, "caller", klog.DefaultCaller)
 		logger.AddLogger(ologger)
 	}
 	if config.Logz != "" {
 		lz, _ := kitz.New(config.Logz)
-		logger.AddLogger(klog.With(lz.Build(), "host", h))
+		logger.AddLogger(lz.Build())
 	}
+
+	logger.With("app", name)
+	logger.With("host", h)
+	logger.With("ts", klog.DefaultTimestampUTC)
+	logger.With("caller", klog.Caller(4))
 }
 
 var logger log.Logger

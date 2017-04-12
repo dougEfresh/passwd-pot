@@ -57,7 +57,7 @@ type Logger struct {
 }
 
 func (logger Logger) Log(keyvals ...interface{}) error {
-	logger.Info(keyvals)
+	logger.Info(fmt.Sprint(keyvals))
 	return nil
 }
 
@@ -69,17 +69,26 @@ func (logger *Logger) GetLevel() Level {
 	return logger.level
 }
 
+func (logger *Logger) With(key string, value interface{}) {
+	for i, l := range logger.loggers {
+		logger.loggers[i] = klog.With(l, key, value)
+	}
+}
+
 func (logger *Logger) AddLogger(l klog.Logger) {
 	if logger.loggers == nil {
 		logger.loggers = make([]klog.Logger, 1)
+		logger.loggers[0] = l
+	} else {
+		logger.loggers = append(logger.loggers, l)
 	}
-	logger.loggers = append(logger.loggers, l)
+
 }
 
 func (logger *Logger) Debugf(format string, args ...interface{}) {
 	if logger.level >= DebugLevel {
 		for _, l := range logger.loggers {
-			l.Log("message", fmt.Sprintf(format, args), "level", DebugLevel)
+			l.Log("message", fmt.Sprintf(format, args...), "level", DebugLevel)
 		}
 	}
 }
@@ -87,7 +96,7 @@ func (logger *Logger) Debugf(format string, args ...interface{}) {
 func (logger *Logger) Infof(format string, args ...interface{}) {
 	if logger.level >= InfoLevel {
 		for _, l := range logger.loggers {
-			l.Log("message", fmt.Sprintf(format, args), "level", InfoLevel)
+			l.Log("message", fmt.Sprintf(format, args...), "level", InfoLevel)
 		}
 	}
 }
@@ -95,42 +104,42 @@ func (logger *Logger) Infof(format string, args ...interface{}) {
 func (logger *Logger) Warnf(format string, args ...interface{}) {
 	if logger.level >= WarnLevel {
 		for _, l := range logger.loggers {
-			l.Log("message", fmt.Sprintf(format, args), "level", WarnLevel)
+			l.Log("message", fmt.Sprintf(format, args...), "level", WarnLevel)
 		}
 	}
 }
 
 func (logger *Logger) Errorf(format string, args ...interface{}) {
 	for _, l := range logger.loggers {
-		l.Log("message", fmt.Sprintf(format, args), "level", ErrorLevel)
+		l.Log("message", fmt.Sprintf(format, args...), "level", ErrorLevel)
 	}
 }
 
-func (logger *Logger) Debug(args ...interface{}) {
+func (logger *Logger) Debug(msg  interface{}) {
 	if logger.level >= DebugLevel {
 		for _, l := range logger.loggers {
-			l.Log("message", args, "level", DebugLevel)
+			l.Log("message", msg, "level", DebugLevel)
 		}
 	}
 }
 
-func (logger *Logger) Info(args ...interface{}) {
+func (logger *Logger) Info(msg interface{}) {
 	if logger.level >= InfoLevel {
 		for _, l := range logger.loggers {
-			l.Log("message", args, "level", InfoLevel)
+			l.Log("message", msg, "level", InfoLevel)
 		}
 	}
 }
-func (logger *Logger) Warn(args ...interface{}) {
+func (logger *Logger) Warn(msg interface{}) {
 	if logger.level >= WarnLevel {
 		for _, l := range logger.loggers {
-			l.Log("message", args, "level", WarnLevel)
+			l.Log("message", msg, "level", WarnLevel)
 		}
 	}
 }
 
-func (logger *Logger) Error(args ...interface{}) {
+func (logger *Logger) Error(msg interface{}) {
 	for _, l := range logger.loggers {
-		l.Log("message", args, "level", ErrorLevel)
+		l.Log("message", msg, "level", ErrorLevel)
 	}
 }
