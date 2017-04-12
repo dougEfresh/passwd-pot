@@ -43,7 +43,6 @@ var potConfig struct {
 	Pop    int
 	Psql   int
 	Vnc    int
-	Health string
 	Server string
 	Bind   string
 	All    bool

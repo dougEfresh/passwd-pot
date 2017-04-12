@@ -18,7 +18,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/gocraft/health"
 	"sync"
 	"time"
 )
@@ -34,23 +33,19 @@ var geoPool = sync.Pool{
 }
 
 func insertGeo(geo *Geo, db *sql.DB) (int64, error) {
-	job := stream.NewJob("insert_geo")
 	var id int64
 	r, err := db.Query(`INSERT INTO geo
 	(ip, country_code, region_code, region_name, city, time_zone, latitude, longitude, metro_code, last_update)
 	VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING ID`,
 		geo.IP, geo.CountryCode, geo.RegionCode, geo.RegionName, geo.City, geo.TimeZone, geo.Latitude, geo.Longitude, geo.MetroCode, geo.LastUpdate)
 	if err != nil {
-		job.Complete(health.Error)
 		return 0, err
 	}
 	defer r.Close()
 	if !r.Next() {
-		job.Complete(health.Error)
 		return 0, errors.New(fmt.Sprintf("Failed inserting %s", geo))
 	}
 	err = r.Scan(&id)
-	job.Complete(health.Success)
 	return id, err
 }
 

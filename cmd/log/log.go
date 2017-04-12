@@ -115,7 +115,7 @@ func (logger *Logger) Errorf(format string, args ...interface{}) {
 	}
 }
 
-func (logger *Logger) Debug(msg  interface{}) {
+func (logger *Logger) Debug(msg interface{}) {
 	if logger.level >= DebugLevel {
 		for _, l := range logger.loggers {
 			l.Log("message", msg, "level", DebugLevel)

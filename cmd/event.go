@@ -18,7 +18,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/gocraft/health"
 )
 
 type eventRecorder interface {
@@ -49,7 +48,6 @@ func (c *eventClient) list() []EventGeo {
 }
 
 func (c *eventClient) recordEvent(event Event) (int64, error) {
-	job := stream.NewJob("record_event")
 	var r *sql.Rows
 	var rId int64
 	var oId int64
@@ -70,7 +68,6 @@ func (c *eventClient) recordEvent(event Event) (int64, error) {
 			event.Time, event.User, event.Passwd, event.RemoteAddr, event.RemotePort, event.RemoteName, event.RemoteVersion, event.OriginAddr, event.Application, event.Protocol)
 	}
 	if err != nil {
-		job.Complete(health.Error)
 		return 0, err
 	}
 	var id int64
@@ -81,7 +78,6 @@ func (c *eventClient) recordEvent(event Event) (int64, error) {
 		return 0, err
 	}
 	event.ID = id
-	job.Complete(health.Success)
 	if rId == 0 || oId == 0 {
 		eventChan <- &event
 	}
@@ -90,35 +86,27 @@ func (c *eventClient) recordEvent(event Event) (int64, error) {
 }
 
 func (c *eventClient) resolveGeoEvent(event Event) error {
-	job := stream.NewJob("resolve_geo_event")
 	if event.ID == 0 {
 		err := errors.New("Bad event recv")
 		logger.Errorf("Got bad event %s", event)
-		job.EventErr("resolve_geo_event_invalid", err)
-		job.Complete(health.ValidationError)
 		return err
 	}
 	var err error
 	var id int64
 	if id, err = c.resolveAddr(event.RemoteAddr); err != nil {
-		job.Complete(health.ValidationError)
 		return err
 	}
 	if _, err = c.db.Exec(`UPDATE event SET remote_geo_id = $1 where id = $2`, id, event.ID); err != nil {
-		job.Complete(health.Error)
 		return err
 	}
 
 	if id, err = c.resolveAddr(event.OriginAddr); err != nil {
-		job.Complete(health.Error)
 		return err
 	}
 
 	if _, err = c.db.Exec(`UPDATE event SET origin_geo_id = $1 where id = $2`, id, event.ID); err != nil {
-		job.Complete(health.Error)
 		return err
 	}
-	job.Complete(health.Success)
 	return nil
 }
 
@@ -139,7 +127,6 @@ func (c *eventClient) broadcastEvent(id int64, hub *Hub) *EventGeo {
 }
 
 func (c *eventClient) get(id int64) *EventGeo {
-	job := stream.NewJob("get_event")
 	r := c.db.QueryRow(`SELECT
 	id, dt, username, passwd, remote_addr, remote_name, remote_version, remote_port, remote_country, remote_city,
 	origin_addr, origin_country, origin_city,
@@ -155,10 +142,8 @@ func (c *eventClient) get(id int64) *EventGeo {
 		&event.OriginLatitude, &event.OriginLongitude)
 	if err != nil {
 		logger.Errorf("Error getting event id %d %s", id, err)
-		job.Complete(health.Error)
 		return nil
 	}
 
-	job.Complete(health.Success)
 	return &event
 }

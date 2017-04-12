@@ -28,7 +28,6 @@ var config struct {
 	Debug    bool
 	Syslog   string
 	Dsn      string
-	Health   string
 	Statsd   string
 	Pprof    string
 	NewRelic string

@@ -18,15 +18,12 @@ import (
 	"github.com/dougEfresh/kitz"
 	"github.com/dougEfresh/passwd-pot/cmd/log"
 	klog "github.com/go-kit/kit/log"
-	"github.com/gocraft/health"
 	"github.com/newrelic/go-agent"
 	"github.com/spf13/cobra"
 	"log/syslog"
 	"net/http"
 	"os"
 )
-
-var stream = health.NewStream()
 
 func setup(cmd *cobra.Command, args []string) {
 	var err error
