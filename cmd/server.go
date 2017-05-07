@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"runtime/trace"
 )
 
 var serverCmd = &cobra.Command{
@@ -59,6 +60,16 @@ func run(cmd *cobra.Command, args []string) {
 	go func() {
 		errs <- http.ListenAndServe(config.BindAddr, h)
 	}()
+	if config.Trace {
+		logger.Info("Enabling trace")
+		f, _ := os.Create(fmt.Sprintf("/tmp/trace-%s.out", cmd.Name()))
+		defer f.Close()
+		err := trace.Start(f)
+		if err != nil {
+			panic(err)
+		}
+		defer trace.Stop()
+	}
 	logger.Infof("exit %s", <-errs)
 }
 
@@ -68,4 +79,5 @@ func init() {
 	serverCmd.PersistentFlags().StringVar(&config.BindAddr, "bind", "localhost:8080", "bind to this address:port")
 	serverCmd.PersistentFlags().StringVar(&config.NewRelic, "new-relic", "", "new relic api key")
 	serverCmd.PersistentFlags().BoolVar(&config.NoCache, "no-cache", false, "don't cache geo ip results")
+	serverCmd.PersistentFlags().BoolVar(&config.Trace, "trace", false, "enable trace")
 }

@@ -18,6 +18,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type eventRecorder interface {
@@ -47,11 +48,23 @@ func (c *eventClient) list() []EventGeo {
 	return geoEvents
 }
 
+var timeHist = prometheus.NewSummary(prometheus.SummaryOpts{
+	Namespace: "passwdpot",
+	Name:      "record",
+	Subsystem: "timer",
+	Help:      "timer for recording events",
+})
+
 func (c *eventClient) recordEvent(event Event) (int64, error) {
-	var r *sql.Rows
-	var rId int64
-	var oId int64
-	var err error
+	var (
+		r   *sql.Rows
+		rId int64
+		oId int64
+		err error
+		id int64
+	)
+	timer := prometheus.NewTimer(timeHist)
+	defer timer.ObserveDuration()
 	rId, _ = geoCache.get(event.RemoteAddr)
 	oId, _ = geoCache.get(event.OriginAddr)
 	if rId > 0 && oId > 0 {
@@ -70,7 +83,6 @@ func (c *eventClient) recordEvent(event Event) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	var id int64
 	defer r.Close()
 	r.Next()
 	err = r.Scan(&id)

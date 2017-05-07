@@ -24,6 +24,7 @@ import (
 	"github.com/newrelic/go-agent"
 	"net/http"
 	"strings"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var app newrelic.Application
@@ -37,6 +38,7 @@ func MakeHTTPHandler(s EventService, logger log.Logger) http.Handler {
 	}
 
 	r.Methods("POST").Path(api.EventURL).Handler(getHandle(api.EventURL, httptransport.NewServer(e.RecordEndpoint, decodeEvent, encodeResponse, options...)))
+	r.Methods("GET").Path("/metrics").Handler(promhttp.Handler())
 	return r
 }
 

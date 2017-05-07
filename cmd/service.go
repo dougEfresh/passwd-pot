@@ -17,7 +17,17 @@ package cmd
 import (
 	"context"
 	"errors"
+	"github.com/prometheus/client_golang/prometheus"
 )
+
+var labels = make(map[string]prometheus.Labels)
+
+var recordCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
+	Namespace: "passwdpot",
+	Name:      "record",
+	Help:      "count of requests",
+	Subsystem: "total",
+}, []string{"origin"})
 
 type EventService interface {
 	Record(ctx context.Context, event Event) (int64, error)
@@ -32,9 +42,19 @@ func NewEventService(er eventRecorder) EventService {
 }
 
 func (es *eventService) Record(ctx context.Context, event Event) (int64, error) {
+	var l prometheus.Labels
+	var ok bool
+	if l, ok = labels[event.OriginAddr]; !ok {
+		l = prometheus.Labels{"origin": event.OriginAddr}
+	}
+	recordCounter.With(l).Inc()
 	return es.eventRecorder.recordEvent(event)
 }
 
 var (
 	ErrNotFound = errors.New("not found")
 )
+
+func init() {
+	prometheus.MustRegister(recordCounter)
+}

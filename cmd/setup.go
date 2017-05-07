@@ -70,7 +70,7 @@ func setupLogger(name string) {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error connecting to logz %s\n", err)
 		} else {
-			logger.AddLogger(lz.Build())
+			logger.AddLogger(lz)
 		}
 	}
 

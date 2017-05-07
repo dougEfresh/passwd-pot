@@ -75,6 +75,10 @@ func (logger *Logger) With(key string, value interface{}) {
 	}
 }
 
+func (logger Logger) IsDebug() bool {
+	return logger.level == DebugLevel
+}
+
 func (logger *Logger) AddLogger(l klog.Logger) {
 	if logger.loggers == nil {
 		logger.loggers = make([]klog.Logger, 1)

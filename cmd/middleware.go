@@ -37,5 +37,8 @@ type loggingMiddleware struct {
 }
 
 func (mw loggingMiddleware) Record(ctx context.Context, event Event) (int64, error) {
+	if logger.IsDebug() {
+		logger.Debugf("Processing %s", event)
+	}
 	return mw.next.Record(ctx, event)
 }

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"sync"
 	"time"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var eventChan = make(chan *Event)
@@ -109,11 +110,22 @@ func (c *eventClient) resolveAddr(addr string) (int64, error) {
 	return geo.ID, nil
 }
 
+var resolveError = prometheus.NewCounter(prometheus.CounterOpts{
+	Namespace: "passwdpot",
+	Name:      "resolve",
+	Help:      "count of requests",
+	Subsystem: "errors",
+})
+
 func runLookup(er eventRecorder) {
 	for {
 		select {
 		case event := <-eventChan:
-			go er.resolveGeoEvent(*event)
+			err := er.resolveGeoEvent(*event)
+			if err != nil {
+				resolveError.Inc()
+				logger.Errorf("Error looking up %s or %s %s", event.OriginAddr, event.RemoteAddr, err)
+			}
 		}
 	}
 }
@@ -123,4 +135,5 @@ func init() {
 		geoPool.Put(&Geo{})
 	}
 	geoCache = NewCache()
+	prometheus.MustRegister(resolveError)
 }
