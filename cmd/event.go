@@ -61,7 +61,7 @@ func (c *eventClient) recordEvent(event Event) (int64, error) {
 		rId int64
 		oId int64
 		err error
-		id int64
+		id  int64
 	)
 	timer := prometheus.NewTimer(timeHist)
 	defer timer.ObserveDuration()

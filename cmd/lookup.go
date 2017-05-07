@@ -18,9 +18,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"sync"
 	"time"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 var eventChan = make(chan *Event)

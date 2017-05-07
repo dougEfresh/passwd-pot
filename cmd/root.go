@@ -31,7 +31,7 @@ var config struct {
 	Pprof    string
 	NewRelic string
 	NoCache  bool
-	Trace  bool
+	Trace    bool
 	Logz     string
 }
 

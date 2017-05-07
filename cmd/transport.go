@@ -22,9 +22,9 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 	"github.com/newrelic/go-agent"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"strings"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var app newrelic.Application

@@ -21,8 +21,8 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
-	"syscall"
 	"runtime/trace"
+	"syscall"
 )
 
 var serverCmd = &cobra.Command{

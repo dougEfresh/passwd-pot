@@ -16,9 +16,9 @@ package cmd
 
 import (
 	"encoding/json"
+	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
 	"time"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 type geoClientTransporter interface {
@@ -36,12 +36,11 @@ func defaultGeoClient() *GeoClient {
 	}
 }
 
-
 var freegeoCounter = prometheus.NewCounter(prometheus.CounterOpts{
-	Name: "freegeo",
+	Name:      "freegeo",
 	Subsystem: "total",
 	Namespace: "passwdpot",
-	Help: "Count of freegeo lookups",
+	Help:      "Count of freegeo lookups",
 })
 
 func (c *GeoClient) getLocationForAddr(ip string) (*Geo, error) {
@@ -60,6 +59,6 @@ func (c *GeoClient) getLocationForAddr(ip string) (*Geo, error) {
 	return &loc, nil
 }
 
-func init(){
+func init() {
 	prometheus.MustRegister(freegeoCounter)
 }
