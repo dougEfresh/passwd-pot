@@ -121,6 +121,10 @@ func runPotter() {
 			wg.Add(1)
 			go httppot.Run(getWorker(pc, &wg, getPort(defaultHttpPort, potConfig.Http), "http"), logger)
 		}
+		if potConfig.Ftp > 0 {
+			wg.Add(1)
+			go ftp.Run(getWorker(pc, &wg, getPort(defaultFtpPort, potConfig.Ftp), "ftp"), logger)
+		}
 	}
 
 	wg.Wait()

@@ -32,6 +32,7 @@ import (
 
 var unAuthorized []byte = []byte("530 Login authentication failed\r\n")
 var userOk []byte = []byte("331 User OK\r\n")
+var actionNotTaken []byte = []byte("550 Action not taken\r\n")
 
 func (p *potHandler) sendEvent(user string, password string, remoteAddrPair []string) {
 	logger.Debugf("processing request %s %s", user, password)
@@ -106,6 +107,7 @@ func (p *potHandler) HandleConnection(conn net.Conn) {
 		if cmd == "QUIT" {
 			return
 		}
+		conn.Write(actionNotTaken)
 		logger.Errorf("Unknown command! %s %s", cmd, args)
 	}
 }
