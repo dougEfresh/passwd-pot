@@ -89,7 +89,7 @@ type Event struct {
 }
 
 type Transporter interface {
-	SendEvent(event *Event) (*Event, error)
+	SendEvent(event *Event) error
 	GetEvent(id int64) (*Event, error)
 }
 
@@ -97,11 +97,11 @@ type EventClient struct {
 	server string
 }
 
-func (e *EventClient) SendEvent(event *Event) (*Event, error) {
+func (e *EventClient) SendEvent(event *Event) error {
 
 	b, err := json.Marshal(event)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	var body []byte
 	err = backoff.Retry(func() error {
@@ -109,9 +109,9 @@ func (e *EventClient) SendEvent(event *Event) (*Event, error) {
 		return err
 	}, backoff.NewExponentialBackOff())
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return convert(body)
+	return nil
 }
 
 //TODO

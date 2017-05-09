@@ -26,9 +26,9 @@ type mockEventClient struct {
 
 var submittedEvent *api.Event
 
-func (c *mockEventClient) SendEvent(event *api.Event) (*api.Event, error) {
+func (c *mockEventClient) SendEvent(event *api.Event) error {
 	submittedEvent = event
-	return event, nil
+	return nil
 }
 
 func (c *mockEventClient) GetEvent(id int64) (*api.Event, error) {
