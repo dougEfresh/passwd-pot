@@ -64,6 +64,7 @@ type potHandler struct {
 func getCommand(line string) (string, []string) {
 	line = strings.Trim(line, "\r \n")
 	cmd := strings.Split(line, " ")
+	logger.Infof("Recv command: %s", line)
 	return cmd[0], cmd[1:]
 }
 
