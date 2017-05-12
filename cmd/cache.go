@@ -41,8 +41,8 @@ func (cache *Cache) Delete(key string) {
 }
 
 func (cache *Cache) Clear() {
+	logger.Infof("Removing cached items: %s", len(cache.cm))
 	for item := range cache.cm.IterBuffered() {
-		logger.Infof("Removing cached item %s", item.Key)
 		cache.cm.Remove(item.Key)
 	}
 }

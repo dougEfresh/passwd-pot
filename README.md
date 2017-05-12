@@ -1,4 +1,4 @@
-# Passwd Honey Pot
+# Passwd Pot
 
 
 [![Build Status](https://travis-ci.org/dougEfresh/passwd-pot.svg?branch=master)](https://travis-ci.org/dougEfresh/passwd-pot)
@@ -8,4 +8,4 @@
 [![license](http://img.shields.io/badge/license-apache-red.svg?style=flat)](https://raw.githubusercontent.com/dougEfresh/passwd-pot/master/LICENSE)
 
 
-Passwd pot is a i
+Passwd pot is an open source application that captures user names and passwords for various protocols.
