@@ -211,7 +211,7 @@ func startRandomHub(hub *Hub) {
 	logger.Info("Starting random hub")
 
 	var id int64
-	query := fmt.Sprintf("SELECT id FROM %s WHERE id != $1 and remote_latitude != $2 and remote_longitude != $3 and id >= (SELECT max(id) * RANDOM() FROM %s) ORDER BY id LIMIT 1 ", eventGeoTable, eventTable)
+	query := fmt.Sprintf("SELECT id FROM %s WHERE id != $1 and origin_country != '' and remote_latitude != $2 and remote_longitude != $3 and id >= (SELECT max(id) * RANDOM() FROM %s) ORDER BY id LIMIT 1 ", eventGeoTable, eventTable)
 	for {
 		time.Sleep(1250 * time.Millisecond)
 		if len(hub.clients) == 0 {
