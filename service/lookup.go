@@ -18,11 +18,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 	"github.com/dougEfresh/passwd-pot/api"
+	"time"
 )
 
-type EventResolver interface{
+type EventResolver interface {
 	ResolveEvent(event api.Event) ([]int64, error)
 }
 

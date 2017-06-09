@@ -16,8 +16,8 @@ package service
 
 import (
 	"database/sql"
-	"github.com/dougEfresh/passwd-pot/log"
 	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/log"
 )
 
 type EventRecorder interface {
@@ -34,7 +34,7 @@ type EventTransporter interface {
 }
 
 type eventClient struct {
-	db        *sql.DB
+	db *sql.DB
 }
 
 var defaultEventClient *eventClient

@@ -18,9 +18,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/dougEfresh/passwd-pot/api"
+	_ "github.com/lib/pq"
 	"testing"
 	"time"
-	_ "github.com/lib/pq"
 )
 
 var localGeo = make(map[string]string)
@@ -47,7 +47,7 @@ func (c *mockGeoClient) GetLocationForAddr(ip string) (*Geo, error) {
 const test_dsn string = "postgres://postgres:@127.0.0.1:5432/?sslmode=disable"
 
 var testEventClient = &eventClient{
-	db:        loadDSN(test_dsn),
+	db: loadDSN(test_dsn),
 }
 
 var testResolveClient = &ResolveClient{
