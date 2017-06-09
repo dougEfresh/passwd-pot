@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package service
 
 import (
 	"database/sql"
@@ -20,6 +20,7 @@ import (
 	"github.com/dougEfresh/passwd-pot/api"
 	"testing"
 	"time"
+	_ "github.com/lib/pq"
 )
 
 var localGeo = make(map[string]string)
@@ -34,7 +35,7 @@ func init() {
 	localGeo["10.0.0.1"] = `{"ip":"10.0.0.1","country_code":"ZX","country_name":"USA","region_code":"05","region_name":"America","city":"New York","zip_code":"","time_zone":"Asia/Singapore","latitude":2.2,"longitude":102.00,"metro_code":0}`
 }
 
-func (c *mockGeoClient) getLocationForAddr(ip string) (*Geo, error) {
+func (c *mockGeoClient) GetLocationForAddr(ip string) (*Geo, error) {
 	resp := []byte(localGeo[ip])
 	var geo = &Geo{}
 	err := json.Unmarshal(resp, geo)
@@ -47,13 +48,14 @@ const test_dsn string = "postgres://postgres:@127.0.0.1:5432/?sslmode=disable"
 
 var testEventClient = &eventClient{
 	db:        loadDSN(test_dsn),
-	geoClient: geoClientTransporter(&mockGeoClient{}),
+}
+
+var testResolveClient = &ResolveClient{
+	db:        loadDSN(test_dsn),
+	geoClient: mockGeoClient{},
 }
 
 func clearDb(db *sql.DB, t *testing.T) {
-	for k, _ := range localGeo {
-		geoCache.Delete(k)
-	}
 	if _, err := db.Exec("DELETE FROM event"); err != nil {
 		t.Fatalf("Error deletiing %s", err)
 	}
@@ -63,7 +65,7 @@ func clearDb(db *sql.DB, t *testing.T) {
 }
 
 var now = time.Now()
-var testEvent = Event{
+var testEvent = api.Event{
 	RemoteAddr:    "1.2.3.4",
 	RemotePort:    3432,
 	RemoteVersion: "SSH-2.0-JSCH-0.1.51",
@@ -76,8 +78,8 @@ var testEvent = Event{
 	Protocol:      "ssh",
 }
 
-func createEvent(event *Event) error {
-	id, err := testEventClient.recordEvent(*event)
+func createEvent(event *api.Event) error {
+	id, err := testEventClient.RecordEvent(*event)
 	if err != nil {
 		return err
 	}
@@ -114,11 +116,11 @@ func TestLookup(t *testing.T) {
 		t.Fatalf("Event id should be > 0 %+v", &testEvent)
 	}
 
-	err = testEventClient.resolveGeoEvent(testEvent)
+	_, err = testResolveClient.ResolveEvent(testEvent)
 	if err != nil {
 		t.Fatalf("Error with getting geo %s", err)
 	}
-	geoEvent := testEventClient.get(testEvent.ID)
+	geoEvent := testEventClient.Get(testEvent.ID)
 
 	if geoEvent == nil {
 		t.Fatalf("Could not find id %d", testEvent.ID)
@@ -197,13 +199,15 @@ func TestExpire(t *testing.T) {
 		t.Fatalf("Event id should be > 0 %+v", &testEvent)
 	}
 
-	testEventClient.resolveGeoEvent(testEvent)
-	geoEvent := testEventClient.get(testEvent.ID)
+	ids, _ := testResolveClient.ResolveEvent(testEvent)
+	if ids[0] == 0 || ids[1] == 0 {
+		t.Fatalf("Failed to lookup event")
+	}
+	geoEvent := testEventClient.Get(testEvent.ID)
 
 	if geoEvent == nil {
 		t.Fatalf("Could not find id %d", testEvent.ID)
 	}
-	geoCache.Delete(testEvent.RemoteAddr)
 	var oldlastUpdate time.Time
 	var newerLastUpdate time.Time
 	r := testEventClient.db.QueryRow("select last_update from geo where ip = $1 LIMIT 1", testEvent.RemoteAddr)
@@ -216,7 +220,7 @@ func TestExpire(t *testing.T) {
 		t.Fatalf("Error updating time %s", err)
 	}
 	createEvent(&testEvent)
-	testEventClient.resolveGeoEvent(testEvent)
+	testResolveClient.ResolveEvent(testEvent)
 	r = testEventClient.db.QueryRow("select last_update from geo where ip = $1 LIMIT 1", testEvent.RemoteAddr)
 	err = r.Scan(&newerLastUpdate)
 
@@ -240,8 +244,8 @@ func TestExpireAndChangedGeo(t *testing.T) {
 		t.Fatalf("Event id should be > 0 %+v", &testEvent)
 	}
 
-	testEventClient.resolveGeoEvent(testEvent)
-	geoEvent := testEventClient.get(testEvent.ID)
+	testEventClient.RecordEvent(testEvent)
+	geoEvent := testEventClient.Get(testEvent.ID)
 
 	if geoEvent == nil {
 		t.Fatalf("Could not find id %d", testEvent.ID)
@@ -254,7 +258,6 @@ func TestExpireAndChangedGeo(t *testing.T) {
 		t.Fatalf("Error updating time %s", err)
 	}
 
-	geoCache.Delete(testEvent.RemoteAddr)
 	_, err = testEventClient.db.Exec("UPDATE geo SET last_update = $1 WHERE ip = $2", time.Now().Add(time.Hour*24*-100), testEvent.RemoteAddr)
 	if err != nil {
 		t.Fatalf("Error updating time %s", err)
@@ -267,8 +270,8 @@ func TestExpireAndChangedGeo(t *testing.T) {
 	}()
 
 	createEvent(&testEvent)
-	testEventClient.resolveGeoEvent(testEvent)
-	geoEvent = testEventClient.get(testEvent.ID)
+	testEventClient.RecordEvent(testEvent)
+	geoEvent = testEventClient.Get(testEvent.ID)
 	if geoEvent == nil {
 		t.Fatalf("Could not find id %d", testEvent.ID)
 	}
@@ -286,15 +289,16 @@ func TestExpireAndChangedGeo(t *testing.T) {
 	}
 }
 
-func TestCacheDelete(t *testing.T) {
-	geoCache.set("blah", 1)
-	id, _ := geoCache.get("blah")
-	if id == 0 {
-		t.Fatal("id is zero")
+func loadDSN(dsn string) *sql.DB {
+	var db *sql.DB
+	var err error
+	db, err = sql.Open("postgres", dsn)
+	if err != nil {
+		panic(err)
 	}
-	geoCache.Clear()
-	id, _ = geoCache.get("blah")
-	if id != 0 {
-		t.Fatal("id is NOT zero")
+	err = db.Ping()
+	if err != nil {
+		panic(err)
 	}
+	return db
 }

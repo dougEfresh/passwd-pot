@@ -12,25 +12,50 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package service
 
 import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
-	"sync"
 	"time"
+	"github.com/dougEfresh/passwd-pot/api"
 )
 
-var eventChan = make(chan *Event)
-var geoCache *Cache
-var mutex = &sync.Mutex{}
-var geoClient = geoClientTransporter(defaultGeoClient())
-var geoPool = sync.Pool{
-	New: func() interface{} {
-		return &Geo{}
-	},
+type EventResolver interface{
+	ResolveEvent(event api.Event) ([]int64, error)
+}
+
+type ResolveClient struct {
+	db        *sql.DB
+	geoClient GeoClientTransporter
+}
+
+func (c *ResolveClient) ResolveEvent(event api.Event) ([]int64, error) {
+	var geoIds []int64 = []int64{0, 0}
+	if event.ID == 0 {
+		err := errors.New("Bad event recv")
+		logger.Errorf("Got bad event")
+		return geoIds, err
+	}
+	var err error
+	var geoId int64
+	if geoId, err = c.resolveAddr(event.RemoteAddr); err != nil {
+		return geoIds, err
+	}
+	if _, err = c.db.Exec(`UPDATE event SET remote_geo_id = $1 where id = $2`, geoId, event.ID); err != nil {
+		return geoIds, err
+	}
+	geoIds[0] = geoId
+	if geoId, err = c.resolveAddr(event.OriginAddr); err != nil {
+		return geoIds, err
+	}
+
+	if _, err = c.db.Exec(`UPDATE event SET origin_geo_id = $1 where id = $2`, geoId, event.ID); err != nil {
+		return geoIds, err
+	}
+	geoIds[1] = geoId
+	return geoIds, nil
 }
 
 func insertGeo(geo *Geo, db *sql.DB) (int64, error) {
@@ -50,15 +75,8 @@ func insertGeo(geo *Geo, db *sql.DB) (int64, error) {
 	return id, err
 }
 
-func (c *eventClient) resolveAddr(addr string) (int64, error) {
-	cachedGeo, found := geoCache.get(addr)
-	if found {
-		return cachedGeo, nil
-	}
-	mutex.Lock()
-	defer mutex.Unlock()
-	geo := geoPool.Get().(*Geo)
-	defer geoPool.Put(geo)
+func (c *ResolveClient) resolveAddr(addr string) (int64, error) {
+	var geo = Geo{}
 	expire := time.Now().AddDate(0, -1, 0)
 	if c == nil {
 		panic("no!")
@@ -74,7 +92,7 @@ func (c *eventClient) resolveAddr(addr string) (int64, error) {
 	}
 	if err == sql.ErrNoRows {
 		logger.Infof("New addr found %s", addr)
-		geo, err = c.geoClient.getLocationForAddr(addr)
+		geo, err := c.geoClient.getLocationForAddr(addr)
 		if err != nil {
 			return 0, err
 		}
@@ -104,36 +122,5 @@ func (c *eventClient) resolveAddr(addr string) (int64, error) {
 			geo.ID = id
 		}
 	}
-	if !config.NoCache {
-		geoCache.set(addr, geo.ID)
-	}
 	return geo.ID, nil
-}
-
-var resolveError = prometheus.NewCounter(prometheus.CounterOpts{
-	Namespace: "passwdpot",
-	Name:      "resolve",
-	Help:      "count of requests",
-	Subsystem: "errors",
-})
-
-func runLookup(er eventRecorder) {
-	for {
-		select {
-		case event := <-eventChan:
-			err := er.resolveGeoEvent(*event)
-			if err != nil {
-				resolveError.Inc()
-				logger.Errorf("Error looking up %s or %s %s", event.OriginAddr, event.RemoteAddr, err)
-			}
-		}
-	}
-}
-
-func init() {
-	for i := 0; i < 100; i++ {
-		geoPool.Put(&Geo{})
-	}
-	geoCache = NewCache()
-	prometheus.MustRegister(resolveError)
 }

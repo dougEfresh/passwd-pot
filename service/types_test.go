@@ -12,62 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package service
 
 import (
-	"encoding/json"
 	"testing"
-	"time"
 )
-
-func TestUnMarshalEvent(t *testing.T) {
-	var event Event
-	err := json.Unmarshal([]byte(requestBodyOrigin), &event)
-	if err != nil {
-		t.Fatalf("Cannot deserialize event %s \n%s", err, requestBodyOrigin)
-	}
-
-	if time.Time(event.Time).UnixNano()/int64(time.Millisecond) != 1487973301661 {
-		t.Fatalf("%s != 1487973301661", event.Time.String())
-	}
-
-	if event.OriginAddr != "10.0.0.1" {
-		t.Fatalf("OriginAddr != 10.0.0.1 (%s)", event.OriginAddr)
-	}
-
-	if event.OriginAddr != "10.0.0.1" {
-		t.Fatalf("OriginAddr != 10.0.0.1 (%s)", event.OriginAddr)
-	}
-
-	if event.RemoteAddr != "192.168.1.1" {
-		t.Fatalf("OriginAddr != 192.168.1.1 (%s)", event.RemoteAddr)
-	}
-}
-
-//Verify time is converted properly
-func TestMarshalEvent(t *testing.T) {
-	var event Event
-	var kv map[string]interface{}
-	err := json.Unmarshal([]byte(requestBodyOrigin), &event)
-	b, err := json.Marshal(&event)
-	if err != nil {
-		t.Fatalf("Cannot deserialize event %s \n%s", err, requestBodyOrigin)
-	}
-
-	err = json.Unmarshal(b, &kv)
-	if err != nil {
-		t.Fatalf("Error %s", err)
-	}
-
-	switch i := kv["time"].(type) {
-	case float64:
-		if i != float64(1487973301661) {
-			t.Fatalf("Error %s != 1487973301661", kv["time"])
-		}
-	default:
-		t.Fatal("Unknown type")
-	}
-}
 
 func TestEventEquals(t *testing.T) {
 	g := Geo{

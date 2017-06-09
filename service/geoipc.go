@@ -12,17 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package service
 
 import (
 	"encoding/json"
-	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
 	"time"
 )
 
-type geoClientTransporter interface {
-	getLocationForAddr(ip string) (*Geo, error)
+type GeoClientTransporter interface {
+	GetLocationForAddr(ip string) (*Geo, error)
 }
 
 //GeoClient for geo IP
@@ -36,15 +35,7 @@ func defaultGeoClient() *GeoClient {
 	}
 }
 
-var freegeoCounter = prometheus.NewCounter(prometheus.CounterOpts{
-	Name:      "freegeo",
-	Subsystem: "total",
-	Namespace: "passwdpot",
-	Help:      "Count of freegeo lookups",
-})
-
 func (c *GeoClient) getLocationForAddr(ip string) (*Geo, error) {
-	freegeoCounter.Inc()
 	res, err := http.Get(c.URL + "/" + ip)
 	if err != nil {
 		return &Geo{}, err
@@ -57,8 +48,4 @@ func (c *GeoClient) getLocationForAddr(ip string) (*Geo, error) {
 	}
 	loc.LastUpdate = time.Now()
 	return &loc, nil
-}
-
-func init() {
-	prometheus.MustRegister(freegeoCounter)
 }

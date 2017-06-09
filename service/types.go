@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package service
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/dougEfresh/passwd-pot/api"
 	"time"
 )
 
@@ -58,21 +57,6 @@ type Geo struct {
 	MetroCode   int       `db:"metro_code" json:"metro_code"`
 }
 
-//Event to record
-type Event struct {
-	ID            int64         `db:"id" json:"id"`
-	Time          api.EventTime `db:"dt" json:"time"`
-	User          string        `db:"username"`
-	Passwd        string        `db:"passwd"`
-	RemoteAddr    string        `db:"remote_addr"`
-	RemotePort    int           `db:"remote_port"`
-	RemoteName    string        `db:"remote_name"`
-	RemoteVersion string        `db:"remote_version"`
-	OriginAddr    string        `db:"origin_addr"`
-	Application   string        `db:"application"`
-	Protocol      string        `db:"protocol"`
-}
-
 func (g *Geo) equals(another *Geo) bool {
 	return g.CountryCode == another.CountryCode &&
 		g.City == another.City &&
@@ -83,14 +67,6 @@ func (g *Geo) equals(another *Geo) bool {
 		g.RegionCode == another.RegionCode &&
 		g.TimeZone == another.TimeZone &&
 		g.IP == another.IP
-}
-
-func (e Event) String() string {
-	b, err := json.Marshal(e)
-	if err != nil {
-		return fmt.Sprintf("%s", err)
-	}
-	return string(b)
 }
 
 func (g Geo) String() string {

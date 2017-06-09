@@ -50,3 +50,9 @@ SELECT a.id,
        LEFT JOIN geo b on a.remote_geo_id = b.id
        LEFT JOIN geo c on a.origin_geo_id = c.id;
 
+CREATE TABLE country_stats (
+       country_code char(2),
+       latitude float,
+       longitude float,
+       hits int
+);

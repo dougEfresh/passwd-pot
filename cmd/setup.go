@@ -17,7 +17,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/dougEfresh/kitz"
-	"github.com/dougEfresh/passwd-pot/cmd/log"
+	"github.com/dougEfresh/passwd-pot/log"
 	klog "github.com/go-kit/kit/log"
 	"github.com/newrelic/go-agent"
 	"github.com/spf13/cobra"
