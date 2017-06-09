@@ -33,13 +33,40 @@ type EventTransporter interface {
 	EventRecorder
 }
 
-type eventClient struct {
-	db *sql.DB
+type EventClient struct {
+	db  *sql.DB
+	log log.Logger
 }
 
-var defaultEventClient *eventClient
+type EventOptionFunc func(*EventClient) error
 
-func (c *eventClient) RecordEvent(event api.Event) (int64, error) {
+func NewEventClient(options ...EventOptionFunc) (*EventClient, error) {
+	ec := &EventClient{
+		log: logger,
+	}
+	for _, option := range options {
+		if err := option(ec); err != nil {
+			return nil, err
+		}
+	}
+	return ec, nil
+}
+
+func SetEventDb(db *sql.DB) EventOptionFunc {
+	return func(c *EventClient) error {
+		c.db = db
+		return nil
+	}
+}
+
+func SetEventLogger(l log.Logger) EventOptionFunc {
+	return func(c *EventClient) error {
+		c.log = l
+		return nil
+	}
+}
+
+func (c *EventClient) RecordEvent(event api.Event) (int64, error) {
 	var (
 		r   *sql.Rows
 		err error
@@ -63,7 +90,7 @@ func (c *eventClient) RecordEvent(event api.Event) (int64, error) {
 	return id, nil
 }
 
-func (c *eventClient) Get(id int64) *EventGeo {
+func (c *EventClient) Get(id int64) *EventGeo {
 	r := c.db.QueryRow(`SELECT
 	id, dt, username, passwd, remote_addr, remote_name, remote_version, remote_port, remote_country, remote_city,
 	origin_addr, origin_country, origin_city,

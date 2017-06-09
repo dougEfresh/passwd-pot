@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/log"
 	"time"
 )
 
@@ -29,6 +30,42 @@ type EventResolver interface {
 type ResolveClient struct {
 	db        *sql.DB
 	geoClient GeoClientTransporter
+	log       log.Logger
+}
+
+type ResolveOptionFunc func(*ResolveClient) error
+
+func NewResolveClient(options ...ResolveOptionFunc) (*ResolveClient, error) {
+	rc := &ResolveClient{
+		log: logger,
+	}
+	for _, option := range options {
+		if err := option(rc); err != nil {
+			return nil, err
+		}
+	}
+	return rc, nil
+}
+
+func SetResolveDb(db *sql.DB) ResolveOptionFunc {
+	return func(c *ResolveClient) error {
+		c.db = db
+		return nil
+	}
+}
+
+func SetResolveLogger(l log.Logger) ResolveOptionFunc {
+	return func(c *ResolveClient) error {
+		c.log = l
+		return nil
+	}
+}
+
+func SetGeoClient(gc GeoClientTransporter) ResolveOptionFunc {
+	return func(c *ResolveClient) error {
+		c.geoClient = gc
+		return nil
+	}
 }
 
 func (c *ResolveClient) ResolveEvent(event api.Event) ([]int64, error) {
@@ -77,6 +114,7 @@ func insertGeo(geo *Geo, db *sql.DB) (int64, error) {
 
 func (c *ResolveClient) resolveAddr(addr string) (int64, error) {
 	var geo = Geo{}
+	var id int64 = 0
 	expire := time.Now().AddDate(0, -1, 0)
 	if c == nil {
 		panic("no!")
@@ -92,19 +130,19 @@ func (c *ResolveClient) resolveAddr(addr string) (int64, error) {
 	}
 	if err == sql.ErrNoRows {
 		logger.Infof("New addr found %s", addr)
-		geo, err := c.geoClient.getLocationForAddr(addr)
+		geo, err := c.geoClient.GetLocationForAddr(addr)
 		if err != nil {
 			return 0, err
 		}
-		id, err := insertGeo(geo, c.db)
+		id, err = insertGeo(geo, c.db)
 		if err != nil {
 			return 0, err
 		}
-		geo.ID = id
+		logger.Infof("Adding %d to geo_event", id)
 	} else if geo.LastUpdate.Before(expire) {
 		logger.Infof("Found expired addr %s (%s) (%s)", addr, geo.LastUpdate, expire)
 		var newGeo = &Geo{}
-		newGeo, err = c.geoClient.getLocationForAddr(addr)
+		newGeo, err = c.geoClient.GetLocationForAddr(addr)
 		if err != nil {
 			return 0, err
 		}
@@ -115,12 +153,11 @@ func (c *ResolveClient) resolveAddr(addr string) (int64, error) {
 			}
 		} else {
 			logger.Infof("Inserting new record for id %d ", geo.ID)
-			id, err := insertGeo(newGeo, c.db)
+			id, err = insertGeo(newGeo, c.db)
 			if err != nil {
 				return 0, err
 			}
-			geo.ID = id
 		}
 	}
-	return geo.ID, nil
+	return id, nil
 }

@@ -46,13 +46,13 @@ func (c *mockGeoClient) GetLocationForAddr(ip string) (*Geo, error) {
 
 const test_dsn string = "postgres://postgres:@127.0.0.1:5432/?sslmode=disable"
 
-var testEventClient = &eventClient{
-	db: loadDSN(test_dsn),
-}
+var testEventClient = &EventClient{}
+var testResolveClient = &ResolveClient{}
 
-var testResolveClient = &ResolveClient{
-	db:        loadDSN(test_dsn),
-	geoClient: mockGeoClient{},
+func init() {
+	db := loadDSN(test_dsn)
+	testEventClient, _ = NewEventClient(SetEventDb(db))
+	testResolveClient, _ = NewResolveClient(SetResolveDb(db), SetGeoClient(GeoClientTransporter(&mockGeoClient{})))
 }
 
 func clearDb(db *sql.DB, t *testing.T) {
@@ -245,6 +245,7 @@ func TestExpireAndChangedGeo(t *testing.T) {
 	}
 
 	testEventClient.RecordEvent(testEvent)
+	testResolveClient.ResolveEvent(testEvent)
 	geoEvent := testEventClient.Get(testEvent.ID)
 
 	if geoEvent == nil {
@@ -271,6 +272,7 @@ func TestExpireAndChangedGeo(t *testing.T) {
 
 	createEvent(&testEvent)
 	testEventClient.RecordEvent(testEvent)
+	testResolveClient.ResolveEvent(testEvent)
 	geoEvent = testEventClient.Get(testEvent.ID)
 	if geoEvent == nil {
 		t.Fatalf("Could not find id %d", testEvent.ID)
