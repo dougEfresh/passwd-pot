@@ -18,32 +18,56 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/log"
+	"github.com/dougEfresh/passwd-pot/service"
+	klog "github.com/go-kit/kit/log"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
-	"github.com/dougEfresh/passwd-pot/service"
-	"github.com/dougEfresh/passwd-pot/log"
-	"os"
-	klog "github.com/go-kit/kit/log"
 )
 
 const (
 	requestBody       = `{"time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "1.2.3.4", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51" , "application": "OpenSSH" , "protocol": "ssh"}`
 	requestBodyOrigin = `{"time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "192.168.1.1", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51" , "originAddr" : "10.0.0.1", "application": "OpenSSH" , "protocol": "ssh" }`
-	test_dsn string = "postgres://postgres:@127.0.0.1:5432/?sslmode=disable"
+	test_dsn          = "postgres://postgres:@127.0.0.1:5432/?sslmode=disable"
 )
+
 var ts *httptest.Server
 var eventEndpoint string
+var localGeo = make(map[string]string)
+
+type mockGeoClient struct {
+}
 
 func init() {
-	db :=  loadDSN(test_dsn)
+	localGeo["1.2.3.4"] = `{"ip":"1.2.3.4","country_code":"CA","country_name":"Singapore","region_code":"01","region_name":"Central Singapore Community Development Council","city":"Singapore","zip_code":"","time_zone":"Asia/Singapore","latitude":1.1,"longitude":101.00,"metro_code":0}`
+	localGeo["127.0.0.1"] = `{"ip":"127.0.0.1","country_code":"US","country_name":"USA","region_code":"05","region_name":"America","city":"New York","zip_code":"","time_zone":"Asia/Singapore","latitude":2.2,"longitude":102.00,"metro_code":0}`
+	localGeo["192.168.1.1"] = `{"ip":"192.168.1.1","country_code":"ZZ","country_name":"USA","region_code":"05","region_name":"America","city":"New York","zip_code":"","time_zone":"Asia/Singapore","latitude":2.2,"longitude":102.00,"metro_code":0}`
+	localGeo["10.0.0.1"] = `{"ip":"10.0.0.1","country_code":"ZX","country_name":"USA","region_code":"05","region_name":"America","city":"New York","zip_code":"","time_zone":"Asia/Singapore","latitude":2.2,"longitude":102.00,"metro_code":0}`
+}
+
+func (c *mockGeoClient) GetLocationForAddr(ip string) (*service.Geo, error) {
+	resp := []byte(localGeo[ip])
+	logger.Infof("Found mocked %s" , localGeo[ip])
+	var geo = &service.Geo{}
+	err := json.Unmarshal(resp, geo)
+	geo.IP = ip
+	geo.LastUpdate = time.Now()
+	return geo, err
+}
+
+func init() {
+	db := loadDSN(test_dsn)
 	logger.SetLevel(log.DebugLevel)
 	logger.AddLogger(klog.NewJSONLogger(os.Stdout))
+	logger.With("ts", klog.DefaultTimestamp)
+	logger.With("caller", klog.DefaultCaller)
 	eventClient, _ = service.NewEventClient(service.SetEventDb(db), service.SetEventLogger(logger))
-	resolveClient, _ = service.NewResolveClient(service.SetResolveDb(db), service.SetResolveLogger(logger))
+	resolveClient, _ = service.NewResolveClient(service.SetResolveDb(db), service.SetResolveLogger(logger), service.SetGeoClient(service.GeoClientTransporter(&mockGeoClient{})))
 	ts = httptest.NewServer(handlers())
 	eventEndpoint = fmt.Sprintf("%s%s", ts.URL, api.EventURL)
 
@@ -115,7 +139,7 @@ func TestServerRequestWithOrigin(t *testing.T) {
 	}
 
 	if eventGeo.OriginCountry != "ZX" {
-		t.Fatalf("Origin Country is not ZZ (%s)", eventGeo.OriginCountry)
+		t.Fatalf("Origin Country is not ZX (%s)", eventGeo.OriginCountry)
 	}
 
 	if eventGeo.RemoteCountry == "" {

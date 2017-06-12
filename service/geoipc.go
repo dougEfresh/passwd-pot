@@ -35,7 +35,7 @@ func defaultGeoClient() *GeoClient {
 	}
 }
 
-func (c *GeoClient) getLocationForAddr(ip string) (*Geo, error) {
+func (c *GeoClient) GetLocationForAddr(ip string) (*Geo, error) {
 	res, err := http.Get(c.URL + "/" + ip)
 	if err != nil {
 		return &Geo{}, err

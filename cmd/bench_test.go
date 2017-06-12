@@ -15,9 +15,9 @@
 package cmd
 
 import (
-	"testing"
 	"encoding/json"
 	"github.com/dougEfresh/passwd-pot/api"
+	"testing"
 )
 
 func BenchmarkEvent(b *testing.B) {
@@ -40,7 +40,7 @@ func BenchmarkLookup(b *testing.B) {
 	//id, _ := defaultEventClient.recordEvent(event)
 	//event.ID = id
 	for i := 0; i < b.N; i++ {
-	//	defaultEventClient.resolveGeoEvent(event)
+		//	defaultEventClient.resolveGeoEvent(event)
 	}
 
 }

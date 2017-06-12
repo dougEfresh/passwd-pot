@@ -16,8 +16,8 @@ package listen
 
 import (
 	"github.com/dougEfresh/passwd-pot/cmd/work"
-	"net"
 	"github.com/dougEfresh/passwd-pot/log"
+	"net"
 )
 
 type Handler interface {

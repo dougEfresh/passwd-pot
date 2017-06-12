@@ -17,7 +17,7 @@ package psql
 import (
 	"database/sql"
 	"github.com/dougEfresh/passwd-pot/api"
-	"github.com/dougEfresh/passwd-pot/cmd/log"
+	"github.com/dougEfresh/passwd-pot/log"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	_ "github.com/lib/pq"
 	"strings"

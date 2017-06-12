@@ -35,14 +35,14 @@ type EventTransporter interface {
 
 type EventClient struct {
 	db  *sql.DB
-	log log.Logger
+	logger log.Logger
 }
 
 type EventOptionFunc func(*EventClient) error
 
 func NewEventClient(options ...EventOptionFunc) (*EventClient, error) {
 	ec := &EventClient{
-		log: logger,
+		logger: defaultLogger,
 	}
 	for _, option := range options {
 		if err := option(ec); err != nil {
@@ -61,7 +61,7 @@ func SetEventDb(db *sql.DB) EventOptionFunc {
 
 func SetEventLogger(l log.Logger) EventOptionFunc {
 	return func(c *EventClient) error {
-		c.log = l
+		c.logger = l
 		return nil
 	}
 }
@@ -105,16 +105,16 @@ func (c *EventClient) Get(id int64) *EventGeo {
 		&event.RemoteLatitude, &event.RemoteLongitude,
 		&event.OriginLatitude, &event.OriginLongitude)
 	if err != nil {
-		logger.Errorf("Error getting event id %d %s", id, err)
+		c.logger.Errorf("Error getting event id %d %s", id, err)
 		return nil
 	}
 
 	return &event
 }
 
-var logger log.Logger
+var defaultLogger log.Logger
 
 func init() {
-	logger = log.Logger{}
-	logger.SetLevel(log.InfoLevel)
+	defaultLogger = log.Logger{}
+	defaultLogger.SetLevel(log.InfoLevel)
 }

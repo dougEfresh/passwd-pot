@@ -56,8 +56,8 @@ func init() {
 	db := loadDSN(test_dsn)
 	testEventClient, _ = NewEventClient(SetEventDb(db))
 	testResolveClient, _ = NewResolveClient(SetResolveDb(db), SetGeoClient(GeoClientTransporter(&mockGeoClient{})))
-	logger.AddLogger(klog.NewJSONLogger(os.Stderr))
-	logger.SetLevel(log.WarnLevel)
+	defaultLogger.AddLogger(klog.NewJSONLogger(os.Stderr))
+	defaultLogger.SetLevel(log.WarnLevel)
 }
 
 func clearDb(db *sql.DB, t *testing.T) {

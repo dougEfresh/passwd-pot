@@ -15,21 +15,21 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/service"
+	"github.com/gorilla/mux"
+	"github.com/newrelic/go-agent"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cobra"
+	"io/ioutil"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"runtime/trace"
-	"github.com/gorilla/mux"
-	"github.com/dougEfresh/passwd-pot/api"
-	"time"
-	"github.com/dougEfresh/passwd-pot/service"
-	"github.com/newrelic/go-agent"
-	"io/ioutil"
-	"encoding/json"
 	"strings"
-	"github.com/prometheus/client_golang/prometheus"
+	"time"
 )
 
 var serverCmd = &cobra.Command{
@@ -57,7 +57,6 @@ func getHandler(path string, h func(http.ResponseWriter, *http.Request)) (string
 		return path, h
 	}
 }
-
 
 func handleEvent(w http.ResponseWriter, r *http.Request) {
 	var event api.Event
@@ -110,23 +109,23 @@ func resolveEvent(event api.Event) {
 	rId, _ := geoCache.get(event.RemoteAddr)
 	oId, _ := geoCache.get(event.OriginAddr)
 	if rId > 0 && oId > 0 {
-		e := resolveClient.MarkEvent(event.ID, rId)
+		e := resolveClient.MarkEvent(event.ID, rId, true)
 		if e != nil {
 			err = e
 		}
-		e = resolveClient.MarkEvent(event.ID, oId)
+		e = resolveClient.MarkEvent(event.ID, oId, false)
 		if e != nil {
 			err = e
 		}
 	} else {
-		ids , err = resolveClient.ResolveEvent(event)
+		ids, err = resolveClient.ResolveEvent(event)
 		if err != nil {
 			geoCache.set(event.RemoteAddr, ids[0])
 			geoCache.set(event.OriginAddr, ids[1])
 		}
 	}
 	if err != nil {
-		logger.Errorf("Error looking up %s", err)
+		logger.Errorf("Error looking up %s %s", event, err)
 	}
 }
 
@@ -168,6 +167,7 @@ func init() {
 	serverCmd.PersistentFlags().BoolVar(&config.Trace, "trace", false, "enable trace")
 	prometheus.MustRegister(recordCounter)
 }
+
 var labels = make(map[string]prometheus.Labels)
 var recordCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
 	Namespace: "passwdpot",
