@@ -18,7 +18,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/log"
+	klog "github.com/go-kit/kit/log"
 	_ "github.com/lib/pq"
+	"os"
 	"testing"
 	"time"
 )
@@ -53,6 +56,8 @@ func init() {
 	db := loadDSN(test_dsn)
 	testEventClient, _ = NewEventClient(SetEventDb(db))
 	testResolveClient, _ = NewResolveClient(SetResolveDb(db), SetGeoClient(GeoClientTransporter(&mockGeoClient{})))
+	logger.AddLogger(klog.NewJSONLogger(os.Stderr))
+	logger.SetLevel(log.WarnLevel)
 }
 
 func clearDb(db *sql.DB, t *testing.T) {

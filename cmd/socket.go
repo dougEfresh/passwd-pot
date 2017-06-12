@@ -19,7 +19,7 @@ import (
 	"crypto/tls"
 	"github.com/cenkalti/backoff"
 	"github.com/dougEfresh/passwd-pot/cmd/listen"
-	"github.com/dougEfresh/passwd-pot/cmd/log"
+	"github.com/dougEfresh/passwd-pot/log"
 	"github.com/spf13/cobra"
 	"net"
 	"net/http"

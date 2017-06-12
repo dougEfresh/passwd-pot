@@ -38,10 +38,6 @@ func setup(cmd *cobra.Command, args []string) {
 	if config.Pprof != "" {
 		go func() { logger.Error(http.ListenAndServe(config.Pprof, nil)) }()
 	}
-	defaultEventClient = &eventClient{
-		db:        loadDSN(config.Dsn),
-		geoClient: geoClient,
-	}
 	if len(args) > 0 {
 		logger.Infof("Running %s with %s", cmd.Name(), args)
 	} else {
@@ -73,7 +69,6 @@ func setupLogger(name string) {
 			logger.AddLogger(lz)
 		}
 	}
-
 	logger.With("app", name)
 	logger.With("host", h)
 	logger.With("ts", klog.DefaultTimestampUTC)
@@ -85,4 +80,5 @@ var logger log.Logger
 func init() {
 	logger = log.Logger{}
 	logger.SetLevel(log.InfoLevel)
+
 }

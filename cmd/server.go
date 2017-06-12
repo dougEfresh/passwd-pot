@@ -20,9 +20,16 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"os/signal"
 	"runtime/trace"
-	"syscall"
+	"github.com/gorilla/mux"
+	"github.com/dougEfresh/passwd-pot/api"
+	"time"
+	"github.com/dougEfresh/passwd-pot/service"
+	"github.com/newrelic/go-agent"
+	"io/ioutil"
+	"encoding/json"
+	"strings"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var serverCmd = &cobra.Command{
@@ -31,35 +38,110 @@ var serverCmd = &cobra.Command{
 	Long:  "",
 	Run:   run,
 }
+var geoCache *Cache = NewCache()
+var eventClient *service.EventClient
+var resolveClient *service.ResolveClient
+var app newrelic.Application
 
-func getHandler(er eventRecorder) (http.Handler, chan error) {
-	var s EventService
-	{
-		s = NewEventService(er)
-		s = LoggingMiddleware(logger)(s)
-	}
-	var h http.Handler
-	{
-		h = MakeHTTPHandler(s, logger)
-	}
-	errs := make(chan error)
+func handlers() *mux.Router {
+	r := mux.NewRouter()
+	r.HandleFunc(getHandler(api.EventURL, handleEvent)).Methods("POST")
+	//r.HandleFunc(getHandler(api.EventURL, listEvents)).Methods("GET")
+	return r
+}
 
-	go func() {
-		c := make(chan os.Signal)
-		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
-		errs <- fmt.Errorf("%s", <-c)
-	}()
-	go runLookup(er)
-	return h, errs
+func getHandler(path string, h func(http.ResponseWriter, *http.Request)) (string, func(http.ResponseWriter, *http.Request)) {
+	if app != nil {
+		return newrelic.WrapHandleFunc(app, path, h)
+	} else {
+		return path, h
+	}
+}
+
+
+func handleEvent(w http.ResponseWriter, r *http.Request) {
+	var event api.Event
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		logger.Errorf("Error reading body %s", err)
+		return
+	}
+	if err = json.Unmarshal(b, &event); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		logger.Errorf("Error unmarshal %s", err)
+		return
+	}
+
+	if event.OriginAddr == "" {
+		if r.Header.Get("X-Forwarded-For") != "" {
+			logger.Debug("Using RemoteAddr from  X-Forwarded-For")
+			event.OriginAddr = r.Header.Get("X-Forwarded-For")
+		} else {
+			//IP:Port
+			logger.Debugf("Using RemoteAddr as OriginAddr %s", r.RemoteAddr)
+			event.OriginAddr = strings.Split(r.RemoteAddr, ":")[0]
+		}
+	}
+	var l prometheus.Labels
+	var ok bool
+	if l, ok = labels[event.OriginAddr]; !ok {
+		l = prometheus.Labels{"origin": event.OriginAddr}
+	}
+	recordCounter.With(l).Inc()
+	id, err := eventClient.RecordEvent(event)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		logger.Errorf("Error writing %+v %s", &event, err)
+		return
+	}
+	event.ID = id
+	go resolveEvent(event)
+	j, _ := json.Marshal(id)
+	w.WriteHeader(http.StatusAccepted)
+	w.Header().Add("Content-Type", "application/json")
+	w.Write(j)
+
+}
+
+func resolveEvent(event api.Event) {
+	var err error
+	var ids []int64
+	rId, _ := geoCache.get(event.RemoteAddr)
+	oId, _ := geoCache.get(event.OriginAddr)
+	if rId > 0 && oId > 0 {
+		e := resolveClient.MarkEvent(event.ID, rId)
+		if e != nil {
+			err = e
+		}
+		e = resolveClient.MarkEvent(event.ID, oId)
+		if e != nil {
+			err = e
+		}
+	} else {
+		ids , err = resolveClient.ResolveEvent(event)
+		if err != nil {
+			geoCache.set(event.RemoteAddr, ids[0])
+			geoCache.set(event.OriginAddr, ids[1])
+		}
+	}
+	if err != nil {
+		logger.Errorf("Error looking up %s", err)
+	}
 }
 
 func run(cmd *cobra.Command, args []string) {
 	setupLogger(cmd.Name())
 	setup(cmd, args)
-	h, errs := getHandler(defaultEventClient)
-	go func() {
-		errs <- http.ListenAndServe(config.BindAddr, h)
-	}()
+	srv := &http.Server{
+		Handler:      handlers(),
+		Addr:         config.BindAddr,
+		WriteTimeout: 10 * time.Second,
+		ReadTimeout:  10 * time.Second,
+	}
+	db := loadDSN(config.Dsn)
+	eventClient, _ = service.NewEventClient(service.SetEventLogger(logger), service.SetEventDb(db))
+	resolveClient, _ = service.NewResolveClient(service.SetResolveLogger(logger), service.SetResolveDb(db))
 	if config.Trace {
 		logger.Info("Enabling trace")
 		f, _ := os.Create(fmt.Sprintf("/tmp/trace-%s.out", cmd.Name()))
@@ -70,7 +152,11 @@ func run(cmd *cobra.Command, args []string) {
 		}
 		defer trace.Stop()
 	}
-	logger.Infof("exit %s", <-errs)
+	err := srv.ListenAndServe()
+	if err != nil {
+		logger.Errorf("Caught error %s", err)
+		os.Exit(-1)
+	}
 }
 
 func init() {
@@ -80,4 +166,12 @@ func init() {
 	serverCmd.PersistentFlags().StringVar(&config.NewRelic, "new-relic", "", "new relic api key")
 	serverCmd.PersistentFlags().BoolVar(&config.NoCache, "no-cache", false, "don't cache geo ip results")
 	serverCmd.PersistentFlags().BoolVar(&config.Trace, "trace", false, "enable trace")
+	prometheus.MustRegister(recordCounter)
 }
+var labels = make(map[string]prometheus.Labels)
+var recordCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
+	Namespace: "passwdpot",
+	Name:      "record",
+	Help:      "count of requests",
+	Subsystem: "total",
+}, []string{"origin"})

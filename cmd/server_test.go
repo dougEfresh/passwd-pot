@@ -18,28 +18,35 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/dougEfresh/passwd-pot/api"
-	"github.com/dougEfresh/passwd-pot/cmd/log"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+	"github.com/dougEfresh/passwd-pot/service"
+	"github.com/dougEfresh/passwd-pot/log"
+	"os"
+	klog "github.com/go-kit/kit/log"
 )
 
 const (
 	requestBody       = `{"time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "1.2.3.4", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51" , "application": "OpenSSH" , "protocol": "ssh"}`
 	requestBodyOrigin = `{"time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "192.168.1.1", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51" , "originAddr" : "10.0.0.1", "application": "OpenSSH" , "protocol": "ssh" }`
+	test_dsn string = "postgres://postgres:@127.0.0.1:5432/?sslmode=disable"
 )
-
 var ts *httptest.Server
 var eventEndpoint string
 
 func init() {
-	h, _ := getHandler(testEventClient)
-	ts = httptest.NewServer(h)
+	db :=  loadDSN(test_dsn)
+	logger.SetLevel(log.DebugLevel)
+	logger.AddLogger(klog.NewJSONLogger(os.Stdout))
+	eventClient, _ = service.NewEventClient(service.SetEventDb(db), service.SetEventLogger(logger))
+	resolveClient, _ = service.NewResolveClient(service.SetResolveDb(db), service.SetResolveLogger(logger))
+	ts = httptest.NewServer(handlers())
 	eventEndpoint = fmt.Sprintf("%s%s", ts.URL, api.EventURL)
-	logger.SetLevel(log.WarnLevel)
+
 }
 
 func TestServerRequest(t *testing.T) {
@@ -70,7 +77,7 @@ func TestServerRequest(t *testing.T) {
 		t.Fatalf("%s %s", string(b), err)
 	}
 	time.Sleep(1 * time.Second)
-	eventGeo := testEventClient.get(id)
+	eventGeo := eventClient.Get(id)
 	if eventGeo == nil {
 		t.Fatalf("Not not find id %d", id)
 	}
@@ -102,7 +109,7 @@ func TestServerRequestWithOrigin(t *testing.T) {
 	}
 
 	time.Sleep(500 * time.Millisecond)
-	eventGeo := testEventClient.get(id)
+	eventGeo := eventClient.Get(id)
 	if eventGeo == nil {
 		t.Fatalf("Not not find id %d", id)
 	}

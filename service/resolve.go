@@ -25,6 +25,7 @@ import (
 
 type EventResolver interface {
 	ResolveEvent(event api.Event) ([]int64, error)
+	MarkEvent(id int64, geoId int64, remote bool) error
 }
 
 type ResolveClient struct {
@@ -68,6 +69,15 @@ func SetGeoClient(gc GeoClientTransporter) ResolveOptionFunc {
 	}
 }
 
+func (c *ResolveClient) MarkEvent(id int64, geoId int64, remote bool) error {
+	if remote {
+		_, err := c.db.Exec(`UPDATE event SET remote_geo_id = $1 where id = $2`, geoId, id)
+		return err
+	}
+	_, err := c.db.Exec(`UPDATE event SET origin_geo_id = $1 where id = $2`, geoId, id)
+	return err
+}
+
 func (c *ResolveClient) ResolveEvent(event api.Event) ([]int64, error) {
 	var geoIds []int64 = []int64{0, 0}
 	if event.ID == 0 {
@@ -80,7 +90,7 @@ func (c *ResolveClient) ResolveEvent(event api.Event) ([]int64, error) {
 	if geoId, err = c.resolveAddr(event.RemoteAddr); err != nil {
 		return geoIds, err
 	}
-	if _, err = c.db.Exec(`UPDATE event SET remote_geo_id = $1 where id = $2`, geoId, event.ID); err != nil {
+	if err = c.MarkEvent(event.ID, geoId, true); err != nil {
 		return geoIds, err
 	}
 	geoIds[0] = geoId
@@ -88,7 +98,7 @@ func (c *ResolveClient) ResolveEvent(event api.Event) ([]int64, error) {
 		return geoIds, err
 	}
 
-	if _, err = c.db.Exec(`UPDATE event SET origin_geo_id = $1 where id = $2`, geoId, event.ID); err != nil {
+	if err = c.MarkEvent(event.ID, geoId, false); err != nil {
 		return geoIds, err
 	}
 	geoIds[1] = geoId
@@ -138,7 +148,6 @@ func (c *ResolveClient) resolveAddr(addr string) (int64, error) {
 		if err != nil {
 			return 0, err
 		}
-		logger.Infof("Adding %d to geo_event", id)
 	} else if geo.LastUpdate.Before(expire) {
 		logger.Infof("Found expired addr %s (%s) (%s)", addr, geo.LastUpdate, expire)
 		var newGeo = &Geo{}

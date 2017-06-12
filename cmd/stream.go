@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"bytes"
-	"fmt"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -79,7 +78,7 @@ var streamCmd = &cobra.Command{
 		//websocket requests
 		go hub.run()
 		go randomDataHub.run()
-		go startRandomHub(randomDataHub)
+		//go startRandomHub(randomDataHub)
 		err = srv.ListenAndServe()
 		if err != nil {
 			logger.Errorf("Caught error %s", err)
@@ -205,6 +204,7 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	client.readPump()
 }
 
+/*
 var lastRandomEvent *EventGeo
 
 func startRandomHub(hub *Hub) {
@@ -219,7 +219,7 @@ func startRandomHub(hub *Hub) {
 		}
 
 		if lastRandomEvent == nil {
-			r := defaultEventClient.db.QueryRow("SELECT max(id) FROM event_geo")
+			r := db.QueryRow("SELECT max(id) FROM event_geo")
 			err := r.Scan(&id)
 			if err != nil {
 				logger.Error("Error getting max id")
@@ -240,7 +240,7 @@ func startRandomHub(hub *Hub) {
 		}
 	}
 }
-
+*/
 func init() {
 	RootCmd.AddCommand(streamCmd)
 	streamCmd.PersistentFlags().StringVar(&config.Dsn, "dsn", "postgres://postgres:@172.17.0.1/?sslmode=disable", "DSN database url")
