@@ -60,7 +60,16 @@ func getHandler(path string, h func(http.ResponseWriter, *http.Request)) (string
 }
 
 func handleEventCountryStats(w http.ResponseWriter, r *http.Request) {
-
+	stats, err := eventClient.GetCountryStats()
+	if err != nil {
+		logger.Errorf("Error getting stats %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	b, _ := json.Marshal(stats)
+	w.Header().Add("Content-Type", "application/json")
+	w.Write(b)
 }
 
 func handleEvent(w http.ResponseWriter, r *http.Request) {

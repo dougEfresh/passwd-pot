@@ -296,6 +296,54 @@ func TestExpireAndChangedGeo(t *testing.T) {
 	}
 }
 
+func TestEventClient_GetCountryStats(t *testing.T) {
+	testEventClient.db.Query("DELETE FROM country_stats")
+	testEventClient.db.Query("INSERT INTO country_stats VALUES ('US',1.0,2.0,1234)")
+	testEventClient.db.Query("INSERT INTO country_stats VALUES ('CA',3.0,4.0,56789)")
+	stats, err := testEventClient.GetCountryStats()
+	if err != nil {
+		t.Fatalf("Error getting stats %s", err)
+	}
+	if len(stats) != 2 {
+		t.Fatalf("Stats != 2 (%d)", len(stats))
+	}
+	var s = stats[0]
+	if s.Country != "US" {
+		t.Fatalf("!= US '%s'", s.Country)
+	}
+	if s.Latitude != 1.0 {
+		t.Fatalf("!= 1.0")
+	}
+
+	if s.Longitude != 2.0 {
+		t.Fatalf("!= 2.0")
+	}
+
+	if s.Hits != 1234 {
+		t.Fatalf("!= 12345")
+	}
+
+	//Test cache
+	testEventClient.db.Query("INSERT INTO country_stats VALUES ('CH',5.0,6.0,56789)")
+	stats, err = testEventClient.GetCountryStats()
+	if err != nil {
+		t.Fatalf("Error getting stats %s", err)
+	}
+	if len(stats) != 2 {
+		t.Fatalf("Stats != 2 (%d)", len(stats))
+	}
+
+	ch.Delete("cc_stats")
+	stats, err = testEventClient.GetCountryStats()
+	if err != nil {
+		t.Fatalf("Error getting stats %s", err)
+	}
+	if len(stats) != 3 {
+		t.Fatalf("Stats != 3 (%d)", len(stats))
+	}
+
+}
+
 func loadDSN(dsn string) *sql.DB {
 	var db *sql.DB
 	var err error
