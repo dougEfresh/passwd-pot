@@ -31,14 +31,14 @@ type EventResolver interface {
 type ResolveClient struct {
 	db        *sql.DB
 	geoClient GeoClientTransporter
-	logger       log.Logger
+	logger    log.Logger
 }
 
 type ResolveOptionFunc func(*ResolveClient) error
 
 func NewResolveClient(options ...ResolveOptionFunc) (*ResolveClient, error) {
 	rc := &ResolveClient{
-		logger: defaultLogger,
+		logger:    defaultLogger,
 		geoClient: defaultGeoClient(),
 	}
 	for _, option := range options {

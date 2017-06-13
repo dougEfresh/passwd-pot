@@ -107,6 +107,7 @@ func runPotter() {
 	pc = &potterClient{
 		eventClient: c,
 	}
+
 	if potConfig.All {
 		wg.Add(1)
 		go httppot.Run(getWorker(pc, &wg, getPort(defaultHttpPort, potConfig.Http), "http"), logger)

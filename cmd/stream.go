@@ -26,6 +26,10 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"fmt"
+	"github.com/dougEfresh/passwd-pot/service"
+	"database/sql"
+	"encoding/json"
 )
 
 // streamCmd represents the stream command
@@ -48,6 +52,8 @@ var (
 	space   = []byte{' '}
 )
 
+var db *sql.DB
+
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
@@ -62,6 +68,7 @@ var streamCmd = &cobra.Command{
 	Long:  "",
 	Run: func(cmd *cobra.Command, args []string) {
 		var err error
+		setupLogger(cmd.Name())
 		setup(cmd, args)
 		r := mux.NewRouter()
 		r.HandleFunc(api.StreamURL, streamEvents).Methods("GET")
@@ -75,11 +82,14 @@ var streamCmd = &cobra.Command{
 		}
 
 		logger.Infof("Listing on %s", config.BindAddr)
+		db = loadDSN(config.Dsn)
+		eventClient, _ = service.NewEventClient(service.SetEventLogger(logger), service.SetEventDb(db))
 		//websocket requests
 		go hub.run()
 		go randomDataHub.run()
-		//go startRandomHub(randomDataHub)
+		go startRandomHub(randomDataHub)
 		err = srv.ListenAndServe()
+
 		if err != nil {
 			logger.Errorf("Caught error %s", err)
 			os.Exit(-1)
@@ -204,8 +214,8 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	client.readPump()
 }
 
-/*
-var lastRandomEvent *EventGeo
+
+var lastRandomEvent *service.EventGeo
 
 func startRandomHub(hub *Hub) {
 	logger.Info("Starting random hub")
@@ -226,7 +236,7 @@ func startRandomHub(hub *Hub) {
 				continue
 			}
 		} else {
-			r := defaultEventClient.db.QueryRow(query, lastRandomEvent.ID, lastRandomEvent.RemoteLatitude, lastRandomEvent.RemoteLongitude)
+			r := db.QueryRow(query, lastRandomEvent.ID, lastRandomEvent.RemoteLatitude, lastRandomEvent.RemoteLongitude)
 			err := r.Scan(&id)
 			if err != nil {
 				logger.Errorf("Error getting next id %s", err)
@@ -236,11 +246,29 @@ func startRandomHub(hub *Hub) {
 			logger.Error("Could not find an random event!")
 		}
 		if id != 0 {
-			lastRandomEvent = defaultEventClient.broadcastEvent(id, hub)
+			lastRandomEvent = broadcastEvent(id, hub)
 		}
 	}
 }
-*/
+
+func broadcastEvent(id int64, hub *Hub) *service.EventGeo {
+	if len(hub.clients) == 0 {
+		return nil
+	}
+	gEvent := eventClient.Get(id)
+	if gEvent == nil {
+		return nil
+	}
+	if b, err := json.Marshal(gEvent); err != nil {
+		logger.Errorf("Error decoding geo event %d %s", id, err)
+	} else {
+		hub.broadcast <- b
+	}
+	return gEvent
+}
+
+
+
 func init() {
 	RootCmd.AddCommand(streamCmd)
 	streamCmd.PersistentFlags().StringVar(&config.Dsn, "dsn", "postgres://postgres:@172.17.0.1/?sslmode=disable", "DSN database url")

@@ -52,7 +52,7 @@ func init() {
 
 func (c *mockGeoClient) GetLocationForAddr(ip string) (*service.Geo, error) {
 	resp := []byte(localGeo[ip])
-	logger.Infof("Found mocked %s" , localGeo[ip])
+	logger.Infof("Found mocked %s", localGeo[ip])
 	var geo = &service.Geo{}
 	err := json.Unmarshal(resp, geo)
 	geo.IP = ip

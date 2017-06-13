@@ -34,7 +34,7 @@ type EventTransporter interface {
 }
 
 type EventClient struct {
-	db  *sql.DB
+	db     *sql.DB
 	logger log.Logger
 }
 

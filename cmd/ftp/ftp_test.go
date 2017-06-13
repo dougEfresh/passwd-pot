@@ -17,8 +17,8 @@ package ftp
 import (
 	"bufio"
 	"github.com/dougEfresh/passwd-pot/api"
-	"github.com/dougEfresh/passwd-pot/log"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
+	"github.com/dougEfresh/passwd-pot/log"
 	"net"
 	"strings"
 	"sync"
