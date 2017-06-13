@@ -30,6 +30,7 @@ import (
 	"runtime/trace"
 	"strings"
 	"time"
+	"github.com/patrickmn/go-cache"
 )
 
 var serverCmd = &cobra.Command{
@@ -60,6 +61,13 @@ func getHandler(path string, h func(http.ResponseWriter, *http.Request)) (string
 }
 
 func handleEventCountryStats(w http.ResponseWriter, r *http.Request) {
+	cached, found := ch.Get("cc_stats")
+	if found {
+		w.WriteHeader(http.StatusOK)
+		w.Header().Add("Content-Type", "application/json")
+		w.Write(cached.([]byte))
+		return
+	}
 	stats, err := eventClient.GetCountryStats()
 	if err != nil {
 		logger.Errorf("Error getting stats %s", err)
@@ -70,6 +78,7 @@ func handleEventCountryStats(w http.ResponseWriter, r *http.Request) {
 	b, _ := json.Marshal(stats)
 	w.Header().Add("Content-Type", "application/json")
 	w.Write(b)
+	ch.Set("cc_stats",b, cache.DefaultExpiration)
 }
 
 func handleEvent(w http.ResponseWriter, r *http.Request) {
@@ -171,6 +180,8 @@ func run(cmd *cobra.Command, args []string) {
 		os.Exit(-1)
 	}
 }
+
+var ch *cache.Cache = cache.New(10* time.Minute, 20*time.Minute)
 
 func init() {
 	RootCmd.AddCommand(serverCmd)

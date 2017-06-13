@@ -18,8 +18,6 @@ import (
 	"database/sql"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/log"
-	"github.com/patrickmn/go-cache"
-	"time"
 )
 
 type EventClient struct {
@@ -102,10 +100,6 @@ func (c *EventClient) GetEvent(id int64) (*api.EventGeo, error) {
 }
 
 func (c *EventClient) GetCountryStats() ([]api.CountryStat, error) {
-	cached, found := ch.Get("cc_stats")
-	if found {
-		return cached.([]api.CountryStat) , nil
-	}
 	r, err := c.db.Query(`SELECT country_code,latitude,longitude,hits from country_stats`)
 	var stats []api.CountryStat = make([]api.CountryStat, 5000)
 	var cnt = 0
@@ -122,14 +116,13 @@ func (c *EventClient) GetCountryStats() ([]api.CountryStat, error) {
 		stats[cnt] = stat
 		cnt++
 	}
-	ch.Set("cc_stats",  stats[0:cnt], cache.DefaultExpiration)
 	return stats[0:cnt], nil
 }
 
 var defaultLogger log.Logger
-var ch *cache.Cache
+
+
 func init() {
 	defaultLogger = log.Logger{}
 	defaultLogger.SetLevel(log.InfoLevel)
-	ch = cache.New(10*time.Minute, 20*time.Minute)
 }

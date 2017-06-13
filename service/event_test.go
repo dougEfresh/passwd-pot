@@ -323,17 +323,7 @@ func TestEventClient_GetCountryStats(t *testing.T) {
 		t.Fatalf("!= 12345")
 	}
 
-	//Test cache
 	testEventClient.db.Query("INSERT INTO country_stats VALUES ('CH',5.0,6.0,56789)")
-	stats, err = testEventClient.GetCountryStats()
-	if err != nil {
-		t.Fatalf("Error getting stats %s", err)
-	}
-	if len(stats) != 2 {
-		t.Fatalf("Stats != 2 (%d)", len(stats))
-	}
-
-	ch.Delete("cc_stats")
 	stats, err = testEventClient.GetCountryStats()
 	if err != nil {
 		t.Fatalf("Error getting stats %s", err)
@@ -341,7 +331,6 @@ func TestEventClient_GetCountryStats(t *testing.T) {
 	if len(stats) != 3 {
 		t.Fatalf("Stats != 3 (%d)", len(stats))
 	}
-
 }
 
 func loadDSN(dsn string) *sql.DB {
