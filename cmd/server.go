@@ -21,6 +21,7 @@ import (
 	"github.com/dougEfresh/passwd-pot/service"
 	"github.com/gorilla/mux"
 	"github.com/newrelic/go-agent"
+	"github.com/patrickmn/go-cache"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cobra"
 	"io/ioutil"
@@ -30,7 +31,6 @@ import (
 	"runtime/trace"
 	"strings"
 	"time"
-	"github.com/patrickmn/go-cache"
 )
 
 var serverCmd = &cobra.Command{
@@ -62,6 +62,8 @@ func getHandler(path string, h func(http.ResponseWriter, *http.Request)) (string
 
 func handleEventCountryStats(w http.ResponseWriter, r *http.Request) {
 	cached, found := ch.Get("cc_stats")
+	w.Header().Add("Access-Control-Allow-Origin", "*")
+	w.Header().Add("Access-Control-Allow-Headers", "*")
 	if found {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Add("Content-Type", "application/json")
@@ -78,7 +80,7 @@ func handleEventCountryStats(w http.ResponseWriter, r *http.Request) {
 	b, _ := json.Marshal(stats)
 	w.Header().Add("Content-Type", "application/json")
 	w.Write(b)
-	ch.Set("cc_stats",b, cache.DefaultExpiration)
+	ch.Set("cc_stats", b, cache.DefaultExpiration)
 }
 
 func handleEvent(w http.ResponseWriter, r *http.Request) {
@@ -181,7 +183,7 @@ func run(cmd *cobra.Command, args []string) {
 	}
 }
 
-var ch *cache.Cache = cache.New(10* time.Minute, 20*time.Minute)
+var ch *cache.Cache = cache.New(10*time.Minute, 20*time.Minute)
 
 func init() {
 	RootCmd.AddCommand(serverCmd)

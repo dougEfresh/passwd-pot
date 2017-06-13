@@ -121,7 +121,6 @@ func (c *EventClient) GetCountryStats() ([]api.CountryStat, error) {
 
 var defaultLogger log.Logger
 
-
 func init() {
 	defaultLogger = log.Logger{}
 	defaultLogger.SetLevel(log.InfoLevel)
