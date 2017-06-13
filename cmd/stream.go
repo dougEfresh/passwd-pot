@@ -20,16 +20,16 @@ import (
 	"time"
 
 	"bytes"
+	"database/sql"
+	"encoding/json"
+	"fmt"
 	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/service"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"net/http"
 	"os"
 	"strings"
-	"fmt"
-	"github.com/dougEfresh/passwd-pot/service"
-	"database/sql"
-	"encoding/json"
 )
 
 // streamCmd represents the stream command
@@ -214,7 +214,6 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	client.readPump()
 }
 
-
 var lastRandomEvent *service.EventGeo
 
 func startRandomHub(hub *Hub) {
@@ -266,8 +265,6 @@ func broadcastEvent(id int64, hub *Hub) *service.EventGeo {
 	}
 	return gEvent
 }
-
-
 
 func init() {
 	RootCmd.AddCommand(streamCmd)
