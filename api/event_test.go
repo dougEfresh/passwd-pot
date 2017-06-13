@@ -42,7 +42,7 @@ func TestSend(t *testing.T) {
 		t.Fatalf("Get: %v", err)
 	}
 	ts := int64(1487973301661)
-	event := &Event{
+	event := Event{
 		ID:            0,
 		Time:          EventTime(time.Unix(ts/1000, (ts%1000)*1000000).UTC()),
 		User:          "admin",
@@ -55,8 +55,8 @@ func TestSend(t *testing.T) {
 		Application:   "OpenSSH",
 		Protocol:      "ssh",
 	}
-	err = ec.SendEvent(event)
+	_, err = ec.RecordEvent(event)
 	if err != nil {
-		t.Fatalf("SendEvent: %s", err)
+		t.Fatalf("RecordEvent: %s", err)
 	}
 }

@@ -39,13 +39,14 @@ var serverCmd = &cobra.Command{
 	Run:   run,
 }
 var geoCache *Cache = NewCache()
-var eventClient *service.EventClient
+var eventClient api.Transporter
 var resolveClient *service.ResolveClient
 var app newrelic.Application
 
 func handlers() *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc(getHandler(api.EventURL, handleEvent)).Methods("POST")
+	r.HandleFunc(getHandler(api.EventCountryStatsUrl, handleEventCountryStats)).Methods("GET")
 	//r.HandleFunc(getHandler(api.EventURL, listEvents)).Methods("GET")
 	return r
 }
@@ -56,6 +57,10 @@ func getHandler(path string, h func(http.ResponseWriter, *http.Request)) (string
 	} else {
 		return path, h
 	}
+}
+
+func handleEventCountryStats(w http.ResponseWriter, r *http.Request) {
+
 }
 
 func handleEvent(w http.ResponseWriter, r *http.Request) {

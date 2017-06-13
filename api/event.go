@@ -28,6 +28,7 @@ import (
 )
 
 const EventURL = "/api/v1/event"
+const EventCountryStatsUrl = "/api/v1/event/stats/country"
 const StreamURL = "/api/v1/event/stream"
 
 //Custom Serializer
@@ -73,35 +74,14 @@ func (et *EventTime) Scan(value interface{}) error {
 	return nil
 }
 
-//Event to record
-type Event struct {
-	ID            int64
-	Time          EventTime
-	User          string
-	Passwd        string
-	RemoteAddr    string
-	RemotePort    int
-	RemoteName    string
-	RemoteVersion string
-	OriginAddr    string
-	Application   string
-	Protocol      string
-}
-
-type Transporter interface {
-	SendEvent(event *Event) error
-	GetEvent(id int64) (*Event, error)
-}
-
 type EventClient struct {
 	server string
 }
 
-func (e *EventClient) SendEvent(event *Event) error {
-
+func (e *EventClient) RecordEvent(event Event) (int64, error) {
 	b, err := json.Marshal(event)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	var body []byte
 	err = backoff.Retry(func() error {
@@ -109,22 +89,24 @@ func (e *EventClient) SendEvent(event *Event) error {
 		return err
 	}, backoff.NewExponentialBackOff())
 	if err != nil {
-		return err
+		return 0, err
 	}
-	return nil
+	return 0, nil
 }
 
 //TODO
-func (e *EventClient) GetEvent(id int64) (*Event, error) {
+func (e *EventClient) GetEvent(id int64) (*EventGeo, error) {
 	return nil, nil
 }
 
-func convert(b []byte) (*Event, error) {
-	var event Event
-	if err := json.Unmarshal(b, &event); err != nil {
-		return nil, err
+func (e *EventClient) GetCountryStats() ([]CountryStat, error) {
+	var stats []CountryStat
+	resp, err := e.transport("GET", EventCountryStatsUrl, nil)
+	if err != nil {
+		return stats, err
 	}
-	return &event, nil
+	err = json.Unmarshal(resp, stats)
+	return stats, err
 }
 
 func (e *EventClient) transport(method string, endpoint string, body []byte) ([]byte, error) {
@@ -135,9 +117,7 @@ func (e *EventClient) transport(method string, endpoint string, body []byte) ([]
 			"application/json",
 			bytes.NewReader(body))
 	} else {
-		res, err = http.Post(fmt.Sprintf("%s%s", e.server, endpoint),
-			"application/json",
-			bytes.NewReader(body))
+		res, err = http.Get(fmt.Sprintf("%s%s", e.server, endpoint))
 	}
 
 	if err != nil {

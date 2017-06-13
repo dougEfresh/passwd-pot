@@ -60,7 +60,7 @@ type dryRunClient struct {
 func (p *potterClient) Send(event *api.Event) {
 	go func(e *api.Event) {
 		logger.Infof("Sending %s", e)
-		if err := p.eventClient.SendEvent(e); err != nil {
+		if _, err := p.eventClient.RecordEvent(*e); err != nil {
 			logger.Errorf("Error sending event %s %s", e, err)
 		}
 	}(event)
@@ -69,10 +69,15 @@ func (p *potterClient) Send(event *api.Event) {
 func (d *dryRunClient) Send(event *api.Event) {
 
 }
-func (d *dryRunClient) SendEvent(event *api.Event) error {
-	return nil
+
+func (d *dryRunClient) RecordEvent(event api.Event) (int64, error) {
+	return 0, nil
 }
-func (d *dryRunClient) GetEvent(id int64) (*api.Event, error) {
+func (d *dryRunClient) GetEvent(id int64) (*api.EventGeo, error) {
+	return nil, nil
+}
+
+func (d *dryRunClient) GetCountryStats() ([]api.CountryStat, error) {
 	return nil, nil
 }
 

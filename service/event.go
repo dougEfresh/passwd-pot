@@ -20,19 +20,6 @@ import (
 	"github.com/dougEfresh/passwd-pot/log"
 )
 
-type EventRecorder interface {
-	RecordEvent(event api.Event) (int64, error)
-}
-
-type EventLister interface {
-	Get(id int64) *EventGeo
-}
-
-type EventTransporter interface {
-	EventLister
-	EventRecorder
-}
-
 type EventClient struct {
 	db     *sql.DB
 	logger log.Logger
@@ -90,14 +77,14 @@ func (c *EventClient) RecordEvent(event api.Event) (int64, error) {
 	return id, nil
 }
 
-func (c *EventClient) Get(id int64) *EventGeo {
+func (c *EventClient) GetEvent(id int64) (*api.EventGeo, error) {
 	r := c.db.QueryRow(`SELECT
 	id, dt, username, passwd, remote_addr, remote_name, remote_version, remote_port, remote_country, remote_city,
 	origin_addr, origin_country, origin_city,
 	remote_latitude, remote_longitude,
         origin_latitude, origin_longitude
 	FROM event_geo WHERE id = $1 LIMIT 1`, id)
-	var event EventGeo
+	var event api.EventGeo
 	err := r.Scan(&event.ID, &event.Time, &event.User, &event.Passwd,
 		&event.RemoteAddr, &event.RemoteName, &event.RemoteVersion,
 		&event.RemotePort, &event.RemoteCountry, &event.RemoteCity,
@@ -106,10 +93,14 @@ func (c *EventClient) Get(id int64) *EventGeo {
 		&event.OriginLatitude, &event.OriginLongitude)
 	if err != nil {
 		c.logger.Errorf("Error getting event id %d %s", id, err)
-		return nil
+		return nil, err
 	}
 
-	return &event
+	return &event, nil
+}
+
+func (c *EventClient) GetCountryStats() ([]api.CountryStat, error) {
+	return nil, nil
 }
 
 var defaultLogger log.Logger

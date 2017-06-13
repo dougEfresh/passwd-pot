@@ -20,28 +20,6 @@ import (
 	"time"
 )
 
-//EventGeo event with location
-type EventGeo struct {
-	ID              int64     `db:"id"`
-	Time            time.Time `db:"dt"`
-	User            string    `db:"username"`
-	Passwd          string    `db:"passwd"`
-	RemoteAddr      string    `db:"remote_addr"`
-	RemotePort      int       `db:"remote_port"`
-	RemoteName      string    `db:"remote_name"`
-	RemoteVersion   string    `db:"remote_version"`
-	RemoteCountry   string    `db:"remote_country"`
-	RemoteCity      string    `db:"remote_city"`
-	OriginAddr      string    `db:"origin_addr"`
-	OriginCountry   string    `db:"origin_country"`
-	OriginCity      string    `db:"origin_city"`
-	RemoteLatitude  float64   `db:"remote_latitude"`
-	RemoteLongitude float64   `db:"remote_longitude"`
-	OriginLatitude  float64   `db:"origin_latitude"`
-	OriginLongitude float64   `db:"origin_longitude"`
-	MetroCode       uint      `db:"metro_code"`
-}
-
 //Geo location of addr
 type Geo struct {
 	ID          int64     `db:"id" json:"id"`
@@ -70,14 +48,6 @@ func (g *Geo) equals(another *Geo) bool {
 }
 
 func (g Geo) String() string {
-	b, err := json.Marshal(g)
-	if err != nil {
-		return fmt.Sprintf("%s", err)
-	}
-	return string(b)
-}
-
-func (g EventGeo) String() string {
 	b, err := json.Marshal(g)
 	if err != nil {
 		return fmt.Sprintf("%s", err)

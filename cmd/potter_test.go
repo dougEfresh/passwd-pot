@@ -26,13 +26,17 @@ type mockEventClient struct {
 
 var submittedEvent *api.Event
 
-func (c *mockEventClient) SendEvent(event *api.Event) error {
-	submittedEvent = event
-	return nil
+func (c *mockEventClient) RecordEvent(event api.Event) (int64, error) {
+	submittedEvent = &event
+	return 0, nil
 }
 
-func (c *mockEventClient) GetEvent(id int64) (*api.Event, error) {
-	return &api.Event{}, nil
+func (c *mockEventClient) GetEvent(id int64) (*api.EventGeo, error) {
+	return &api.EventGeo{}, nil
+}
+
+func (c *mockEventClient) GetCountryStats() ([]api.CountryStat, error) {
+	return nil, nil
 }
 
 func init() {

@@ -214,7 +214,7 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	client.readPump()
 }
 
-var lastRandomEvent *service.EventGeo
+var lastRandomEvent *api.EventGeo
 
 func startRandomHub(hub *Hub) {
 	logger.Info("Starting random hub")
@@ -250,11 +250,11 @@ func startRandomHub(hub *Hub) {
 	}
 }
 
-func broadcastEvent(id int64, hub *Hub) *service.EventGeo {
+func broadcastEvent(id int64, hub *Hub) *api.EventGeo {
 	if len(hub.clients) == 0 {
 		return nil
 	}
-	gEvent := eventClient.Get(id)
+	gEvent, _ := eventClient.GetEvent(id)
 	if gEvent == nil {
 		return nil
 	}

@@ -101,7 +101,7 @@ func TestServerRequest(t *testing.T) {
 		t.Fatalf("%s %s", string(b), err)
 	}
 	time.Sleep(1 * time.Second)
-	eventGeo := eventClient.Get(id)
+	eventGeo, err := eventClient.GetEvent(id)
 	if eventGeo == nil {
 		t.Fatalf("Not not find id %d", id)
 	}
@@ -133,7 +133,8 @@ func TestServerRequestWithOrigin(t *testing.T) {
 	}
 
 	time.Sleep(500 * time.Millisecond)
-	eventGeo := eventClient.Get(id)
+	eventGeo, _ := eventClient.GetEvent(id)
+
 	if eventGeo == nil {
 		t.Fatalf("Not not find id %d", id)
 	}

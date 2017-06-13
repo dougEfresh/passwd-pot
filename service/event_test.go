@@ -125,7 +125,7 @@ func TestLookup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error with getting geo %s", err)
 	}
-	geoEvent := testEventClient.Get(testEvent.ID)
+	geoEvent, err := testEventClient.GetEvent(testEvent.ID)
 
 	if geoEvent == nil {
 		t.Fatalf("Could not find id %d", testEvent.ID)
@@ -208,7 +208,7 @@ func TestExpire(t *testing.T) {
 	if ids[0] == 0 || ids[1] == 0 {
 		t.Fatalf("Failed to lookup event")
 	}
-	geoEvent := testEventClient.Get(testEvent.ID)
+	geoEvent, err := testEventClient.GetEvent(testEvent.ID)
 
 	if geoEvent == nil {
 		t.Fatalf("Could not find id %d", testEvent.ID)
@@ -251,7 +251,7 @@ func TestExpireAndChangedGeo(t *testing.T) {
 
 	testEventClient.RecordEvent(testEvent)
 	testResolveClient.ResolveEvent(testEvent)
-	geoEvent := testEventClient.Get(testEvent.ID)
+	geoEvent, err := testEventClient.GetEvent(testEvent.ID)
 
 	if geoEvent == nil {
 		t.Fatalf("Could not find id %d", testEvent.ID)
@@ -278,7 +278,7 @@ func TestExpireAndChangedGeo(t *testing.T) {
 	createEvent(&testEvent)
 	testEventClient.RecordEvent(testEvent)
 	testResolveClient.ResolveEvent(testEvent)
-	geoEvent = testEventClient.Get(testEvent.ID)
+	geoEvent, err = testEventClient.GetEvent(testEvent.ID)
 	if geoEvent == nil {
 		t.Fatalf("Could not find id %d", testEvent.ID)
 	}
