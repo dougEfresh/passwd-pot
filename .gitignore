@@ -45,3 +45,5 @@ bin/
 
 ssh-password-pot
 prof.*
+handler.so
+handler.zip
