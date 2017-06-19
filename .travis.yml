@@ -1,7 +1,7 @@
 language: go
 sudo: false
 go:
-- 1.8
+- 1.8.3
 services:
 - postgresql
 before_install:
@@ -12,7 +12,7 @@ os:
 - linux
 script:
 - go build -race
-- go test -v ./...
+- PGHOST=127.0.0.1:5432 go test -v ./...
 - go vet
 #- "$HOME/gopath/bin/goveralls -service=travis-ci"
 env:

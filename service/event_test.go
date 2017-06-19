@@ -26,6 +26,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"fmt"
 )
 
 var localGeo = make(map[string]string)
@@ -50,13 +51,17 @@ func (c *mockGeoClient) GetLocationForAddr(ip string) (*Geo, error) {
 }
 
 //const test_dsn string = "root:@tcp(127.0.0.1:3306)/passwd?parseTime=true"
-const test_dsn string = "postgres://postgres:@127.0.0.1:5432/?sslmode=disable"
+const test_dsn string = "postgres://postgres:@%s/?sslmode=disable"
 
 var testEventClient = &EventClient{}
 var testResolveClient = &ResolveClient{}
 
 func init() {
-	db := loadDSN(test_dsn)
+	pghost := os.Getenv("PGHOST")
+	if pghost == "" {
+		pghost = "127.0.0.1:54321"
+	}
+	db := loadDSN(fmt.Sprintf(test_dsn, pghost))
 	testEventClient, _ = NewEventClient(SetEventDb(db))
 	testEventClient.mysql = !strings.Contains(test_dsn, "postgres")
 	testResolveClient, _ = NewResolveClient(SetResolveDb(db), SetGeoClient(GeoClientTransporter(&mockGeoClient{})))
