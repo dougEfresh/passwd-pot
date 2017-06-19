@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/log"
+	"strings"
 	"time"
 )
 
@@ -32,6 +33,7 @@ type ResolveClient struct {
 	db        *sql.DB
 	geoClient GeoClientTransporter
 	logger    log.Logger
+	mysql     bool
 }
 
 type ResolveOptionFunc func(*ResolveClient) error
@@ -47,6 +49,14 @@ func NewResolveClient(options ...ResolveOptionFunc) (*ResolveClient, error) {
 		}
 	}
 	return rc, nil
+}
+
+func WithResolvDsn(dsn string) ResolveOptionFunc {
+	return func(c *ResolveClient) error {
+		c.db = loadDSN(dsn)
+		c.mysql = !strings.Contains(dsn, "postgres")
+		return nil
+	}
 }
 
 func SetResolveDb(db *sql.DB) ResolveOptionFunc {
@@ -74,11 +84,11 @@ func (c *ResolveClient) MarkEvent(id int64, geoId int64, remote bool) error {
 
 	if remote {
 		c.logger.Debugf("Setting remote_id %d to %d ", geoId, id)
-		_, err := c.db.Exec(`UPDATE event SET remote_geo_id = $1 where id = $2`, geoId, id)
+		_, err := c.db.Exec(c.replaceParams(`UPDATE event SET remote_geo_id = ? where id = ?`), geoId, id)
 		return err
 	}
 	c.logger.Debugf("Setting origin_id %d to %d ", geoId, id)
-	_, err := c.db.Exec(`UPDATE event SET origin_geo_id = $1 where id = $2`, geoId, id)
+	_, err := c.db.Exec(c.replaceParams(`UPDATE event SET origin_geo_id = ? where id = ?`), geoId, id)
 	return err
 }
 
@@ -108,8 +118,18 @@ func (c *ResolveClient) ResolveEvent(event api.Event) ([]int64, error) {
 	return geoIds, nil
 }
 
-func insertGeo(geo *Geo, db *sql.DB) (int64, error) {
+func insertGeo(geo *Geo, db *sql.DB, mysql bool) (int64, error) {
 	var id int64
+	if mysql {
+		res, err := db.Exec(`INSERT INTO geo
+	(ip, country_code, region_code, region_name, city, time_zone, latitude, longitude, metro_code, last_update)
+	VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			geo.IP, geo.CountryCode, geo.RegionCode, geo.RegionName, geo.City, geo.TimeZone, geo.Latitude, geo.Longitude, geo.MetroCode, geo.LastUpdate)
+		if err != nil {
+			return 0, err
+		}
+		return res.LastInsertId()
+	}
 	r, err := db.Query(`INSERT INTO geo
 	(ip, country_code, region_code, region_name, city, time_zone, latitude, longitude, metro_code, last_update)
 	VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING ID`,
@@ -117,6 +137,7 @@ func insertGeo(geo *Geo, db *sql.DB) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	defer r.Close()
 	if !r.Next() {
 		return 0, errors.New(fmt.Sprintf("Failed inserting %s", geo))
@@ -132,11 +153,11 @@ func (c *ResolveClient) resolveAddr(addr string) (int64, error) {
 	if c == nil {
 		panic("no!")
 	}
-	r := c.db.QueryRow(`SELECT
+	r := c.db.QueryRow(c.replaceParams(`SELECT
 	id, ip, country_code, region_code, region_name, city, time_zone, latitude, longitude, metro_code, last_update
 	FROM geo
-	WHERE ip = $1
-	ORDER BY last_update DESC LIMIT 1`, addr)
+	WHERE ip = ?
+	ORDER BY last_update DESC LIMIT 1`), addr)
 	err := r.Scan(&geo.ID, &geo.IP, &geo.CountryCode, &geo.RegionCode, &geo.RegionName, &geo.City, &geo.TimeZone, &geo.Latitude, &geo.Longitude, &geo.MetroCode, &geo.LastUpdate)
 	if err != nil && err != sql.ErrNoRows {
 		return 0, err
@@ -148,7 +169,7 @@ func (c *ResolveClient) resolveAddr(addr string) (int64, error) {
 		if err != nil {
 			return 0, err
 		}
-		id, err = insertGeo(geo, c.db)
+		id, err = insertGeo(geo, c.db, c.mysql)
 		if err != nil {
 			return 0, err
 		}
@@ -161,16 +182,23 @@ func (c *ResolveClient) resolveAddr(addr string) (int64, error) {
 		}
 		if geo.equals(newGeo) {
 			c.logger.Infof("Updating last_update for id %d ", geo.ID)
-			if _, err = c.db.Exec("UPDATE geo SET last_update = now() WHERE id  = $1", geo.ID); err != nil {
+			if _, err = c.db.Exec(c.replaceParams("UPDATE geo SET last_update = now() WHERE id  = ?"), geo.ID); err != nil {
 				return 0, err
 			}
 		} else {
 			c.logger.Infof("Inserting new record for id %d ", geo.ID)
-			id, err = insertGeo(newGeo, c.db)
+			id, err = insertGeo(newGeo, c.db, c.mysql)
 			if err != nil {
 				return 0, err
 			}
 		}
 	}
 	return id, nil
+}
+
+func (c *ResolveClient) replaceParams(sql string) string {
+	if c.mysql {
+		return sql
+	}
+	return replaceParams(sql)
 }

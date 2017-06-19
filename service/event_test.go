@@ -20,8 +20,10 @@ import (
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/log"
 	klog "github.com/go-kit/kit/log"
+	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -47,6 +49,7 @@ func (c *mockGeoClient) GetLocationForAddr(ip string) (*Geo, error) {
 	return geo, err
 }
 
+//const test_dsn string = "root:@tcp(127.0.0.1:3306)/passwd?parseTime=true"
 const test_dsn string = "postgres://postgres:@127.0.0.1:5432/?sslmode=disable"
 
 var testEventClient = &EventClient{}
@@ -55,7 +58,9 @@ var testResolveClient = &ResolveClient{}
 func init() {
 	db := loadDSN(test_dsn)
 	testEventClient, _ = NewEventClient(SetEventDb(db))
+	testEventClient.mysql = !strings.Contains(test_dsn, "postgres")
 	testResolveClient, _ = NewResolveClient(SetResolveDb(db), SetGeoClient(GeoClientTransporter(&mockGeoClient{})))
+	testResolveClient.mysql = !strings.Contains(test_dsn, "postgres")
 	defaultLogger.AddLogger(klog.NewJSONLogger(os.Stderr))
 	defaultLogger.SetLevel(log.WarnLevel)
 }
@@ -88,7 +93,7 @@ func createEvent(event *api.Event) error {
 	if err != nil {
 		return err
 	}
-	r := testEventClient.db.QueryRow(`SELECT id FROM event_geo WHERE id = $1 LIMIT 1`, id)
+	r := testEventClient.db.QueryRow(testEventClient.replaceParams(`SELECT id FROM event_geo WHERE id = ? LIMIT 1`), id)
 	err = r.Scan(&id)
 	if err != nil {
 		return err
@@ -128,7 +133,7 @@ func TestLookup(t *testing.T) {
 	geoEvent, err := testEventClient.GetEvent(testEvent.ID)
 
 	if geoEvent == nil {
-		t.Fatalf("Could not find id %d", testEvent.ID)
+		t.Fatalf("Could not find id %d %s", testEvent.ID, err)
 	}
 
 	if geoEvent.RemoteAddr != testEvent.RemoteAddr {
@@ -215,18 +220,18 @@ func TestExpire(t *testing.T) {
 	}
 	var oldlastUpdate time.Time
 	var newerLastUpdate time.Time
-	r := testEventClient.db.QueryRow("select last_update from geo where ip = $1 LIMIT 1", testEvent.RemoteAddr)
+	r := testEventClient.db.QueryRow(testEventClient.replaceParams("select last_update from geo where ip = ? LIMIT 1"), testEvent.RemoteAddr)
 	err = r.Scan(&oldlastUpdate)
 	if err != nil {
 		t.Fatalf("Error updating time %s", err)
 	}
-	_, err = testEventClient.db.Exec("UPDATE geo SET last_update = $1", time.Now().Add(time.Hour*24*-100))
+	_, err = testEventClient.db.Exec(testEventClient.replaceParams("UPDATE geo SET last_update = ?"), time.Now().Add(time.Hour*24*-100))
 	if err != nil {
 		t.Fatalf("Error updating time %s", err)
 	}
 	createEvent(&testEvent)
 	testResolveClient.ResolveEvent(testEvent)
-	r = testEventClient.db.QueryRow("select last_update from geo where ip = $1 LIMIT 1", testEvent.RemoteAddr)
+	r = testEventClient.db.QueryRow(testEventClient.replaceParams("select last_update from geo where ip = ? LIMIT 1"), testEvent.RemoteAddr)
 	err = r.Scan(&newerLastUpdate)
 
 	if err != nil {
@@ -258,13 +263,13 @@ func TestExpireAndChangedGeo(t *testing.T) {
 	}
 	var oldlastUpdate time.Time
 	var newerLastUpdate time.Time
-	r := testEventClient.db.QueryRow("SELECT last_update FROM geo WHERE ip = $1 LIMIT 1", testEvent.RemoteAddr)
+	r := testEventClient.db.QueryRow(testEventClient.replaceParams("SELECT last_update FROM geo WHERE ip = ? LIMIT 1"), testEvent.RemoteAddr)
 	err = r.Scan(&oldlastUpdate)
 	if err != nil {
 		t.Fatalf("Error updating time %s", err)
 	}
 
-	_, err = testEventClient.db.Exec("UPDATE geo SET last_update = $1 WHERE ip = $2", time.Now().Add(time.Hour*24*-100), testEvent.RemoteAddr)
+	_, err = testEventClient.db.Exec(testEventClient.replaceParams("UPDATE geo SET last_update = ? WHERE ip = ?"), time.Now().Add(time.Hour*24*-100), testEvent.RemoteAddr)
 	if err != nil {
 		t.Fatalf("Error updating time %s", err)
 	}
@@ -283,7 +288,7 @@ func TestExpireAndChangedGeo(t *testing.T) {
 		t.Fatalf("Could not find id %d", testEvent.ID)
 	}
 
-	r = testEventClient.db.QueryRow("SELECT last_update FROM geo WHERE ip = $1 ORDER BY last_update DESC LIMIT 1", testEvent.RemoteAddr)
+	r = testEventClient.db.QueryRow(testEventClient.replaceParams("SELECT last_update FROM geo WHERE ip = ? ORDER BY last_update DESC LIMIT 1"), testEvent.RemoteAddr)
 	err = r.Scan(&newerLastUpdate)
 	if err != nil {
 		t.Fatalf("Error getting  %s", err)
@@ -331,18 +336,4 @@ func TestEventClient_GetCountryStats(t *testing.T) {
 	if len(stats) != 3 {
 		t.Fatalf("Stats != 3 (%d)", len(stats))
 	}
-}
-
-func loadDSN(dsn string) *sql.DB {
-	var db *sql.DB
-	var err error
-	db, err = sql.Open("postgres", dsn)
-	if err != nil {
-		panic(err)
-	}
-	err = db.Ping()
-	if err != nil {
-		panic(err)
-	}
-	return db
 }
