@@ -60,7 +60,7 @@ func getHandler(path string, h func(http.ResponseWriter, *http.Request)) (string
 	}
 }
 
-func handleEventCountryStats(w http.ResponseWriter, r *http.Request) {
+func handleEventCountryStats(w http.ResponseWriter, _ *http.Request) {
 	cached, found := ch.Get("cc_stats")
 	w.Header().Add("Access-Control-Allow-Origin", "*")
 	w.Header().Add("Access-Control-Allow-Headers", "*")
