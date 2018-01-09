@@ -17,6 +17,7 @@ package service
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/log"
 	klog "github.com/go-kit/kit/log"
@@ -26,7 +27,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"fmt"
 )
 
 var localGeo = make(map[string]string)
