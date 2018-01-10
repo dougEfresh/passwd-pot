@@ -321,12 +321,12 @@ func TestEventClient_GetCountryStats(t *testing.T) {
 	if s.Country != "US" {
 		t.Fatalf("!= US '%s'", s.Country)
 	}
-	if s.Latitude != 1.0 {
-		t.Fatalf("!= 1.0")
+	if s.Latitude != 0.0 {
+		t.Fatalf("!= 0.0")
 	}
 
-	if s.Longitude != 2.0 {
-		t.Fatalf("!= 2.0")
+	if s.Longitude != 0.0 {
+		t.Fatalf("!= 0.0")
 	}
 
 	if s.Hits != 1234 {
