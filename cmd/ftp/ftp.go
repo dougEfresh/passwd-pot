@@ -72,7 +72,6 @@ func (p *potHandler) HandleConnection(conn net.Conn) {
 	defer conn.Close()
 	if _, err := conn.Write([]byte("220 This is a private system - No anonymous login\r\n")); err != nil {
 		logger.Errorf("Error sending 220 %s", err)
-		conn.Close()
 		return
 	}
 	var user string

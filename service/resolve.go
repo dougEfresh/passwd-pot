@@ -95,9 +95,8 @@ func (c *ResolveClient) MarkEvent(id int64, geoId int64, remote bool) error {
 func (c *ResolveClient) ResolveEvent(event api.Event) ([]int64, error) {
 	var geoIds []int64 = []int64{0, 0}
 	if event.ID == 0 {
-		err := errors.New("Bad event recv")
-		c.logger.Errorf("Got bad event")
-		return geoIds, err
+		c.logger.Errorf("Got bad event: %s", event)
+		return geoIds, errors.New("bad event recv")
 	}
 	var err error
 	var geoId int64

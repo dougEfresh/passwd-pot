@@ -124,15 +124,15 @@ func (c *EventClient) GetEvent(id int64) (*api.EventGeo, error) {
 }
 
 func (c *EventClient) GetCountryStats() ([]api.CountryStat, error) {
-	r, err := c.db.Query(c.replaceParams(`SELECT country_code,latitude,longitude,hits from country_stats`))
-	var stats []api.CountryStat = make([]api.CountryStat, 5000)
+	r, err := c.db.Query(c.replaceParams(`SELECT country_code,sum(hits) as hits from country_stats group by country_code`))
+	var stats = make([]api.CountryStat, 5000)
 	var cnt = 0
 	if err != nil {
 		return nil, err
 	}
 	for r.Next() {
 		var stat api.CountryStat
-		r.Scan(&stat.Country, &stat.Latitude, &stat.Longitude, &stat.Hits)
+		r.Scan(&stat.Country, &stat.Hits)
 		if len(stats) > cnt+1 {
 			var buf = make([]api.CountryStat, 1000)
 			stats = append(stats, buf[0:999]...)
