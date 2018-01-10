@@ -317,7 +317,7 @@ func TestEventClient_GetCountryStats(t *testing.T) {
 	if len(stats) != 2 {
 		t.Fatalf("Stats != 2 (%d)", len(stats))
 	}
-	var s = stats[0]
+	var s = stats[1]
 	if s.Country != "US" {
 		t.Fatalf("!= US '%s'", s.Country)
 	}
