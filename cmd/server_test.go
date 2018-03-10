@@ -63,7 +63,7 @@ func (c *mockGeoClient) GetLocationForAddr(ip string) (*service.Geo, error) {
 func init() {
 	pghost := os.Getenv("PGHOST")
 	if pghost == "" {
-		pghost = "127.0.0.1:54321"
+		pghost = "127.0.0.1:5432"
 	}
 	db := loadDSN(fmt.Sprintf(test_dsn, pghost))
 	logger.SetLevel(log.DebugLevel)

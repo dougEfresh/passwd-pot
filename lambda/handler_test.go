@@ -15,12 +15,12 @@
 package main
 
 import (
-	"testing"
 	"github.com/aws/aws-lambda-go/events"
 	"strings"
+	"testing"
 )
-var body = ` { "time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "158.69.243.135", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51", "application": "OpenSSH", "protocol": "ssh" }`
 
+var body = ` { "time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "158.69.243.135", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51", "application": "OpenSSH", "protocol": "ssh" }`
 
 func TestHandler(t *testing.T) {
 	req := events.APIGatewayProxyRequest{Body: body}

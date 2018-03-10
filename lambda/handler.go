@@ -3,13 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/service"
 	"github.com/eawsy/aws-lambda-go-core/service/lambda/runtime"
 	_ "github.com/go-sql-driver/mysql"
 	"os"
-	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-lambda-go/events"
 )
 
 func Handle(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
