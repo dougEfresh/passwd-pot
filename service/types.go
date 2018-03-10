@@ -32,7 +32,7 @@ type Geo struct {
 	TimeZone    string    `db:"time_zone" json:"time_zone"`
 	Latitude    float64   `db:"latitude" json:"latitude"`
 	Longitude   float64   `db:"longitude" json:"longitude"`
-	MetroCode   int       `db:"metro_code" json:"metro_code"`
+	MetroCode   uint      `db:"metro_code" json:"metro_code"`
 }
 
 func (g *Geo) equals(another *Geo) bool {

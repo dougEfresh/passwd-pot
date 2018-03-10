@@ -34,6 +34,7 @@ var config struct {
 	NoCache  bool
 	Trace    bool
 	Logz     string
+	GeoDB    string
 }
 
 var cfgFile string

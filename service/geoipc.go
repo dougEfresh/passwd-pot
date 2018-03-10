@@ -16,6 +16,10 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/fiorix/freegeoip"
+	"net"
 	"net/http"
 	"time"
 )
@@ -27,6 +31,10 @@ type GeoClientTransporter interface {
 //GeoClient for geo IP
 type GeoClient struct {
 	URL string
+}
+
+type GeoClientDB struct {
+	db *freegeoip.DB
 }
 
 func defaultGeoClient() *GeoClient {
@@ -48,4 +56,35 @@ func (c *GeoClient) GetLocationForAddr(ip string) (*Geo, error) {
 	}
 	loc.LastUpdate = time.Now()
 	return &loc, nil
+}
+
+type geoipQuery struct {
+	freegeoip.DefaultQuery
+}
+
+func (c *GeoClientDB) GetLocationForAddr(ip string) (*Geo, error) {
+	var q geoipQuery
+	ipaddr := net.ParseIP(ip)
+	if ipaddr == nil {
+		return nil, errors.New("Error parsing ip " + ip)
+	}
+	if err := c.db.Lookup(ipaddr, &q); err != nil {
+		return nil, err
+	}
+	g := Geo{
+		IP:          ip,
+		LastUpdate:  time.Now(),
+		CountryCode: q.Country.ISOCode,
+		City:        q.City.Names["en"],
+		TimeZone:    q.Location.TimeZone,
+		Latitude:    q.Location.Latitude,
+		Longitude:   q.Location.Longitude,
+		MetroCode:   q.Location.MetroCode,
+	}
+	if len(q.Region) > 0 {
+		g.RegionName = q.Region[0].Names["en"]
+		g.RegionCode = q.Region[0].ISOCode
+	}
+	fmt.Printf("Returning %s", g)
+	return &g, nil
 }

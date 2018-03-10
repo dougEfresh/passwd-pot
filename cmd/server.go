@@ -165,7 +165,16 @@ func run(cmd *cobra.Command, args []string) {
 	}
 	db := loadDSN(config.Dsn)
 	eventClient, _ = service.NewEventClient(service.SetEventLogger(logger), service.SetEventDb(db))
-	resolveClient, _ = service.NewResolveClient(service.SetResolveLogger(logger), service.SetResolveDb(db))
+	var err error
+	if len(config.GeoDB) > 0 {
+		resolveClient, err = service.NewResolveClient(service.SetResolveLogger(logger), service.SetResolveDb(db), service.SetGeoDb(config.GeoDB))
+		if err != nil {
+			logger.Errorf("Cannot open geo db %s", err)
+			os.Exit(-1)
+		}
+	} else {
+		resolveClient, _ = service.NewResolveClient(service.SetResolveLogger(logger), service.SetResolveDb(db))
+	}
 	if config.Trace {
 		logger.Info("Enabling trace")
 		f, _ := os.Create(fmt.Sprintf("/tmp/trace-%s.out", cmd.Name()))
@@ -176,7 +185,7 @@ func run(cmd *cobra.Command, args []string) {
 		}
 		defer trace.Stop()
 	}
-	err := srv.ListenAndServe()
+	err = srv.ListenAndServe()
 	if err != nil {
 		logger.Errorf("Caught error %s", err)
 		os.Exit(-1)
@@ -192,6 +201,7 @@ func init() {
 	serverCmd.PersistentFlags().StringVar(&config.NewRelic, "new-relic", "", "new relic api key")
 	serverCmd.PersistentFlags().BoolVar(&config.NoCache, "no-cache", false, "don't cache geo ip results")
 	serverCmd.PersistentFlags().BoolVar(&config.Trace, "trace", false, "enable trace")
+	serverCmd.PersistentFlags().StringVar(&config.GeoDB, "geo-db", "", "location of geoLite2 db")
 	prometheus.MustRegister(recordCounter)
 }
 

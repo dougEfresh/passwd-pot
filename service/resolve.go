@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/log"
+	"github.com/fiorix/freegeoip"
 	"strings"
 	"time"
 )
@@ -62,6 +63,19 @@ func WithResolvDsn(dsn string) ResolveOptionFunc {
 func SetResolveDb(db *sql.DB) ResolveOptionFunc {
 	return func(c *ResolveClient) error {
 		c.db = db
+		return nil
+	}
+}
+
+func SetGeoDb(db string) ResolveOptionFunc {
+	return func(c *ResolveClient) error {
+		geodb, err := freegeoip.Open(db)
+		if err != nil {
+			return err
+		}
+		c.geoClient = &GeoClientDB{
+			db: geodb,
+		}
 		return nil
 	}
 }
