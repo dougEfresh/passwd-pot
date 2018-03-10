@@ -7,24 +7,21 @@ import (
 	"github.com/dougEfresh/passwd-pot/service"
 	"github.com/eawsy/aws-lambda-go-core/service/lambda/runtime"
 	_ "github.com/go-sql-driver/mysql"
-	"log"
 	"os"
+	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-lambda-go/events"
 )
 
-type lambdaClient struct {
-}
-
-func Handle(evt json.RawMessage, ctx *runtime.Context) (string, error) {
+func Handle(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var e api.Event
-	err := json.Unmarshal(evt, &e)
-	db := os.Getenv("DSN")
-	c, err := service.NewEventClient(service.WithDsn(db))
-	if err != nil {
-		log.Printf("Error writing %s", err)
-		return "ERROR", err
+	if err := json.Unmarshal([]byte(request.Body), &e); err != nil {
+		return events.APIGatewayProxyResponse{Body: fmt.Sprintf("%s", err), StatusCode: 403}, nil
 	}
-	id, err := c.RecordEvent(e)
-	return fmt.Sprintf("%d", id), err
+	e.ID = 1
+	var header = make(map[string]string)
+	header["Content-Type"] = "application/json;charset=UTF-8"
+	return events.APIGatewayProxyResponse{Body: fmt.Sprintf("{\"id\":%d}", e.ID), StatusCode: 202, Headers: header}, nil
+
 }
 
 func ResolveEvent(evt json.RawMessage, ctx *runtime.Context) (string, error) {
@@ -40,5 +37,5 @@ func ResolveEvent(evt json.RawMessage, ctx *runtime.Context) (string, error) {
 }
 
 func main() {
-
+	lambda.Start(Handle)
 }
