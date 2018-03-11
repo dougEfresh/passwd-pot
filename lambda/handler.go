@@ -5,11 +5,11 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/dougEfresh/passwd-pot/api"
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/dougEfresh/passwd-pot/service"
 	"github.com/dougEfresh/passwd-pot/log"
-	"os"
+	"github.com/dougEfresh/passwd-pot/service"
 	klog "github.com/go-kit/kit/log"
+	_ "github.com/go-sql-driver/mysql"
+	"os"
 )
 
 var eventResolver service.EventResolver
@@ -51,13 +51,13 @@ func Handle(apiEvent ApiEvent) (events.APIGatewayProxyResponse, error) {
 	id, err := eventClient.RecordEvent(e)
 	if err != nil {
 		logger.Errorf("error loading event %s", err)
-		return events.APIGatewayProxyResponse{Body: fmt.Sprintf("error loading event %s", err), StatusCode: 500, }, err
+		return events.APIGatewayProxyResponse{Body: fmt.Sprintf("error loading event %s", err), StatusCode: 500}, err
 	}
 	e.ID = id
-	_ , err = eventResolver.ResolveEvent(e)
+	_, err = eventResolver.ResolveEvent(e)
 	if err != nil {
 		logger.Errorf("Error resolving %s %s", e, err)
-		return events.APIGatewayProxyResponse{Body: fmt.Sprintf("error resolving event %s", err), StatusCode: 500, }, err
+		return events.APIGatewayProxyResponse{Body: fmt.Sprintf("error resolving event %s", err), StatusCode: 500}, err
 	}
 	var header = make(map[string]string)
 	header["Content-Type"] = "application/json;charset=UTF-8"

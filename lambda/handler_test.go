@@ -15,9 +15,9 @@
 package main
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
-	"encoding/json"
 )
 
 var body = ` { "event": { "time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "158.69.243.135", "originAddr": "212.143.121.156",  "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51", "application": "OpenSSH", "protocol": "ssh" }}`
