@@ -54,9 +54,10 @@ func NewResolveClient(options ...ResolveOptionFunc) (*ResolveClient, error) {
 
 func WithResolvDsn(dsn string) ResolveOptionFunc {
 	return func(c *ResolveClient) error {
-		c.db = loadDSN(dsn)
+		var err error
+		c.db, err = loadDSN(dsn)
 		c.mysql = !strings.Contains(dsn, "postgres")
-		return nil
+		return err
 	}
 }
 
@@ -164,7 +165,7 @@ func (c *ResolveClient) resolveAddr(addr string) (int64, error) {
 	var id int64 = 0
 	expire := time.Now().AddDate(0, -1, 0)
 	if c == nil {
-		panic("no!")
+		return 0, errors.New("FATAL: Resolve client is null")
 	}
 	r := c.db.QueryRow(c.replaceParams(`SELECT
 	id, ip, country_code, region_code, region_name, city, time_zone, latitude, longitude, metro_code, last_update

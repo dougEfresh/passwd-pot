@@ -1,0 +1,125 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "PasswdPot API",
+    "version": "1.0.0"
+  },
+  "host" : "virtserver.swaggerhub.com",
+  "basePath": "/v1",
+  "schemes": ["https"],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "paths": {
+    "/event": {
+      "post": {
+        "summary" : "Record a password event",
+        "operationId" : "createEvent",
+        "consumes" : [ "application/json" ],
+        "produces" : [ "application/json" ],
+        "responses": {
+          "202": {
+            "description": "event created",
+            "schema" : {
+              "$ref" : "#/definitions/EventResponse"
+            }
+          },
+           "400" : {
+            "description" : "Invalid parameters"
+          },
+          "404" : {
+            "description" : "Requested resource or parameter not found"
+          },
+          "500" : {
+            "description" : "Server error"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "event",
+          "in": "body",
+          "description": "JSON body",
+          "required": true,
+          "schema": {
+            "$ref": "#/definitions/Event"
+          }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "aws",
+        "uri": "arn:aws:apigateway:$AWSRegion:lambda:path/2015-03-31/functions/$LambdaArn/invocations",
+        "httpMethod": "POST",
+        "requestTemplates": {
+          "application/json": "{\"fun\": \"postUser\", \"body\": $input.json('$')}"
+        },
+        "responses": {
+          "default": {
+            "statusCode": "202",
+            "responseTemplates": {
+              "application/json": "$input.json('$.body')"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Event": {
+      "type": "object",
+      "properties": {
+        "time": {
+          "type": "number",
+          "example": "1489868389483,"
+        },
+        "user": {
+          "type": "string",
+          "example": "root"
+        },
+        "passwd": {
+          "type": "string",
+          "example": "passw0rd"
+        },
+        "remoteAddr": {
+          "type": "string",
+          "example": "116.31.116.10"
+        },
+        "remotePort": {
+          "type": "number",
+          "example": "6534"
+        },
+        "remoteName": {
+          "type": "string",
+          "example": "www.hacker.com"
+        },
+        "remoteVersion": {
+          "type": "string",
+          "example": "SSH-2.0-PUTTY"
+        },
+        "originAddr": {
+          "type": "string",
+          "example": "23.20.79.90"
+        },
+        "application": {
+          "type": "string",
+          "example": "OpenSSh"
+        },
+        "protocol": {
+          "type": "string",
+          "example": "ssh"
+        }
+      },
+      "required": ["time", "remoteAddr", "originAddr", "application", "protocol", "user"]
+    },
+     "EventResponse" : {
+      "properties" : {
+        "id" : {
+          "type" : "number",
+          "example" : 1
+        }
+      },
+      "example" : {
+        "id" : 1
+      }
+    }
+  }
+}

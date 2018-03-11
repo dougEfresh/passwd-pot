@@ -52,9 +52,10 @@ func SetEventDb(db *sql.DB) EventOptionFunc {
 
 func WithDsn(dsn string) EventOptionFunc {
 	return func(c *EventClient) error {
-		c.db = loadDSN(dsn)
+		var err error
+		c.db, err = loadDSN(dsn)
 		c.mysql = !strings.Contains(dsn, "postgres")
-		return nil
+		return err
 	}
 }
 
@@ -166,7 +167,7 @@ func init() {
 	defaultLogger.SetLevel(log.InfoLevel)
 }
 
-func loadDSN(dsn string) *sql.DB {
+func loadDSN(dsn string) (*sql.DB, error) {
 	var db *sql.DB
 	var err error
 	if strings.Contains(dsn, "postgres") {
@@ -175,11 +176,11 @@ func loadDSN(dsn string) *sql.DB {
 		db, err = sql.Open("mysql", dsn)
 	}
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	err = db.Ping()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return db
+	return db, nil
 }

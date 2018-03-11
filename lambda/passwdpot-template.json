@@ -1,0 +1,309 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Api and Lambda for Passwd Pot",
+  "Parameters": {
+    "PasswdPotDsn": {
+      "Description": "Golang DSN",
+      "Type": "String"
+    },
+    "LogzApi": {
+      "Description": "logz.io api key",
+      "Type": "String",
+      "Default": ""
+    },
+    "S3Bucket": {
+      "Description": "S3Bucket",
+      "Type": "String"
+    },
+    "S3Key": {
+      "Type": "String"
+    },
+    "Debug": {
+      "type": "String",
+      "Default": "0"
+    },
+    "ApiId": {
+      "Description": "API Gateway App Id. E.g. 1yc6td9zjj",
+      "Type": "String",
+      "Default": ""
+    }
+  },
+  "Resources": {
+    "PasswdPotLambdaRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path": "/",
+        "Policies": [
+          {
+            "PolicyName": "logs",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:*"
+                  ],
+                  "Resource": "arn:aws:logs:*:*:*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "CreateEventPostLambda": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": "passwdpot-create-event",
+        "Handler": "handler",
+        "Role": {
+          "Fn::GetAtt": [
+            "PasswdPotLambdaRole",
+            "Arn"
+          ]
+        },
+        "MemorySize": 128,
+        "Environment": {
+          "Variables": {
+            "PASSWDPOT_DSN": {
+              "Ref": "PasswdPotDsn"
+            },
+            "PASSWDPOT_DEBUG": {
+              "Ref": "Debug"
+            },
+            "LOGZ": {
+              "Ref": "LogzApi"
+            }
+          }
+        },
+        "Code": {
+          "S3Bucket": {
+            "Ref": "S3Bucket"
+          },
+          "S3Key": {
+            "Ref": "S3Key"
+          }
+        },
+        "Runtime": "go1.x",
+        "Timeout": 1
+      }
+    },
+    "CreateEventPostLambdaPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:invokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "CreateEventPostLambda",
+            "Arn"
+          ]
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:aws:execute-api:",
+              {
+                "Ref": "AWS::Region"
+              },
+              ":",
+              {
+                "Ref": "AWS::AccountId"
+              },
+              ":",
+              {
+                "Ref": "PasswdPotRestApi"
+              },
+              "/*"
+            ]
+          ]
+        }
+      }
+    },
+    "PasswdPotRestApi": {
+      "Type": "AWS::ApiGateway::RestApi",
+      "Properties": {
+        "Name": "Passwdpot API Gateway"
+      }
+    },
+    "EventModel": {
+      "Type": "AWS::ApiGateway::Model",
+      "Properties": {
+        "ContentType": "application/json",
+        "Name": "Event",
+        "RestApiId": {
+          "Ref": "PasswdPotRestApi"
+        },
+        "Schema": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "title": "Event",
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "time": {
+              "type": "number"
+            },
+            "user": {
+              "type": "string"
+            },
+            "passwd": {
+              "type": "string"
+            },
+            "remoteAddr": {
+              "type": "string"
+            },
+            "remotePort": {
+              "type": "number"
+            },
+            "remoteName": {
+              "type": "string"
+            },
+            "remoteVersion": {
+              "type": "string"
+            },
+            "originAddr": {
+              "type": "string"
+            },
+            "application": {
+              "type": "string"
+            },
+            "protocol": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "time",
+            "remoteAddr",
+            "originAddr",
+            "application",
+            "protocol",
+            "user"
+          ]
+        }
+      }
+    },
+    "EventResponseModel": {
+      "Type": "AWS::ApiGateway::Model",
+      "Properties": {
+        "ContentType": "application/json",
+        "Name": "EventResponse",
+        "RestApiId": {
+          "Ref": "PasswdPotRestApi"
+        },
+        "Schema": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "title": "EventResponse",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "EventResource": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "PasswdPotRestApi"
+        },
+        "ParentId": {
+          "Fn::GetAtt": [
+            "PasswdPotRestApi",
+            "RootResourceId"
+          ]
+        },
+        "PathPart": "event"
+      }
+    },
+    "EventPost": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "PasswdPotRestApi"
+        },
+        "ResourceId": {
+          "Ref": "EventResource"
+        },
+        "HttpMethod": "POST",
+        "AuthorizationType": "NONE",
+        "Integration": {
+          "Type": "AWS",
+          "IntegrationHttpMethod": "POST",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                "arn:aws:apigateway:",
+                {
+                  "Ref": "AWS::Region"
+                },
+                ":lambda:path/2015-03-31/functions/",
+                {
+                  "Fn::GetAtt": [
+                    "CreateEventPostLambda",
+                    "Arn"
+                  ]
+                },
+                "/invocations"
+              ]
+            ]
+          },
+          "IntegrationResponses": [
+            {
+              "ResponseTemplates": {
+                "application/json": "$input.json('$.body')"
+              },
+              "StatusCode": 202
+            }
+          ],
+          "PassthroughBehavior": "NEVER",
+          "RequestTemplates": {
+            "application/json":  "{ \"body\" : $util.parseJson($input.json('$'))"
+          }
+        },
+        "RequestModels": {
+          "application/json": {
+            "Ref": "EventModel"
+          }
+        },
+        "MethodResponses": [
+          {
+            "ResponseModels": {
+              "application/json": {"Ref": "EventResponseModel"}
+            },
+            "StatusCode": 202
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+      "LambdaArn": {
+        "Value": {
+          "Fn::GetAtt": [
+            "CreateEventPostLambda",
+            "Arn"
+          ]
+        }
+      }
+    }
+}
