@@ -14,6 +14,7 @@ script:
 - go build -race
 - PGHOST=127.0.0.1:5432 go test -v ./...
 - go vet
+- cd lambda; ./deploy.sh
 env:
   global:
   - secure: tL2cNeeQ0HR7TWCVNb0okYTIjsLgkOqZEU5lS8cr198bVMExZ/i8yewrX3pifFizo3dHkYbaXXompj3jzPWlNFlgLq8RHZVnW+sO7cYWagyO33eSEOf/Rkvofes94JOnHvwYqrp5YXx+1ACxyiKm0Yzb4z8NxVTsf5ijTyAhk27P5MzLzzNxT8vFBYWvEoaYXJXxgalWh0e7Rm1gDRmiqsZ8RsuW7uq65S3Hpkjz/1whLMxoDsLsUf+19FWB2T8UAVhau9RlKE7IY7fkXuFccjBlQ0u6D+jM+mCIRfuT646/Lj/j4iA/qiwrryOrzjwdQESFD6HkV1KnE8SK2ioLI9Sekhei/Nm3HYuFBJcAQ7TSLKqX1Zbf5lVsF3wyFZ4RhntYv8U34uk5CCBtkpQS8X89F5ACIQ+GFvIzIA1IlIoDgxwtIs7HoFWeW2TeJLPSNMIbmVRyRh9KoyfgEdnPKM1vPJ8iwl+WWgAA4xEZADXJa76h+GskXVl+BkE8ThHe5/9Dc9ShOlgt8RcQtFAEBF37h1hxnROCTB9PE66JbhG5wjfpGdNxyfEikk3b+1VxRRsiMzKn4TodzMDJ9tJWxG4VlLeqUb0eLzmmapW7ygvr2xEJQE+IUPRPa/Rw0JRsgjZBUbrAUmoNUJj8vi8qidSv91Rd7mcno4hmnEwrUHs=

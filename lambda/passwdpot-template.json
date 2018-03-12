@@ -19,7 +19,7 @@
       "Type": "String"
     },
     "Debug": {
-      "type": "String",
+      "Type": "String",
       "Default": "0"
     },
     "ApiId": {
@@ -277,7 +277,7 @@
           ],
           "PassthroughBehavior": "NEVER",
           "RequestTemplates": {
-            "application/json":  "{ \"body\" : $util.parseJson($input.json('$'))"
+            "application/json":  "{ \"event\": $input.json('$') }"
           }
         },
         "RequestModels": {
@@ -294,6 +294,14 @@
           }
         ]
       }
+    },
+    "RestApiDeployment": {
+      "Type": "AWS::ApiGateway::Deployment",
+      "Properties": {
+        "RestApiId": {"Ref": "PasswdPotRestApi"},
+        "StageName": "v1"
+      },
+      "DependsOn": ["EventPost"]
     }
   },
   "Outputs": {
