@@ -1,3 +1,5 @@
+CREATE SCHEMA passwdpot;
+
 CREATE TABLE geo (
  id BIGINT NOT NULL AUTO_INCREMENT,
  ip varchar(16) NOT NULL,
