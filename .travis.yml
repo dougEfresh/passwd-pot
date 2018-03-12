@@ -3,16 +3,16 @@ sudo: false
 go:
 - 1.9.x
 services:
-- postgresql
+- mysql
 before_install:
 - go get github.com/mattn/goveralls
 - go get golang.org/x/tools/cmd/cover
-- psql -U postgres < schema/psql/schema_psql.sql
+- mysql -h127.0.0.1 -uroot < schema/mysql/schema_mysql.sql
 os:
 - linux
 script:
 - go build -race
-- PGHOST=127.0.0.1:5432 go test -v ./...
+- go test -v ./...
 - go vet
 - cd lambda; ./deploy.sh
 env:

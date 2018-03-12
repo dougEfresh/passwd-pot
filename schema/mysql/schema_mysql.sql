@@ -9,14 +9,14 @@ CREATE TABLE geo (
  latitude float,
  longitude float,
  metro_code int,
- last_update timestamp NOT NULL,
+ last_update timestamp(6) NOT NULL,
  PRIMARY KEY(id)
 );
 
 
 CREATE TABLE event (
   id BIGINT NOT NULL AUTO_INCREMENT,
-  dt timestamp  NOT NULL,
+  dt timestamp(6)  NOT NULL,
   username varchar(256) NOT NULL,
   passwd varchar(512) NOT NULL,
   remote_addr varchar(16) NOT NULL,

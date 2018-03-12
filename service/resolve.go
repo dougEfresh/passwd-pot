@@ -134,7 +134,7 @@ func (c *ResolveClient) ResolveEvent(event api.Event) ([]int64, error) {
 
 func insertGeo(geo *Geo, db *sql.DB, mysql bool) (int64, error) {
 	var id int64
-	if mysql {
+	if true {
 		res, err := db.Exec(`INSERT INTO geo
 	(ip, country_code, region_code, region_name, city, time_zone, latitude, longitude, metro_code, last_update)
 	VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -211,8 +211,11 @@ func (c *ResolveClient) resolveAddr(addr string) (int64, error) {
 }
 
 func (c *ResolveClient) replaceParams(sql string) string {
-	if c.mysql {
-		return sql
-	}
-	return replaceParams(sql)
+	return sql
+	/*
+		if c.mysql {
+			return sql
+		}
+		return replaceParams(sql)
+	*/
 }

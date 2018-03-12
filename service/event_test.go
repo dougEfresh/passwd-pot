@@ -17,7 +17,6 @@ package service
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/log"
 	klog "github.com/go-kit/kit/log"
@@ -50,18 +49,21 @@ func (c *mockGeoClient) GetLocationForAddr(ip string) (*Geo, error) {
 	return geo, err
 }
 
-//const test_dsn string = "root:@tcp(127.0.0.1:3306)/passwd?parseTime=true"
-const test_dsn string = "postgres://postgres:@%s/?sslmode=disable"
+const test_dsn = "root@tcp(127.0.0.1:3306)/passwdpot?tls=skip-verify&parseTime=true&loc=UTC&timeout=50ms"
+
+//const test_dsn string = "postgres://postgres:@%s/?sslmode=disable"
 
 var testEventClient = &EventClient{}
 var testResolveClient = &ResolveClient{}
 
 func init() {
-	pghost := os.Getenv("PGHOST")
-	if pghost == "" {
-		pghost = "127.0.0.1:5432"
+	dsn := os.Getenv("PASSWDPOT_DSN")
+	var db *sql.DB
+	if dsn == "" {
+		db, _ = loadDSN(test_dsn)
+	} else {
+		db, _ = loadDSN(dsn)
 	}
-	db := loadDSN(fmt.Sprintf(test_dsn, pghost))
 	testEventClient, _ = NewEventClient(SetEventDb(db))
 	testEventClient.mysql = !strings.Contains(test_dsn, "postgres")
 	testResolveClient, _ = NewResolveClient(SetResolveDb(db), SetGeoClient(GeoClientTransporter(&mockGeoClient{})))
@@ -225,24 +227,27 @@ func TestExpire(t *testing.T) {
 	}
 	var oldlastUpdate time.Time
 	var newerLastUpdate time.Time
-	r := testEventClient.db.QueryRow(testEventClient.replaceParams("select last_update from geo where ip = ? LIMIT 1"), testEvent.RemoteAddr)
+	r := testEventClient.db.QueryRow("select last_update from geo where ip = ? order by last_update DESC LIMIT 1", testEvent.RemoteAddr)
 	err = r.Scan(&oldlastUpdate)
 	if err != nil {
 		t.Fatalf("Error updating time %s", err)
 	}
-	_, err = testEventClient.db.Exec(testEventClient.replaceParams("UPDATE geo SET last_update = ?"), time.Now().Add(time.Hour*24*-100))
+	_, err = testEventClient.db.Exec("UPDATE geo SET last_update = ?", time.Now().Add(time.Hour*24*-100))
 	if err != nil {
 		t.Fatalf("Error updating time %s", err)
 	}
 	createEvent(&testEvent)
 	testResolveClient.ResolveEvent(testEvent)
-	r = testEventClient.db.QueryRow(testEventClient.replaceParams("select last_update from geo where ip = ? LIMIT 1"), testEvent.RemoteAddr)
+	//geoEvent, _ = testEventClient.GetEvent(testEvent.ID)
+
+	r = testEventClient.db.QueryRow("select last_update from geo where ip = ? order by last_update DESC LIMIT 1", testEvent.RemoteAddr)
 	err = r.Scan(&newerLastUpdate)
 
-	if err != nil {
-		t.Fatalf("Error updating time %s", err)
-	}
-	if oldlastUpdate.After(newerLastUpdate) {
+	//if err != nil {
+	//	t.Fatalf("Error updating time %s", err)
+	//}
+
+	if oldlastUpdate.After(geoEvent.Time) {
 		t.Fatalf("old is afer new %s > %s", oldlastUpdate, newerLastUpdate)
 	}
 }
