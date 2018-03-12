@@ -27,9 +27,9 @@ import (
 	"time"
 )
 
-const EventURL = "/api/v1/event"
-const EventCountryStatsUrl = "/api/v1/event/stats/country"
-const StreamURL = "/api/v1/event/stream"
+const EventURL = "/v1/event"
+const EventCountryStatsUrl = "/v1/event/stats/country"
+const StreamURL = "/v1/event/stream"
 
 //Custom Serializer
 type EventTime time.Time

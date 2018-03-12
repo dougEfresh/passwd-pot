@@ -49,7 +49,7 @@ func (c *mockGeoClient) GetLocationForAddr(ip string) (*Geo, error) {
 	return geo, err
 }
 
-const test_dsn = "root@tcp(127.0.0.1:3306)/passwdpot?tls=skip-verify&parseTime=true&loc=UTC&timeout=50ms"
+const test_dsn = "root@tcp(127.0.0.1:3306)/passwdpot?tls=false&parseTime=true&loc=UTC&timeout=50ms"
 
 //const test_dsn string = "postgres://postgres:@%s/?sslmode=disable"
 

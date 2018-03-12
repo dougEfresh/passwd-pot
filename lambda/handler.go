@@ -21,7 +21,7 @@ var setupError error
 
 func init() {
 	if dsn == "" {
-		dsn = "root@tcp(127.0.0.1:3306)/passwdpot?tls=skip-verify&parseTime=true&loc=UTC&timeout=50ms"
+		dsn = "root@tcp(127.0.0.1:3306)/passwdpot?tls=false&parseTime=true&loc=UTC&timeout=50ms"
 	}
 	logger.SetLevel(log.InfoLevel)
 	logger.AddLogger(klog.NewJSONLogger(os.Stdout))
