@@ -23,6 +23,7 @@ import (
 	"github.com/fiorix/freegeoip"
 	"strings"
 	"time"
+	"regexp"
 )
 
 type EventResolver interface {
@@ -161,6 +162,10 @@ func insertGeo(geo *Geo, db *sql.DB, mysql bool) (int64, error) {
 }
 
 func (c *ResolveClient) resolveAddr(addr string) (int64, error) {
+	if m, _ := regexp.MatchString("\\d{1,3}\\.\\d{1,3}\\.", addr ); !m {
+		c.logger.Infof("%s is not an address", addr)
+		addr = "127.0.0.1"
+	}
 	var geo = Geo{}
 	var id int64 = 0
 	expire := time.Now().AddDate(0, -1, 0)

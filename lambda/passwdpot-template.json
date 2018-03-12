@@ -100,7 +100,7 @@
           }
         },
         "Runtime": "go1.x",
-        "Timeout": 1
+        "Timeout": 2
       }
     },
     "CreateEventPostLambdaPermission": {
@@ -270,7 +270,7 @@
           "IntegrationResponses": [
             {
               "ResponseTemplates": {
-                "application/json": "$input.json('$.body')"
+                "application/json": "$util.parseJson('$.body')"
               },
               "StatusCode": 202
             }

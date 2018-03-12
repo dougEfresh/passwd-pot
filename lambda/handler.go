@@ -11,6 +11,8 @@ import (
 	klog "github.com/go-kit/kit/log"
 	_ "github.com/go-sql-driver/mysql"
 	"os"
+	"strings"
+	"database/sql"
 )
 
 var eventResolver service.EventResolver
@@ -18,6 +20,28 @@ var eventClient *service.EventClient
 var logger log.Logger
 var dsn = os.Getenv("PASSWDPOT_DSN")
 var setupError error
+
+func loadDSN(dsn string) (*sql.DB, error) {
+	var db *sql.DB
+	var err error
+	if strings.Contains(dsn, "postgres") {
+		logger.Debug("Using pq driver")
+		db, err = sql.Open("postgres", dsn)
+	} else {
+		logger.Debug("Using mysql driver")
+		db, err = sql.Open("mysql", dsn)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	err = db.Ping()
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
 
 func init() {
 	if dsn == "" {
@@ -28,17 +52,24 @@ func init() {
 	logger.With("app", "passwdpot-create-event")
 	logger.With("ts", klog.DefaultTimestampUTC)
 	logger.With("caller", klog.Caller(4))
-	var err error
 	if os.Getenv("PASSWDPOT_DEBUG") == "1" {
 		logger.SetLevel(log.DebugLevel)
 	}
-	eventResolver, err = service.NewResolveClient(service.WithResolvDsn(dsn))
+	var err error
+	db, err := loadDSN(dsn)
+
+	if err != nil {
+		logger.Errorf("Error loading db %s", err)
+		setupError = err
+		return
+	}
+	eventResolver, err = service.NewResolveClient(service.SetResolveDb(db), service.SetResolveLogger(logger))
 	if err != nil {
 		logger.Errorf("Error setting up client %s", err)
 		setupError = errors.New(fmt.Sprintf("resolver has bad setup %s", err))
 		return
 	}
-	eventClient, err = service.NewEventClient(service.SetEventLogger(logger), service.WithDsn(dsn))
+	eventClient, err = service.NewEventClient(service.SetEventLogger(logger), service.SetEventDb(db))
 	if err != nil {
 		logger.Errorf("Error setting up eventClient %s", err)
 		setupError = errors.New(fmt.Sprintf("eventClient  has bad setup %s", err))
@@ -46,8 +77,8 @@ func init() {
 }
 
 type ApiEvent struct {
-	Event api.Event `json:"event"`
-	OriginAddr string `json:"originAddr"`
+	Event      api.Event `json:"event"`
+	OriginAddr string    `json:"originAddr"`
 }
 
 func Handle(apiEvent ApiEvent) (events.APIGatewayProxyResponse, error) {
@@ -58,8 +89,8 @@ func Handle(apiEvent ApiEvent) (events.APIGatewayProxyResponse, error) {
 	if setupError != nil {
 		return events.APIGatewayProxyResponse{Body: "Bad setup", StatusCode: 500}, setupError
 	}
-	logger.Debugf("Event %s", e)
 	e.OriginAddr = apiEvent.OriginAddr
+	logger.Debugf("Event %s", e)
 	id, err := eventClient.RecordEvent(e)
 	if err != nil {
 		logger.Errorf("error loading event %s", err)
