@@ -1,4 +1,5 @@
 CREATE SCHEMA passwdpot;
+use passwdpot;
 
 CREATE TABLE geo (
  id BIGINT NOT NULL AUTO_INCREMENT,
