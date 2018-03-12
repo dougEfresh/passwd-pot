@@ -21,7 +21,7 @@ var setupError error
 
 func init() {
 	if dsn == "" {
-		dsn = "root@tcp(127.0.0.1:3306)/passwdpot?tls=false&parseTime=true&loc=UTC&timeout=50ms"
+		dsn = "root@tcp(127.0.0.1:3306)/passwdpot?tls=false&parseTime=true&loc=UTC&timeout=500ms"
 	}
 	logger.SetLevel(log.InfoLevel)
 	logger.AddLogger(klog.NewJSONLogger(os.Stdout))
@@ -47,17 +47,19 @@ func init() {
 
 type ApiEvent struct {
 	Event api.Event `json:"event"`
+	OriginAddr string `json:"originAddr"`
 }
 
 func Handle(apiEvent ApiEvent) (events.APIGatewayProxyResponse, error) {
 	e := apiEvent.Event
 	if e.RemoteAddr == "" {
-		return events.APIGatewayProxyResponse{Body: fmt.Sprintf("error  with event %s", e), StatusCode: 500}, errors.New("Invalid event")
+		return events.APIGatewayProxyResponse{Body: fmt.Sprintf("error  with event %s", e), StatusCode: 500}, errors.New("Invalid")
 	}
 	if setupError != nil {
 		return events.APIGatewayProxyResponse{Body: "Bad setup", StatusCode: 500}, setupError
 	}
 	logger.Debugf("Event %s", e)
+	e.OriginAddr = apiEvent.OriginAddr
 	id, err := eventClient.RecordEvent(e)
 	if err != nil {
 		logger.Errorf("error loading event %s", err)

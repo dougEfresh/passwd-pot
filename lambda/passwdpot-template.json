@@ -277,7 +277,7 @@
           ],
           "PassthroughBehavior": "NEVER",
           "RequestTemplates": {
-            "application/json":  "{ \"event\": $input.json('$') }"
+            "application/json":  "{ \"event\": $input.json('$') ,   \"originAddr\": \"$context.identity.sourceIp\"}"
           }
         },
         "RequestModels": {
