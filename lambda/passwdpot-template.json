@@ -270,7 +270,7 @@
           "IntegrationResponses": [
             {
               "ResponseTemplates": {
-                "application/json": "$util.parseJson('$.body')"
+                "application/json": "$input.json('$.body')"
               },
               "StatusCode": 202
             }

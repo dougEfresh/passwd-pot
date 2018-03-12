@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
@@ -12,7 +13,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"os"
 	"strings"
-	"database/sql"
 )
 
 var eventResolver service.EventResolver

@@ -21,9 +21,9 @@ import (
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/log"
 	"github.com/fiorix/freegeoip"
+	"regexp"
 	"strings"
 	"time"
-	"regexp"
 )
 
 type EventResolver interface {
@@ -162,7 +162,7 @@ func insertGeo(geo *Geo, db *sql.DB, mysql bool) (int64, error) {
 }
 
 func (c *ResolveClient) resolveAddr(addr string) (int64, error) {
-	if m, _ := regexp.MatchString("\\d{1,3}\\.\\d{1,3}\\.", addr ); !m {
+	if m, _ := regexp.MatchString("\\d{1,3}\\.\\d{1,3}\\.", addr); !m {
 		c.logger.Infof("%s is not an address", addr)
 		addr = "127.0.0.1"
 	}
