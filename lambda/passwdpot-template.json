@@ -2,21 +2,14 @@
   "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "Api and Lambda for Passwd Pot",
   "Parameters": {
-    "PasswdPotDsn": {
-      "Description": "Golang DSN",
-      "Type": "String"
-    },
     "LogzApi": {
       "Description": "logz.io api key",
       "Type": "String",
       "Default": ""
     },
-    "S3Bucket": {
-      "Description": "S3Bucket",
-      "Type": "String"
-    },
     "S3Key": {
-      "Type": "String"
+      "Type": "String",
+      "Default": "passwdpot.zip"
     },
     "Debug": {
       "Type": "String",
@@ -26,9 +19,73 @@
       "Description": "API Gateway App Id. E.g. 1yc6td9zjj",
       "Type": "String",
       "Default": ""
+    },
+    "PasswdPotDBUsername": {
+      "Description": "DB username",
+      "Type": "String",
+      "Default": "root"
+    },
+    "PasswdPotDBMasterPassword": {
+      "Description": "DB password",
+      "Type": "String"
+    },
+    "PasswdPotDPassword": {
+      "Description": "DB password",
+      "Type": "String"
+    },
+    "PasswdPotDBOptions": {
+      "Description": "MySql golang driver options",
+      "Type": "String",
+      "Default": "tls=true&parseTime=true&loc=UTC&timeout=100ms"
     }
   },
   "Resources": {
+    "PasswdPotVPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "EnableDnsSupport": "true",
+        "EnableDnsHostnames": "true",
+        "CidrBlock": "10.1.0.0/16"
+      }
+    },
+    "PasswdPotDBSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Allow all to client host",
+        "VpcId": {
+          "Ref": "PasswdPotVPC"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "3306",
+            "ToPort": "3306",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ]
+      }
+    },
+    "PasswdPotDatabase": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "DBName": "passwdpotdb",
+        "DBInstanceClass": "db.t2.small",
+        "Engine": "aurora-mysql",
+        "MasterUsername": "root",
+        "MasterUserPassword": {
+          "Ref": "PasswdPotDBMasterPassword"
+        },
+        "PubliclyAccessible": true,
+        "MultiAZ": false,
+        "BackupRetentionPeriod": "1",
+        "AllocatedStorage": "50",
+        "VPCSecurityGroups": [
+          {
+            "Ref": "PasswdPotDBSecurityGroup"
+          }
+        ]
+      }
+    },
     "PasswdPotLambdaRole": {
       "Type": "AWS::IAM::Role",
       "Properties": {
@@ -68,6 +125,7 @@
     },
     "CreateEventPostLambda": {
       "Type": "AWS::Lambda::Function",
+      "DependsOn": "PasswdPotDatabase",
       "Properties": {
         "FunctionName": "passwdpot-create-event",
         "Handler": "handler",
@@ -81,7 +139,32 @@
         "Environment": {
           "Variables": {
             "PASSWDPOT_DSN": {
-              "Ref": "PasswdPotDsn"
+              "Fn::Join": [
+                "",
+                [
+                  "passwdpot:",
+                  {
+                    "Ref": "PasswdPotDBPassword"
+                  },
+                  "@tcp(",
+                  {
+                    "Fn::GetAtt": [
+                      "PasswdPotDatabase",
+                      "Endpoint.Address"
+                    ]
+                  },
+                  ":", {
+                  "Fn::GetAtt": [
+                    "PasswdPotDatabase",
+                     "Endpoint.Port"
+                  ]
+                },
+                  ")/passwdpot?",
+                  {
+                    "Ref": "PasswdPotDBOptions"
+                  }
+                ]
+              ]
             },
             "PASSWDPOT_DEBUG": {
               "Ref": "Debug"
@@ -93,7 +176,15 @@
         },
         "Code": {
           "S3Bucket": {
-            "Ref": "S3Bucket"
+            "Fn::Join": [
+              "",
+              [
+                "passwdpot-",
+                {
+                  "Ref": "AWS::Region"
+                }
+              ]
+            ]
           },
           "S3Key": {
             "Ref": "S3Key"
@@ -277,7 +368,7 @@
           ],
           "PassthroughBehavior": "NEVER",
           "RequestTemplates": {
-            "application/json":  "{ \"event\": $input.json('$') ,   \"originAddr\": \"$context.identity.sourceIp\"}"
+            "application/json": "{ \"event\": $input.json('$') ,   \"originAddr\": \"$context.identity.sourceIp\"}"
           }
         },
         "RequestModels": {
@@ -288,7 +379,9 @@
         "MethodResponses": [
           {
             "ResponseModels": {
-              "application/json": {"Ref": "EventResponseModel"}
+              "application/json": {
+                "Ref": "EventResponseModel"
+              }
             },
             "StatusCode": 202
           }
@@ -298,20 +391,24 @@
     "RestApiDeployment": {
       "Type": "AWS::ApiGateway::Deployment",
       "Properties": {
-        "RestApiId": {"Ref": "PasswdPotRestApi"},
+        "RestApiId": {
+          "Ref": "PasswdPotRestApi"
+        },
         "StageName": "v1"
       },
-      "DependsOn": ["EventPost"]
+      "DependsOn": [
+        "EventPost"
+      ]
     }
   },
   "Outputs": {
-      "LambdaArn": {
-        "Value": {
-          "Fn::GetAtt": [
-            "CreateEventPostLambda",
-            "Arn"
-          ]
-        }
+    "LambdaArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "CreateEventPostLambda",
+          "Arn"
+        ]
       }
     }
+  }
 }
