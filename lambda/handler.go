@@ -104,7 +104,7 @@ func Handle(apiEvent ApiEvent) (events.APIGatewayProxyResponse, error) {
 	}
 	var header = make(map[string]string)
 	header["Content-Type"] = "application/json;charset=UTF-8"
-	return events.APIGatewayProxyResponse{Body: fmt.Sprintf("{\"id\":%d}", id), StatusCode: 202, Headers: header}, nil
+	return events.APIGatewayProxyResponse{Body: fmt.Sprintf("{id:%d}", id), StatusCode: 202, Headers: header}, nil
 }
 
 func main() {

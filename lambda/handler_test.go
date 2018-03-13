@@ -39,7 +39,7 @@ func TestHandler(t *testing.T) {
 	if resp.StatusCode != 202 {
 		t.Fatal("Not 202")
 	}
-	if !strings.Contains(resp.Body, "{\"id\":") {
+	if !strings.Contains(resp.Body, "{id:") {
 		t.Fatalf("%s", resp.Body)
 	}
 	t.Logf("Response is %s", resp.Body)
