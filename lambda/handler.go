@@ -13,12 +13,14 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"os"
 	"strings"
+	"github.com/dougEfresh/kitz"
 )
 
 var eventResolver service.EventResolver
 var eventClient *service.EventClient
 var logger log.Logger
 var dsn = os.Getenv("PASSWDPOT_DSN")
+var LOGZ = os.Getenv("LOGZ")
 var setupError error
 
 func loadDSN(dsn string) (*sql.DB, error) {
@@ -45,13 +47,21 @@ func loadDSN(dsn string) (*sql.DB, error) {
 
 func init() {
 	if dsn == "" {
-		dsn = "root@tcp(127.0.0.1:3306)/passwdpot?tls=false&parseTime=true&loc=UTC&timeout=500ms"
+		dsn = "root@tcp(127.0.0.1:3306)/passwdpot?tls=false&parseTime=true&loc=UTC&timeout=10ms"
 	}
 	logger.SetLevel(log.InfoLevel)
 	logger.AddLogger(klog.NewJSONLogger(os.Stdout))
 	logger.With("app", "passwdpot-create-event")
 	logger.With("ts", klog.DefaultTimestampUTC)
 	logger.With("caller", klog.Caller(4))
+	if LOGZ != "" {
+		lz, err := kitz.New(LOGZ)
+		if err != nil {
+			logger.Errorf("Error connecting to logz %s\n", err)
+		} else {
+			logger.AddLogger(lz)
+		}
+	}
 	if os.Getenv("PASSWDPOT_DEBUG") == "1" {
 		logger.SetLevel(log.DebugLevel)
 	}
