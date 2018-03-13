@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Api and Lambda for Passwd Pot",
+  "Description": "Passwd Pot resources",
   "Parameters": {
     "LogzApi": {
       "Description": "logz.io api key",
@@ -29,7 +29,7 @@
       "Description": "DB password",
       "Type": "String"
     },
-    "PasswdPotDPassword": {
+    "PasswdPotDBPassword": {
       "Description": "DB password",
       "Type": "String"
     },
@@ -40,6 +40,7 @@
     }
   },
   "Resources": {
+
     "PasswdPotVPC": {
       "Type": "AWS::EC2::VPC",
       "Properties": {
@@ -48,6 +49,13 @@
         "CidrBlock": "10.1.0.0/16"
       }
     },
+    "PasswdPotSubnet": {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+         "VpcId" : { "Ref" : "PasswdPotVPC" },
+         "CidrBlock" : "10.1.1.0/24"
+      }
+   },
     "PasswdPotDBSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
@@ -65,26 +73,62 @@
         ]
       }
     },
+    "PasswdPotDBSubnetGroup" : {
+      "Type" : "AWS::RDS::DBSubnetGroup",
+      "Properties" : {
+         "DBSubnetGroupDescription" : "description",
+         "SubnetIds" : [ {"Ref": "PasswdPotSubnet"}]
+      }
+   },
+    "SecurityGroupIngress": {
+      "Type" : "AWS::RDS::DBSecurityGroupIngress",
+      "Properties" : {
+       "CIDRIP": "0.0.0.0/0",
+       "DBSecurityGroupName": {"Ref": "PasswdPotDBSecurityGroup"}
+    },
+
+    "DBSecurityGroup": {
+      "Type" : "AWS::RDS::DBSecurityGroup",
+      "Properties" :
+      {
+         "DBSecurityGroupIngress" : [{"Ref": "SecurityGroupIngress"}],
+         "GroupDescription": "Allow all to client host"
+      }
+   },
     "PasswdPotDatabase": {
-      "Type": "AWS::RDS::DBInstance",
+      "Type": "AWS::RDS::DBCluster",
       "Properties": {
-        "DBName": "passwdpotdb",
-        "DBInstanceClass": "db.t2.small",
+        "DatabaseName": "passwdpotcluster",
         "Engine": "aurora-mysql",
         "MasterUsername": "root",
         "MasterUserPassword": {
           "Ref": "PasswdPotDBMasterPassword"
         },
-        "PubliclyAccessible": true,
-        "MultiAZ": false,
         "BackupRetentionPeriod": "1",
-        "AllocatedStorage": "50",
-        "VPCSecurityGroups": [
-          {
-            "Ref": "PasswdPotDBSecurityGroup"
-          }
-        ]
+        "DBClusterParameterGroupName": "default.aurora-mysql5.7",
+        "DBSubnetGroupName" : { "Ref" : "PasswdPotDBSubnetGroup" },
+        "VpcSecurityGroupIds": [ {"Ref": "PasswdPotDBSecurityGroup" }]
       }
+    },
+    "PasswdPotDatabasePrimaryInstance": {
+    "Type" : "AWS::RDS::DBInstance",
+    "Properties" :  {
+      "MultiAZ": false,
+      "DBSubnetGroupName" : {
+        "Ref" : "PasswdPotDBSubnetGroup"
+      },
+      "AvailabilityZone" : { "Fn::GetAtt" : [ "PasswdPotSubnet", "AvailabilityZone" ] },
+      "PubliclyAccessible": true,
+      "Engine": "aurora-mysql",
+      "DBClusterIdentifier": {"Ref" :"PasswdPotDatabase"},
+      "DBInstanceClass": "db.t2.small",
+      "DBParameterGroupName": "default.aurora-mysql5.7",
+      "VPCSecurityGroups": [
+        {
+          "Ref": "PasswdPotDBSecurityGroup"
+        }
+      ]
+    } 
     },
     "PasswdPotLambdaRole": {
       "Type": "AWS::IAM::Role",
@@ -229,6 +273,7 @@
     },
     "PasswdPotRestApi": {
       "Type": "AWS::ApiGateway::RestApi",
+      "DependsOn": "PasswdPotDatabase",
       "Properties": {
         "Name": "Passwdpot API Gateway"
       }
