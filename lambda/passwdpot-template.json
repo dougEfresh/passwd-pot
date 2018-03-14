@@ -20,14 +20,15 @@
       "Type": "String",
       "Default": ""
     },
+    "PasswdPotDBHost": {
+      "Description": "DB username",
+      "Type": "String",
+      "Default": "passwdpot"
+    },
     "PasswdPotDBUsername": {
       "Description": "DB username",
       "Type": "String",
-      "Default": "root"
-    },
-    "PasswdPotDBMasterPassword": {
-      "Description": "DB password",
-      "Type": "String"
+      "Default": "passwdpot"
     },
     "PasswdPotDBPassword": {
       "Description": "DB password",
@@ -40,96 +41,6 @@
     }
   },
   "Resources": {
-
-    "PasswdPotVPC": {
-      "Type": "AWS::EC2::VPC",
-      "Properties": {
-        "EnableDnsSupport": "true",
-        "EnableDnsHostnames": "true",
-        "CidrBlock": "10.1.0.0/16"
-      }
-    },
-    "PasswdPotSubnet": {
-      "Type" : "AWS::EC2::Subnet",
-      "Properties" : {
-         "VpcId" : { "Ref" : "PasswdPotVPC" },
-         "CidrBlock" : "10.1.1.0/24"
-      }
-   },
-    "PasswdPotDBSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup",
-      "Properties": {
-        "GroupDescription": "Allow all to client host",
-        "VpcId": {
-          "Ref": "PasswdPotVPC"
-        },
-        "SecurityGroupIngress": [
-          {
-            "IpProtocol": "tcp",
-            "FromPort": "3306",
-            "ToPort": "3306",
-            "CidrIp": "0.0.0.0/0"
-          }
-        ]
-      }
-    },
-    "PasswdPotDBSubnetGroup" : {
-      "Type" : "AWS::RDS::DBSubnetGroup",
-      "Properties" : {
-         "DBSubnetGroupDescription" : "description",
-         "SubnetIds" : [ {"Ref": "PasswdPotSubnet"}]
-      }
-   },
-    "SecurityGroupIngress": {
-      "Type" : "AWS::RDS::DBSecurityGroupIngress",
-      "Properties" : {
-       "CIDRIP": "0.0.0.0/0",
-       "DBSecurityGroupName": {"Ref": "PasswdPotDBSecurityGroup"}
-    },
-
-    "DBSecurityGroup": {
-      "Type" : "AWS::RDS::DBSecurityGroup",
-      "Properties" :
-      {
-         "DBSecurityGroupIngress" : [{"Ref": "SecurityGroupIngress"}],
-         "GroupDescription": "Allow all to client host"
-      }
-   },
-    "PasswdPotDatabase": {
-      "Type": "AWS::RDS::DBCluster",
-      "Properties": {
-        "DatabaseName": "passwdpotcluster",
-        "Engine": "aurora-mysql",
-        "MasterUsername": "root",
-        "MasterUserPassword": {
-          "Ref": "PasswdPotDBMasterPassword"
-        },
-        "BackupRetentionPeriod": "1",
-        "DBClusterParameterGroupName": "default.aurora-mysql5.7",
-        "DBSubnetGroupName" : { "Ref" : "PasswdPotDBSubnetGroup" },
-        "VpcSecurityGroupIds": [ {"Ref": "PasswdPotDBSecurityGroup" }]
-      }
-    },
-    "PasswdPotDatabasePrimaryInstance": {
-    "Type" : "AWS::RDS::DBInstance",
-    "Properties" :  {
-      "MultiAZ": false,
-      "DBSubnetGroupName" : {
-        "Ref" : "PasswdPotDBSubnetGroup"
-      },
-      "AvailabilityZone" : { "Fn::GetAtt" : [ "PasswdPotSubnet", "AvailabilityZone" ] },
-      "PubliclyAccessible": true,
-      "Engine": "aurora-mysql",
-      "DBClusterIdentifier": {"Ref" :"PasswdPotDatabase"},
-      "DBInstanceClass": "db.t2.small",
-      "DBParameterGroupName": "default.aurora-mysql5.7",
-      "VPCSecurityGroups": [
-        {
-          "Ref": "PasswdPotDBSecurityGroup"
-        }
-      ]
-    } 
-    },
     "PasswdPotLambdaRole": {
       "Type": "AWS::IAM::Role",
       "Properties": {
@@ -197,12 +108,13 @@
                       "Endpoint.Address"
                     ]
                   },
-                  ":", {
-                  "Fn::GetAtt": [
-                    "PasswdPotDatabase",
-                     "Endpoint.Port"
-                  ]
-                },
+                  ":",
+                  {
+                    "Fn::GetAtt": [
+                      "PasswdPotDatabase",
+                      "Endpoint.Port"
+                    ]
+                  },
                   ")/passwdpot?",
                   {
                     "Ref": "PasswdPotDBOptions"
@@ -273,7 +185,6 @@
     },
     "PasswdPotRestApi": {
       "Type": "AWS::ApiGateway::RestApi",
-      "DependsOn": "PasswdPotDatabase",
       "Properties": {
         "Name": "Passwdpot API Gateway"
       }
@@ -440,10 +351,7 @@
           "Ref": "PasswdPotRestApi"
         },
         "StageName": "v1"
-      },
-      "DependsOn": [
-        "EventPost"
-      ]
+      }
     }
   },
   "Outputs": {
