@@ -1,0 +1,1 @@
+echo "CREATE USER '%user%'@'%'" INDENTIFIED BY

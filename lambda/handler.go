@@ -4,23 +4,23 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/dougEfresh/kitz"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/log"
 	"github.com/dougEfresh/passwd-pot/service"
 	klog "github.com/go-kit/kit/log"
 	_ "github.com/go-sql-driver/mysql"
-	"os"
-	"strings"
-	"github.com/dougEfresh/kitz"
 )
 
-var eventResolver service.EventResolver
 var eventClient *service.EventClient
 var logger log.Logger
 var dsn = os.Getenv("PASSWDPOT_DSN")
-var LOGZ = os.Getenv("LOGZ")
+var logz = os.Getenv("LOGZ")
 var setupError error
 
 func loadDSN(dsn string) (*sql.DB, error) {
@@ -44,6 +44,9 @@ func loadDSN(dsn string) (*sql.DB, error) {
 
 	return db, nil
 }
+var header = map[string]string {
+	"Content-Type": "application/json;charset=UTF-8",
+}
 
 func init() {
 	if dsn == "" {
@@ -54,8 +57,8 @@ func init() {
 	logger.With("app", "passwdpot-create-event")
 	logger.With("ts", klog.DefaultTimestampUTC)
 	logger.With("caller", klog.Caller(4))
-	if LOGZ != "" {
-		lz, err := kitz.New(LOGZ)
+	if logz != "" {
+		lz, err := kitz.New(logz)
 		if err != nil {
 			logger.Errorf("Error connecting to logz %s\n", err)
 		} else {
@@ -86,15 +89,17 @@ func init() {
 	}
 }
 
+// ApiEvent from API GW
 type ApiEvent struct {
 	Event      api.Event `json:"event"`
 	OriginAddr string    `json:"originAddr"`
 }
 
+// Handle Password Event
 func Handle(apiEvent ApiEvent) (events.APIGatewayProxyResponse, error) {
 	e := apiEvent.Event
 	if e.RemoteAddr == "" {
-		return events.APIGatewayProxyResponse{Body: fmt.Sprintf("error  with event %s", e), StatusCode: 500}, errors.New("Invalid")
+		return events.APIGatewayProxyResponse{Body: fmt.Sprintf("error  with event %s", e), StatusCode: 500}, errors.New("Invalid Event")
 	}
 	if setupError != nil {
 		return events.APIGatewayProxyResponse{Body: "Bad setup", StatusCode: 500}, setupError
@@ -107,13 +112,11 @@ func Handle(apiEvent ApiEvent) (events.APIGatewayProxyResponse, error) {
 		return events.APIGatewayProxyResponse{Body: fmt.Sprintf("error loading event %s", err), StatusCode: 500}, err
 	}
 	e.ID = id
-	_, err = eventResolver.ResolveEvent(e)
+	err = resolveEvent(e)
 	if err != nil {
 		logger.Errorf("Error resolving %s %s", e, err)
-		return events.APIGatewayProxyResponse{Body: fmt.Sprintf("error resolving event %s", err), StatusCode: 500}, err
+		return events.APIGatewayProxyResponse{Body: fmt.Sprintf("error loading event %s", err), StatusCode: 500}, err
 	}
-	var header = make(map[string]string)
-	header["Content-Type"] = "application/json;charset=UTF-8"
 	return events.APIGatewayProxyResponse{Body: fmt.Sprintf("{id:%d}", id), StatusCode: 202, Headers: header}, nil
 }
 

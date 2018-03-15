@@ -18,17 +18,20 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/dougEfresh/passwd-pot/api"
-	"github.com/dougEfresh/passwd-pot/log"
-	"github.com/fiorix/freegeoip"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/log"
+	"github.com/fiorix/freegeoip"
 )
 
+// EventResolver interface
 type EventResolver interface {
 	ResolveEvent(event api.Event) ([]int64, error)
-	MarkEvent(id int64, geoId int64, remote bool) error
+	MarkRemoteEvent(id int64, geoID int64) error
+	MarkOriginEvent(id int64, geoID int64) error
 }
 
 type ResolveClient struct {
@@ -96,15 +99,22 @@ func SetGeoClient(gc GeoClientTransporter) ResolveOptionFunc {
 	}
 }
 
-func (c *ResolveClient) MarkEvent(id int64, geoId int64, remote bool) error {
+func (c *ResolveClient) MarkOriginEvent(id int64, geoID int64) error {
+	return c.markEvent(id, geoID, false)
+}
 
-	if remote {
-		c.logger.Debugf("Setting remote_id %d to %d ", geoId, id)
-		_, err := c.db.Exec(c.replaceParams(`UPDATE event SET remote_geo_id = ? where id = ?`), geoId, id)
-		return err
+func (c *ResolveClient) MarkRemoteEvent(id int64, geoID int64) error {
+	return c.markEvent(id, geoID, true)
+}
+
+func (c *ResolveClient) markEvent(id int64, geoID int64, remote bool) error {
+	var field = "remote"
+	if !remote {
+		field = "origin"
 	}
-	c.logger.Debugf("Setting origin_id %d to %d ", geoId, id)
-	_, err := c.db.Exec(c.replaceParams(`UPDATE event SET origin_geo_id = ? where id = ?`), geoId, id)
+	sql := fmt.Sprintf("UPDATE event SET %s_geo_id = ? where id = ?", field)
+	c.logger.Debug(sql)
+	_, err := c.db.Exec(sql, geoID, id)
 	return err
 }
 
@@ -119,14 +129,14 @@ func (c *ResolveClient) ResolveEvent(event api.Event) ([]int64, error) {
 	if geoId, err = c.resolveAddr(event.RemoteAddr); err != nil {
 		return geoIds, err
 	}
-	if err = c.MarkEvent(event.ID, geoId, true); err != nil {
+	if err = c.MarkRemoteEvent(event.ID, geoId); err != nil {
 		return geoIds, err
 	}
 	geoIds[0] = geoId
 	if geoId, err = c.resolveAddr(event.OriginAddr); err != nil {
 		return geoIds, err
 	}
-	if err = c.MarkEvent(event.ID, geoId, false); err != nil {
+	if err = c.MarkOriginEvent(event.ID, geoId); err != nil {
 		return geoIds, err
 	}
 	geoIds[1] = geoId

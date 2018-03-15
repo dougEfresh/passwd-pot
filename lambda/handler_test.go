@@ -20,7 +20,7 @@ import (
 	"testing"
 )
 
-var body = ` { "originAddr": "not-an-address" , "event": { "time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "158.69.243.135", "originAddr": "212.143.121.156",  "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51", "application": "OpenSSH", "protocol": "ssh" } }`
+var body = ` { "originAddr": "212.143.121.156" , "event": { "time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "158.69.243.135", "originAddr": "212.143.121.156",  "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51", "application": "OpenSSH", "protocol": "ssh" } }`
 
 func TestHandler(t *testing.T) {
 	var e ApiEvent
@@ -42,5 +42,10 @@ func TestHandler(t *testing.T) {
 	if !strings.Contains(resp.Body, "{id:") {
 		t.Fatalf("%s", resp.Body)
 	}
+
+	if id, found := geoCache.Get("158.69.243.135"); !found {
+		t.Fatalf("Cannot find 158.69 ip in cache (%d)", id)
+	}
+
 	t.Logf("Response is %s", resp.Body)
 }

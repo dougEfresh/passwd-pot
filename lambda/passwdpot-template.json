@@ -183,7 +183,7 @@
       "Type": "AWS::ApiGateway::RestApi",
       "Properties": {
         "Name": "Passwdpot API Gateway",
-        "FailOnWarnings": true
+        "FailOnWarnings": false
       }
     },
     "BasePath": {
@@ -354,6 +354,7 @@
     },
     "RestApiDeployment": {
       "Type": "AWS::ApiGateway::Deployment",
+      "DependsOn": "EventPost",
       "Properties": {
         "RestApiId": {
           "Ref": "PasswdPotRestApi"
