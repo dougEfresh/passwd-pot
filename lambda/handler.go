@@ -15,8 +15,11 @@ import (
 	"github.com/dougEfresh/passwd-pot/service"
 	klog "github.com/go-kit/kit/log"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/dougEfresh/passwd-pot/cache"
 )
 
+var geoCache *cache.Cache = cache.NewCache()
+var eventResolver service.EventResolver
 var eventClient *service.EventClient
 var logger log.Logger
 var dsn = os.Getenv("PASSWDPOT_DSN")
@@ -94,6 +97,26 @@ func init() {
 type ApiEvent struct {
 	Event      api.Event `json:"event"`
 	OriginAddr string    `json:"originAddr"`
+}
+
+func resolveEvent(event api.Event) (error) {
+	var ids []int64
+	rId, _ := geoCache.Get(event.RemoteAddr)
+	oId, _ := geoCache.Get(event.OriginAddr)
+	if rId > 0 && oId > 0 {
+		if e := eventResolver.MarkRemoteEvent(event.ID, rId); e != nil {
+			return e
+		}
+		if e := eventResolver.MarkOriginEvent(event.ID, oId) ; e != nil {
+			return e
+		}
+	}
+	ids, err := eventResolver.ResolveEvent(event)
+	if err == nil {
+		geoCache.Set(event.RemoteAddr, ids[0])
+		geoCache.Set(event.OriginAddr, ids[1])
+	}
+	return err
 }
 
 // Handle Password Event
