@@ -361,6 +361,16 @@
         },
         "StageName": "v1"
       }
+    },
+    "RestApiStgDeployment": {
+      "Type": "AWS::ApiGateway::Deployment",
+      "DependsOn": "EventPost",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "PasswdPotRestApi"
+        },
+        "StageName": "stg"
+      }
     }
   },
   "Outputs": {

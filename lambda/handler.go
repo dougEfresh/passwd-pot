@@ -39,11 +39,12 @@ func loadDSN(dsn string) (*sql.DB, error) {
 	}
 	err = db.Ping()
 	if err != nil {
-		return nil, err
+		return db, err
 	}
 
 	return db, nil
 }
+
 var header = map[string]string {
 	"Content-Type": "application/json;charset=UTF-8",
 }

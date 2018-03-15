@@ -1,4 +1,4 @@
-CREATE SCHEMA passwdpot;
+CREATE DATABASE IF NOT EXISTS passwdpot;
 use passwdpot;
 
 CREATE TABLE geo (
