@@ -1,0 +1,217 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Passwd Pot resources",
+  "Parameters": {
+    "PasswdPotDBUsername": {
+      "Description": "DB username",
+      "Type": "String",
+      "Default": "root"
+    },
+    "PasswdPotDBPassword": {
+      "Description": "DB password",
+      "Type": "String"
+    }
+  },
+  "Resources": {
+    "PasswdPotInternetGateway": {
+      "Type": "AWS::EC2::InternetGateway"
+    },
+    "PasswdPotVPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "EnableDnsSupport": "true",
+        "EnableDnsHostnames": "true",
+        "CidrBlock": "10.1.0.0/16"
+      }
+    },
+    "AttachGateway": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": {
+          "Ref": "PasswdPotVPC"
+        },
+        "InternetGatewayId": {
+          "Ref": "PasswdPotInternetGateway"
+        }
+      }
+    },
+    "VPCDefaultSecurityGroupIngress": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Fn::GetAtt": [
+            "PasswdPotVPC",
+            "DefaultSecurityGroup"
+          ]
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "3306",
+        "ToPort": "3306",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "PasswdPotSubnetA": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "PasswdPotVPC"
+        },
+        "CidrBlock": "10.1.1.0/24",
+        "AvailabilityZone": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::Region"
+              },
+              "a"
+            ]
+          ]
+        }
+      }
+    },
+    "PasswdPotSubnetB": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "PasswdPotVPC"
+        },
+        "CidrBlock": "10.1.2.0/24",
+        "AvailabilityZone": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::Region"
+              },
+              "b"
+            ]
+          ]
+        }
+      }
+    },
+    "PasswdPotSubnetC": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "PasswdPotVPC"
+        },
+        "CidrBlock": "10.1.3.0/24",
+        "AvailabilityZone": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::Region"
+              },
+              "c"
+            ]
+          ]
+        }
+      }
+    },
+    "RouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "PasswdPotVPC"
+        }
+      }
+    },
+    "InternetRoute": {
+      "Type": "AWS::EC2::Route",
+      "DependsOn": "PasswdPotInternetGateway",
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "PasswdPotInternetGateway"
+        },
+        "RouteTableId": {
+          "Ref": "RouteTable"
+        }
+      }
+    },
+    "SubnetARouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {"Ref": "RouteTable"},
+        "SubnetId": {"Ref": "PasswdPotSubnetB"}
+      }
+    },
+    "SubnetBRouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {"Ref": "RouteTable"},
+        "SubnetId": {"Ref": "PasswdPotSubnetB"}
+      }
+    },
+    "SubnetCRouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {"Ref": "RouteTable"},
+        "SubnetId": {"Ref":  "PasswdPotSubnetC"}
+      }
+    },
+    "PasswdPotDBSubnetGroup": {
+      "Type": "AWS::RDS::DBSubnetGroup",
+      "Properties": {
+        "DBSubnetGroupDescription": "passwdpot",
+        "SubnetIds": [
+          {
+            "Ref": "PasswdPotSubnetA"
+          },
+          {
+            "Ref": "PasswdPotSubnetB"
+          },
+          {
+            "Ref": "PasswdPotSubnetC"
+          }
+        ]
+      }
+    },
+    "RDSCluster": {
+      "Type": "AWS::RDS::DBCluster",
+      "Properties": {
+        "DBSubnetGroupName": {
+          "Ref": "PasswdPotDBSubnetGroup"
+        },
+        "DBClusterIdentifier": "passwdpotclusterdb",
+        "DatabaseName": "passwdpot",
+        "MasterUsername": {
+          "Ref": "PasswdPotDBUsername"
+        },
+        "MasterUserPassword": {
+          "Ref": "PasswdPotDBPassword"
+        },
+        "Engine": "aurora-mysql",
+        "DBClusterParameterGroupName": "default.aurora-mysql5.7"
+      }
+    },
+    "RDSDBInstance": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "DBSubnetGroupName": {
+          "Ref": "PasswdPotDBSubnetGroup"
+        },
+        "MultiAZ": false,
+        "DBParameterGroupName": "default.aurora-mysql5.7",
+        "Engine": "aurora-mysql",
+        "DBClusterIdentifier": {
+          "Ref": "RDSCluster"
+        },
+        "PubliclyAccessible": "true",
+        "DBInstanceClass": "db.t2.small"
+      }
+    }
+  },
+  "Outputs": {
+    "Endpoint": {
+      "Value": {
+        "Fn::GetAtt": [
+          "RDSCluster",
+          "Endpoint.Address"
+        ]
+      }
+    }
+  }
+}
