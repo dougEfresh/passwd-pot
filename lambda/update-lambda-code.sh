@@ -1,6 +1,6 @@
 #!/bin/bash -xe
 REGION=us-east-2
-dockerRun="docker run -v $HOME/.aws:/root/.aws -v $PWD:/tmp/aws -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -t -i pebbletech/docker-aws-cli aws"
+dockerRun="docker run -v $HOME/.aws:/root/.aws -v $PWD:/tmp/aws -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -t -i mesosphere/aws-cli"
 
 go build handler.go
 rm -f passwdpot.zip 2> /dev/null
