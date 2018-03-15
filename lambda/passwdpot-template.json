@@ -22,8 +22,7 @@
     },
     "PasswdPotDBHost": {
       "Description": "DB username",
-      "Type": "String",
-      "Default": "passwdpot"
+      "Type": "String"
     },
     "PasswdPotDBUsername": {
       "Description": "DB username",
@@ -80,7 +79,6 @@
     },
     "CreateEventPostLambda": {
       "Type": "AWS::Lambda::Function",
-      "DependsOn": "PasswdPotDatabase",
       "Properties": {
         "FunctionName": "passwdpot-create-event",
         "Handler": "handler",
@@ -103,18 +101,9 @@
                   },
                   "@tcp(",
                   {
-                    "Fn::GetAtt": [
-                      "PasswdPotDatabase",
-                      "Endpoint.Address"
-                    ]
+                    "Ref": "PasswdPotDBHost"
                   },
-                  ":",
-                  {
-                    "Fn::GetAtt": [
-                      "PasswdPotDatabase",
-                      "Endpoint.Port"
-                    ]
-                  },
+                  ":3306",
                   ")/passwdpot?",
                   {
                     "Ref": "PasswdPotDBOptions"
@@ -183,10 +172,29 @@
         }
       }
     },
+    "DomainName": {
+      "Type": "AWS::ApiGateway::DomainName",
+      "Properties": {
+        "CertificateArn": "arn:aws:acm:us-east-1:841424144106:certificate/7fbd5209-6f48-4b80-a71c-10c9b5305181",
+        "DomainName": "api.passwd-pot.io"
+      }
+    },
     "PasswdPotRestApi": {
       "Type": "AWS::ApiGateway::RestApi",
       "Properties": {
-        "Name": "Passwdpot API Gateway"
+        "Name": "Passwdpot API Gateway",
+        "FailOnWarnings": true
+      }
+    },
+    "BasePath": {
+      "Type": "AWS::ApiGateway::BasePathMapping",
+      "Properties": {
+        "DomainName": {
+          "Ref": "DomainName"
+        },
+        "RestApiId": {
+          "Ref": "PasswdPotRestApi"
+        }
       }
     },
     "EventModel": {
