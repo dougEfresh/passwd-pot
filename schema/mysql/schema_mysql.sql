@@ -16,23 +16,26 @@ CREATE TABLE geo (
  PRIMARY KEY(id)
 );
 
-
 CREATE TABLE event (
   id BIGINT NOT NULL AUTO_INCREMENT,
-  dt timestamp(6)  NOT NULL,
+  dt timestamp  NOT NULL,
   username varchar(256) NOT NULL,
   passwd varchar(512) NOT NULL,
   remote_addr varchar(16) NOT NULL,
-  remote_geo_id bigint NULL REFERENCES geo(id),
+  remote_geo_id bigint NULL,
   remote_port bigint NULL,
   remote_name varchar(256),
   remote_version varchar(1024),
   origin_addr varchar(16) NOT NULL,
-  origin_geo_id bigint NULL REFERENCES geo(id),
+  origin_geo_id bigint NULL,
   application varchar(32),
   protocol varchar(32),
-  PRIMARY KEY(id)
-);
+  PRIMARY KEY(id),
+  INDEX (remote_geo_id),
+  INDEX (origin_geo_id),
+  CONSTRAINT FOREIGN KEY(remote_geo_id) REFERENCES geo(id),
+  CONSTRAINT FOREIGN KEY(origin_geo_id) REFERENCES geo(id)
+) ENGINE=INNODB DEFAULT CHARACTER SET=utf8;
 
 CREATE OR REPLACE VIEW event_geo AS
 SELECT a.id,
