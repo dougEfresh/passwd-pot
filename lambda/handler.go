@@ -11,11 +11,11 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/dougEfresh/kitz"
 	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/cache"
 	"github.com/dougEfresh/passwd-pot/log"
 	"github.com/dougEfresh/passwd-pot/service"
 	klog "github.com/go-kit/kit/log"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/dougEfresh/passwd-pot/cache"
 )
 
 var geoCache *cache.Cache = cache.NewCache()
@@ -48,7 +48,7 @@ func loadDSN(dsn string) (*sql.DB, error) {
 	return db, nil
 }
 
-var header = map[string]string {
+var header = map[string]string{
 	"Content-Type": "application/json;charset=UTF-8",
 }
 
@@ -95,11 +95,10 @@ func init() {
 
 // ApiEvent from API GW
 type ApiEvent struct {
-	Event      api.Event `json:"event"`
-	OriginAddr string    `json:"originAddr"`
+	Event api.Event `json:"event"`
 }
 
-func resolveEvent(event api.Event) (error) {
+func resolveEvent(event api.Event) error {
 	var ids []int64
 	rId, _ := geoCache.Get(event.RemoteAddr)
 	oId, _ := geoCache.Get(event.OriginAddr)
@@ -107,7 +106,7 @@ func resolveEvent(event api.Event) (error) {
 		if e := eventResolver.MarkRemoteEvent(event.ID, rId); e != nil {
 			return e
 		}
-		if e := eventResolver.MarkOriginEvent(event.ID, oId) ; e != nil {
+		if e := eventResolver.MarkOriginEvent(event.ID, oId); e != nil {
 			return e
 		}
 	}
@@ -128,7 +127,6 @@ func Handle(apiEvent ApiEvent) (events.APIGatewayProxyResponse, error) {
 	if setupError != nil {
 		return events.APIGatewayProxyResponse{Body: "Bad setup", StatusCode: 500}, setupError
 	}
-	e.OriginAddr = apiEvent.OriginAddr
 	logger.Debugf("Event %s", e)
 	id, err := eventClient.RecordEvent(e)
 	if err != nil {

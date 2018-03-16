@@ -18,7 +18,7 @@ CREATE TABLE geo (
 
 CREATE TABLE event (
   id BIGINT NOT NULL AUTO_INCREMENT,
-  dt timestamp  NOT NULL,
+  dt timestamp(6)  NOT NULL,
   username varchar(256) NOT NULL,
   passwd varchar(512) NOT NULL,
   remote_addr varchar(16) NOT NULL,
