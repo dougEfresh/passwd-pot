@@ -18,6 +18,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+const DEFAULT_DSN = "root@tcp(127.0.0.1:3306)/passwdpot?tls=false&parseTime=true&loc=UTC&timeout=10ms"
+
 var geoCache *cache.Cache = cache.NewCache()
 var eventResolver service.EventResolver
 var eventClient *service.EventClient
@@ -25,9 +27,9 @@ var logger log.Logger
 var dsn = os.Getenv("PASSWDPOT_DSN")
 var logz = os.Getenv("LOGZ")
 var setupError error
+var db *sql.DB
 
-func loadDSN(dsn string) (*sql.DB, error) {
-	var db *sql.DB
+func loadDSN(dsn string) error {
 	var err error
 	if strings.Contains(dsn, "postgres") {
 		logger.Debug("Using pq driver")
@@ -38,23 +40,18 @@ func loadDSN(dsn string) (*sql.DB, error) {
 	}
 
 	if err != nil {
-		return nil, err
+		return err
 	}
-	err = db.Ping()
-	if err != nil {
-		return db, err
-	}
-
-	return db, nil
+	return db.Ping()
 }
 
 var header = map[string]string{
-	"Content-Type": "application/json;charset=UTF-8",
+	"Content-Type": "application/json",
 }
 
 func init() {
 	if dsn == "" {
-		dsn = "root@tcp(127.0.0.1:3306)/passwdpot?tls=false&parseTime=true&loc=UTC&timeout=10ms"
+		dsn = DEFAULT_DSN
 	}
 	logger.SetLevel(log.InfoLevel)
 	logger.AddLogger(klog.NewJSONLogger(os.Stdout))
@@ -73,8 +70,7 @@ func init() {
 		logger.SetLevel(log.DebugLevel)
 	}
 	var err error
-	db, err := loadDSN(dsn)
-
+	err = loadDSN(dsn)
 	if err != nil {
 		logger.Errorf("Error loading db %s", err)
 		setupError = err
@@ -97,6 +93,17 @@ func init() {
 type ApiEvent struct {
 	Event api.Event `json:"event"`
 }
+type EventError struct {
+	 Event api.Event
+	 Msg string
+}
+
+func (e EventError) Error() string {
+	return fmt.Sprintf("error with event: %s\nmsg: %s" ,e.Event, e.Msg )
+}
+func (e EventError) String() string {
+	return e.Error()
+}
 
 func resolveEvent(event api.Event) error {
 	var ids []int64
@@ -118,26 +125,41 @@ func resolveEvent(event api.Event) error {
 	return err
 }
 
+func checkDB() bool {
+	if db == nil {
+		if err := loadDSN(dsn) ; err != nil {
+			return false
+		}
+	}
+	if err := db.Ping(); err != nil {
+		return false
+	}
+	return true
+}
+
+func sendError(e EventError) (events.APIGatewayProxyResponse, error) {
+	logger.Errorf("%s", e)
+	return events.APIGatewayProxyResponse{Body: fmt.Sprintf("%s", e), StatusCode: 500}, e
+}
+
 // Handle Password Event
 func Handle(apiEvent ApiEvent) (events.APIGatewayProxyResponse, error) {
 	e := apiEvent.Event
-	if e.RemoteAddr == "" {
-		return events.APIGatewayProxyResponse{Body: fmt.Sprintf("error  with event %s", e), StatusCode: 500}, errors.New("Invalid Event")
+	if !checkDB() {
+		return sendError(EventError{Event:e, Msg:"db is not set up"})
 	}
-	if setupError != nil {
-		return events.APIGatewayProxyResponse{Body: "Bad setup", StatusCode: 500}, setupError
+	if e.RemoteAddr == "" {
+		return sendError(EventError{Event:e, Msg:"invalid event"})
 	}
 	logger.Debugf("Event %s", e)
 	id, err := eventClient.RecordEvent(e)
 	if err != nil {
-		logger.Errorf("error loading event %s", err)
-		return events.APIGatewayProxyResponse{Body: fmt.Sprintf("error loading event %s", err), StatusCode: 500}, err
+		return sendError(EventError{Event:e, Msg: fmt.Sprintf("could not record event %s", err)})
 	}
 	e.ID = id
 	err = resolveEvent(e)
 	if err != nil {
-		logger.Errorf("Error resolving %s %s", e, err)
-		return events.APIGatewayProxyResponse{Body: fmt.Sprintf("error loading event %s", err), StatusCode: 500}, err
+		logger.Warnf("Error resolving %s %s", e, err)
 	}
 	return events.APIGatewayProxyResponse{Body: fmt.Sprintf("{id:%d}", id), StatusCode: 202, Headers: header}, nil
 }

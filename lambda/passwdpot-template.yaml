@@ -197,8 +197,18 @@ Resources:
             - /invocations
         IntegrationResponses:
           - ResponseTemplates:
-              application/json: $input.json('$.body')
+             application/json: >- 
+              #set($requestBody = $util.parseJson($input.json('$')))
+              $requestBody
+            SelectionPattern: ".*\"statusCode\": 202.*"
             StatusCode: 202
+          - ResponseTemplates:
+              application/json: $input.body
+            SelectionPattern: ".*\"statusCode\": 500.*"
+            StatusCode: 500
+          - ResponseTemplates:
+              application/json: $input.body
+            StatusCode: 403
         PassthroughBehavior: NEVER
         RequestTemplates:
           application/json: >-
@@ -213,6 +223,13 @@ Resources:
         - ResponseModels:
             application/json: !Ref EventResponseModel
           StatusCode: 202
+        - ResponseModels:
+            application/json: !Ref EventResponseModel
+          StatusCode: 500
+        - ResponseModels:
+            application/json: !Ref EventResponseModel
+          StatusCode: 403
+
   RestApiDeployment:
     Type: 'AWS::ApiGateway::Deployment'
     DependsOn: EventPost
