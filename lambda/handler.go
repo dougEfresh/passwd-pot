@@ -16,6 +16,7 @@ import (
 	"github.com/dougEfresh/passwd-pot/service"
 	klog "github.com/go-kit/kit/log"
 	_ "github.com/go-sql-driver/mysql"
+	"encoding/json"
 )
 
 const DEFAULT_DSN = "root@tcp(127.0.0.1:3306)/passwdpot?tls=false&parseTime=true&loc=UTC&timeout=10ms"
@@ -94,7 +95,7 @@ type ApiEvent struct {
 	Event api.Event `json:"event"`
 }
 type EventError struct {
-	 Event api.Event
+	 Event string
 	 Msg string
 }
 
@@ -142,19 +143,28 @@ func sendError(e EventError) (events.APIGatewayProxyResponse, error) {
 	return events.APIGatewayProxyResponse{Body: fmt.Sprintf("%s", e), StatusCode: 500}, e
 }
 
+func parseBody(apiEvent events.APIGatewayProxyRequest) (api.Event, error) {
+	var e ApiEvent
+	err := json.Unmarshal([]byte(apiEvent.Body), &e)
+	return e.Event, err
+}
 // Handle Password Event
-func Handle(apiEvent ApiEvent) (events.APIGatewayProxyResponse, error) {
-	e := apiEvent.Event
+func Handle(apiEvent events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+
+	e , err := parseBody(apiEvent)
+	if err != nil {
+		return sendError(EventError{Event: apiEvent.Body,Msg:fmt.Sprintf("%s", err) })
+	}
 	if !checkDB() {
-		return sendError(EventError{Event:e, Msg:"db is not set up"})
+		return sendError(EventError{Event:apiEvent.Body, Msg:"db is not set up"})
 	}
 	if e.RemoteAddr == "" {
-		return sendError(EventError{Event:e, Msg:"invalid event"})
+		return sendError(EventError{Event:apiEvent.Body, Msg:"invalid event"})
 	}
 	logger.Debugf("Event %s", e)
 	id, err := eventClient.RecordEvent(e)
 	if err != nil {
-		return sendError(EventError{Event:e, Msg: fmt.Sprintf("could not record event %s", err)})
+		return sendError(EventError{Event:apiEvent.Body, Msg: fmt.Sprintf("could not record event %s", err)})
 	}
 	e.ID = id
 	err = resolveEvent(e)

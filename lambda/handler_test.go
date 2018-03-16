@@ -15,20 +15,15 @@
 package main
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
+	"github.com/aws/aws-lambda-go/events"
 )
 
 var body = ` { "event": { "time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "158.69.243.135", "originAddr": "212.143.121.156",  "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51", "application": "OpenSSH", "protocol": "ssh" } }`
 
 func TestHandler(t *testing.T) {
-	var e ApiEvent
-	err := json.Unmarshal([]byte(body), &e)
-	if err != nil {
-		t.Fatalf("%s", err)
-	}
-	resp, err := Handle(e)
+	resp, err := Handle(events.APIGatewayProxyRequest{Body: body})
 	if err != nil {
 		t.Fatalf("%s", err)
 	}
