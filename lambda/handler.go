@@ -161,7 +161,7 @@ func Handle(apiEvent ApiEvent) (events.APIGatewayProxyResponse, error) {
 	if err != nil {
 		logger.Warnf("Error resolving %s %s", e, err)
 	}
-	return events.APIGatewayProxyResponse{Body: fmt.Sprintf("{id:%d}", id), StatusCode: 202, Headers: header}, nil
+	return events.APIGatewayProxyResponse{Body: fmt.Sprintf("{\"id\":%d}", id), StatusCode: 202, Headers: header}, nil
 }
 
 func main() {

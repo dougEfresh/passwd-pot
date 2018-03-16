@@ -200,7 +200,7 @@ Resources:
              application/json: >- 
               #set($requestBody = $util.parseJson($input.json('$')))
               $requestBody
-            SelectionPattern: ".*\"statusCode\": 202.*"
+            SelectionPattern: ".*\"statusCode\": 20\\d.*"
             StatusCode: 202
           - ResponseTemplates:
               application/json: $input.body
@@ -213,7 +213,7 @@ Resources:
         RequestTemplates:
           application/json: >-
             #set($requestBody = $util.parseJson($input.json('$')))
-            { "event " : { #foreach($item in $requestBody.keySet()) #set($jsonPath =  "$.$item ") "$item " : $input.json($jsonPath), #end
+            { "event" : { #foreach($item in $requestBody.keySet()) #set($jsonPath =  "$.$item") "$item" : $input.json($jsonPath), #end
             "originAddr" : "$context.identity.sourceIp"
             }
             }
