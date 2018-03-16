@@ -1,0 +1,233 @@
+
+AWSTemplateFormatVersion: 2010-09-09
+Description: Passwd Pot resources
+Parameters:
+  LogzApi:
+    Description: logz.io api key
+    Type: String
+    Default: ''
+  S3Key:
+    Type: String
+    Default: passwdpot.zip
+  Debug:
+    Type: String
+    Default: '0'
+  ApiId:
+    Description: API Gateway App Id. E.g. 1yc6td9zjj
+    Type: String
+    Default: ''
+  PasswdPotDBHost:
+    Description: DB username
+    Type: String
+  PasswdPotDBUsername:
+    Description: DB username
+    Type: String
+    Default: passwdpot
+  PasswdPotDBPassword:
+    Description: DB password
+    Type: String
+  PasswdPotDBOptions:
+    Description: MySql golang driver options
+    Type: String
+    Default: tls=true&parseTime=true&loc=UTC&timeout=100ms
+Resources:
+  PasswdPotLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: logs
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:*'
+                Resource: 'arn:aws:logs:*:*:*'
+  CreateEventPostLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: passwdpot-create-event
+      Handler: handler
+      Role: !GetAtt 
+        - PasswdPotLambdaRole
+        - Arn
+      MemorySize: 128
+      Environment:
+        Variables:
+          PASSWDPOT_DSN: !Join 
+            - ''
+            - - 'passwdpot:'
+              - !Ref PasswdPotDBPassword
+              - '@tcp('
+              - !Ref PasswdPotDBHost
+              - ':3306'
+              - )/passwdpot?
+              - !Ref PasswdPotDBOptions
+          PASSWDPOT_DEBUG: !Ref Debug
+          LOGZ: !Ref LogzApi
+      Code:
+        S3Bucket: !Join 
+          - ''
+          - - passwdpot-
+            - !Ref 'AWS::Region'
+        S3Key: !Ref S3Key
+      Runtime: go1.x
+      Timeout: 2
+  CreateEventPostLambdaPermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:invokeFunction'
+      FunctionName: !GetAtt 
+        - CreateEventPostLambda
+        - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Join 
+        - ''
+        - - 'arn:aws:execute-api:'
+          - !Ref 'AWS::Region'
+          - ':'
+          - !Ref 'AWS::AccountId'
+          - ':'
+          - !Ref PasswdPotRestApi
+          - /*
+  DomainName:
+    Type: 'AWS::ApiGateway::DomainName'
+    Properties:
+      CertificateArn: >-
+        arn:aws:acm:us-east-1:841424144106:certificate/7fbd5209-6f48-4b80-a71c-10c9b5305181
+      DomainName: api.passwd-pot.io
+  PasswdPotRestApi:
+    Type: 'AWS::ApiGateway::RestApi'
+    Properties:
+      Name: Passwdpot API Gateway
+      FailOnWarnings: false
+  BasePath:
+    Type: 'AWS::ApiGateway::BasePathMapping'
+    Properties:
+      DomainName: !Ref DomainName
+      RestApiId: !Ref PasswdPotRestApi
+  EventModel:
+    Type: 'AWS::ApiGateway::Model'
+    Properties:
+      ContentType: application/json
+      Name: Event
+      RestApiId: !Ref PasswdPotRestApi
+      Schema:
+        $schema: 'http://json-schema.org/draft-04/schema#'
+        title: Event
+        type: object
+        additionalProperties: true
+        properties:
+          time:
+            type: number
+          user:
+            type: string
+          passwd:
+            type: string
+          remoteAddr:
+            type: string
+          remotePort:
+            type: number
+          remoteName:
+            type: string
+          remoteVersion:
+            type: string
+          originAddr:
+            type: string
+          application:
+            type: string
+          protocol:
+            type: string
+        required:
+          - time
+          - remoteAddr
+          - originAddr
+          - application
+          - protocol
+          - user
+  EventResponseModel:
+    Type: 'AWS::ApiGateway::Model'
+    Properties:
+      ContentType: application/json
+      Name: EventResponse
+      RestApiId: !Ref PasswdPotRestApi
+      Schema:
+        $schema: 'http://json-schema.org/draft-04/schema#'
+        title: EventResponse
+        type: object
+        additionalProperties: false
+        properties:
+          id:
+            type: number
+  EventResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      RestApiId: !Ref PasswdPotRestApi
+      ParentId: !GetAtt 
+        - PasswdPotRestApi
+        - RootResourceId
+      PathPart: event
+  EventPost:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      RestApiId: !Ref PasswdPotRestApi
+      ResourceId: !Ref EventResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: POST
+        Uri: !Join 
+          - ''
+          - - 'arn:aws:apigateway:'
+            - !Ref 'AWS::Region'
+            - ':lambda:path/2015-03-31/functions/'
+            - !GetAtt 
+              - CreateEventPostLambda
+              - Arn
+            - /invocations
+        IntegrationResponses:
+          - ResponseTemplates:
+              application/json: $input.json('$.body')
+            StatusCode: 202
+        PassthroughBehavior: NEVER
+        RequestTemplates:
+          application/json: >-
+            #set($requestBody = $util.parseJson($input.json('$')))
+            { "event " : { #foreach($item in $requestBody.keySet()) #set($jsonPath =  "$.$item ") "$item " : $input.json($jsonPath), #end
+            "originAddr" : "$context.identity.sourceIp"
+            }
+            }
+      RequestModels:
+        application/json: !Ref EventModel
+      MethodResponses:
+        - ResponseModels:
+            application/json: !Ref EventResponseModel
+          StatusCode: 202
+  RestApiDeployment:
+    Type: 'AWS::ApiGateway::Deployment'
+    DependsOn: EventPost
+    Properties:
+      RestApiId: !Ref PasswdPotRestApi
+      StageName: v1
+  RestApiStgDeployment:
+    Type: 'AWS::ApiGateway::Deployment'
+    DependsOn: EventPost
+    Properties:
+      RestApiId: !Ref PasswdPotRestApi
+      StageName: stg
+Outputs:
+  LambdaArn:
+    Value: !GetAtt 
+      - CreateEventPostLambda
+      - Arn
+
