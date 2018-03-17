@@ -15,32 +15,37 @@
 package main
 
 import (
-	"strings"
+	"encoding/json"
 	"testing"
-	"github.com/aws/aws-lambda-go/events"
+
+	"github.com/dougEfresh/passwd-pot/api"
 )
 
-var body = ` { "event": { "time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "158.69.243.135", "originAddr": "212.143.121.156",  "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51", "application": "OpenSSH", "protocol": "ssh" } }`
+var body = `{"originAddr": "127.0.0.1", "time": 1148797330161, "user": "admin", "passwd": "12345678", "remoteAddr": "4.2.2.2", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-", "application": "OpenSSH", "protocol": "ssh"}`
 
 func TestHandler(t *testing.T) {
-	resp, err := Handle(events.APIGatewayProxyRequest{Body: body})
+	var e api.Event
+	json.Unmarshal([]byte(body), e)
+	resp, err := Handle(e)
 	if err != nil {
 		t.Fatalf("%s", err)
 	}
 
-	if len(resp.Body) <= 0 {
+	if resp.ID <= 0 {
 		t.Fatal("resp is crap")
 	}
-	if resp.StatusCode != 202 {
-		t.Fatal("Not 202")
-	}
-	if !strings.Contains(resp.Body, "{\"id\":") {
-		t.Fatalf("%s", resp.Body)
+
+	if id, found := geoCache.Get("4.2.2.2"); !found {
+		t.Fatalf("Cannot find 4.2.2.2 ip in cache (%d)", id)
 	}
 
-	if id, found := geoCache.Get("158.69.243.135"); !found {
-		t.Fatalf("Cannot find 158.69 ip in cache (%d)", id)
-	}
+	t.Logf("Response is %d", resp.ID)
+}
 
-	t.Logf("Response is %s", resp.Body)
+func TestHandlerError(t *testing.T) {
+	e := api.Event{}
+	_, err := Handle(e)
+	if err == nil {
+		t.Fatal("There should be an error")
+	}
 }

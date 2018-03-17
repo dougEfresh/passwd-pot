@@ -29,7 +29,7 @@ Parameters:
   PasswdPotDBOptions:
     Description: MySql golang driver options
     Type: String
-    Default: tls=true&parseTime=true&loc=UTC&timeout=100ms
+    Default: tls=skip-verify&parseTime=true&loc=UTC&timeout=100ms
 Resources:
   PasswdPotLambdaRole:
     Type: 'AWS::IAM::Role'
@@ -82,15 +82,40 @@ Resources:
         S3Key: !Ref S3Key
       Runtime: go1.x
       Timeout: 2
+
+  CreateEventPostLambdaStg:
+    Type: 'AWS::Lambda::Alias'
+    Properties:
+      FunctionName: !Ref CreateEventPostLambda
+      Name: 'stg'
+      FunctionVersion: !GetAtt
+        - 'CreateEventPostLambdaVersion'
+        - 'Version'
+
+  CreateEventPostLambdaProd:
+    Type: 'AWS::Lambda::Alias'
+    Properties:
+      FunctionName: !Ref CreateEventPostLambda
+      Name: 'prod'
+      FunctionVersion: !GetAtt
+        - 'CreateEventPostLambdaVersion'
+        - 'Version'
+
+  CreateEventPostLambdaVersion:
+    Type: 'AWS::Lambda::Version'
+    Properties:
+      FunctionName: !Ref CreateEventPostLambda
+      Description: 'Version 1'
+
   CreateEventPostLambdaPermission:
     Type: 'AWS::Lambda::Permission'
     Properties:
       Action: 'lambda:invokeFunction'
-      FunctionName: !GetAtt 
+      FunctionName: !GetAtt
         - CreateEventPostLambda
         - Arn
       Principal: apigateway.amazonaws.com
-      SourceArn: !Join 
+      SourceArn: !Join
         - ''
         - - 'arn:aws:execute-api:'
           - !Ref 'AWS::Region'
@@ -99,6 +124,39 @@ Resources:
           - ':'
           - !Ref PasswdPotRestApi
           - /*
+
+  CreateEventPostLambdaPermissionProd:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:invokeFunction'
+      FunctionName: !Ref CreateEventPostLambdaProd
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Join
+        - ''
+        - - 'arn:aws:execute-api:'
+          - !Ref 'AWS::Region'
+          - ':'
+          - !Ref 'AWS::AccountId'
+          - ':'
+          - !Ref PasswdPotRestApi
+          - /*
+
+  CreateEventPostLambdaPermissionStg:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:invokeFunction'
+      FunctionName: !Ref CreateEventPostLambdaStg
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Join
+        - ''
+        - - 'arn:aws:execute-api:'
+          - !Ref 'AWS::Region'
+          - ':'
+          - !Ref 'AWS::AccountId'
+          - ':'
+          - !Ref PasswdPotRestApi
+          - /*
+
   DomainName:
     Type: 'AWS::ApiGateway::DomainName'
     Properties:
@@ -194,25 +252,36 @@ Resources:
             - !GetAtt 
               - CreateEventPostLambda
               - Arn
+            - ':${stageVariables.env}'
             - /invocations
         IntegrationResponses:
           - ResponseTemplates:
-             application/json: >- 
-              #set($requestBody = $input.path('$.body'))
-              $requestBody
+              application/json: >-
+                #set($requestBody = $util.parseJson($input.path('$.body')))
+                $requestBody
             StatusCode: 202
           - ResponseTemplates:
-              application/json: $input.body
-            SelectionPattern: ".*\"statusCode\": 500.*"
+              application/json: >-
+                #set($body = $util.parseJson($inputRoot))
+                ##$body['headers']
+                $body['body']
+            SelectionPattern: ".*\"statusCode\":500.*"
             StatusCode: 500
+          - ResponseTemplates:
+              application/json: >-
+                #set($inputRoot = $input.path('$.errorMessage'))
+                #set($body = $util.parseJson($inputRoot))
+                ##$body['headers']
+                $body['body']
+            SelectionPattern: ".*\"statusCode\":400.*"
+            StatusCode: 400
         PassthroughBehavior: NEVER
         RequestTemplates:
           application/json: >-
             #set($requestBody = $util.parseJson($input.json('$')))
-            { "event" : { #foreach($item in $requestBody.keySet()) #set($jsonPath =  "$.$item") "$item" : $input.json($jsonPath), #end
+            { #foreach($item in $requestBody.keySet()) #set($jsonPath =  "$.$item") "$item" : $input.json($jsonPath), #end
             "originAddr" : "$context.identity.sourceIp"
-            }
-            }
+            }            
       RequestModels:
         application/json: !Ref EventModel
       MethodResponses:
@@ -220,8 +289,31 @@ Resources:
             application/json: !Ref EventResponseModel
           StatusCode: 202
         - ResponseModels:
-            application/json: !Ref Error
+            application/json: !Ref EventResponseModel
           StatusCode: 500
+        - ResponseModels:
+            application/json: !Ref EventResponseModel
+          StatusCode: 400
+
+  RestApiStageStg:
+    Type: 'AWS::ApiGateway::Stage'
+    Properties:
+      StageName: 'stg'
+      Description: 'staging'
+      RestApiId: !Ref PasswdPotRestApi
+      DeploymentId: !Ref RestApiStgDeployment
+      Variables:
+        env: 'stg'
+
+  RestApiStageProd:
+    Type: 'AWS::ApiGateway::Stage'
+    Properties:
+      StageName: 'v1'
+      Description: 'production'
+      RestApiId: !Ref PasswdPotRestApi
+      DeploymentId: !Ref RestApiDeployment
+      Variables:
+        env: 'prod'
 
   RestApiDeployment:
     Type: 'AWS::ApiGateway::Deployment'
@@ -229,12 +321,14 @@ Resources:
     Properties:
       RestApiId: !Ref PasswdPotRestApi
       StageName: v1
+
   RestApiStgDeployment:
     Type: 'AWS::ApiGateway::Deployment'
     DependsOn: EventPost
     Properties:
       RestApiId: !Ref PasswdPotRestApi
       StageName: stg
+
 Outputs:
   LambdaArn:
     Value: !GetAtt 

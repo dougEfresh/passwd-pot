@@ -2,7 +2,7 @@ package main
 
 import (
 	"database/sql"
-	"errors"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -16,21 +16,20 @@ import (
 	"github.com/dougEfresh/passwd-pot/service"
 	klog "github.com/go-kit/kit/log"
 	_ "github.com/go-sql-driver/mysql"
-	"encoding/json"
 )
 
-const DEFAULT_DSN = "root@tcp(127.0.0.1:3306)/passwdpot?tls=false&parseTime=true&loc=UTC&timeout=10ms"
+const defaultDsn = "root@tcp(127.0.0.1:3306)/passwdpot?tls=false&parseTime=true&loc=UTC&timeout=10ms"
 
-var geoCache *cache.Cache = cache.NewCache()
+var geoCache = cache.NewCache()
 var eventResolver service.EventResolver
 var eventClient *service.EventClient
 var logger log.Logger
 var dsn = os.Getenv("PASSWDPOT_DSN")
 var logz = os.Getenv("LOGZ")
 var setupError error
-var db *sql.DB
 
-func loadDSN(dsn string) error {
+func loadDSN(dsn string) (*sql.DB, error) {
+	var db *sql.DB
 	var err error
 	if strings.Contains(dsn, "postgres") {
 		logger.Debug("Using pq driver")
@@ -41,9 +40,14 @@ func loadDSN(dsn string) error {
 	}
 
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return db.Ping()
+	err = db.Ping()
+	if err != nil {
+		return db, err
+	}
+
+	return db, nil
 }
 
 var header = map[string]string{
@@ -52,8 +56,9 @@ var header = map[string]string{
 
 func init() {
 	if dsn == "" {
-		dsn = DEFAULT_DSN
+		dsn = defaultDsn
 	}
+
 	logger.SetLevel(log.InfoLevel)
 	logger.AddLogger(klog.NewJSONLogger(os.Stdout))
 	logger.With("app", "passwdpot-create-event")
@@ -71,7 +76,8 @@ func init() {
 		logger.SetLevel(log.DebugLevel)
 	}
 	var err error
-	err = loadDSN(dsn)
+	db, err := loadDSN(dsn)
+
 	if err != nil {
 		logger.Errorf("Error loading db %s", err)
 		setupError = err
@@ -80,30 +86,14 @@ func init() {
 	eventResolver, err = service.NewResolveClient(service.SetResolveDb(db), service.SetResolveLogger(logger))
 	if err != nil {
 		logger.Errorf("Error setting up client %s", err)
-		setupError = errors.New(fmt.Sprintf("resolver has bad setup %s", err))
+		setupError = fmt.Errorf("resolver has bad setup %s", err)
 		return
 	}
 	eventClient, err = service.NewEventClient(service.SetEventLogger(logger), service.SetEventDb(db))
 	if err != nil {
 		logger.Errorf("Error setting up eventClient %s", err)
-		setupError = errors.New(fmt.Sprintf("eventClient  has bad setup %s", err))
+		setupError = fmt.Errorf("eventClient  has bad setup %s", err)
 	}
-}
-
-// ApiEvent from API GW
-type ApiEvent struct {
-	Event api.Event `json:"event"`
-}
-type EventError struct {
-	 Event string
-	 Msg string
-}
-
-func (e EventError) Error() string {
-	return fmt.Sprintf("error with event: %s\nmsg: %s" ,e.Event, e.Msg )
-}
-func (e EventError) String() string {
-	return e.Error()
 }
 
 func resolveEvent(event api.Event) error {
@@ -126,52 +116,64 @@ func resolveEvent(event api.Event) error {
 	return err
 }
 
-func checkDB() bool {
-	if db == nil {
-		if err := loadDSN(dsn) ; err != nil {
-			return false
+// APIError Custom error msg
+type APIError struct {
+	GatewayError events.APIGatewayProxyResponse
+}
+
+func (e APIError) Error() string {
+	body, err := json.Marshal(e.GatewayError)
+	if err != nil {
+		return `{"statusCode": 500, "body": "fatal error!"}`
+	}
+	return string(body)
+}
+
+func (e APIError) String() string {
+	return e.Error()
+}
+
+func sendError(e events.APIGatewayProxyResponse) events.APIGatewayProxyResponse {
+	body, err := json.Marshal(e)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: 500,
+			Body:       fmt.Sprintf("%s", err),
+			Headers:    header,
 		}
 	}
-	if err := db.Ping(); err != nil {
-		return false
+	return events.APIGatewayProxyResponse{
+		Body:       string(body),
+		StatusCode: e.StatusCode,
+		Headers:    header,
 	}
-	return true
 }
 
-func sendError(e EventError) (events.APIGatewayProxyResponse, error) {
-	logger.Errorf("%s", e)
-	return events.APIGatewayProxyResponse{Body: fmt.Sprintf("%s", e), StatusCode: 500}, e
+// EventResponse Send the ID
+type EventResponse struct {
+	ID int64 `json:"id"`
 }
 
-func parseBody(apiEvent events.APIGatewayProxyRequest) (api.Event, error) {
-	var e ApiEvent
-	err := json.Unmarshal([]byte(apiEvent.Body), &e)
-	return e.Event, err
-}
 // Handle Password Event
-func Handle(apiEvent events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-
-	e , err := parseBody(apiEvent)
-	if err != nil {
-		return sendError(EventError{Event: apiEvent.Body,Msg:fmt.Sprintf("%s", err) })
-	}
-	if !checkDB() {
-		return sendError(EventError{Event:apiEvent.Body, Msg:"db is not set up"})
-	}
+func Handle(e api.Event) (EventResponse, error) {
 	if e.RemoteAddr == "" {
-		return sendError(EventError{Event:apiEvent.Body, Msg:"invalid event"})
+		return EventResponse{}, APIError{events.APIGatewayProxyResponse{Body: fmt.Sprintf("error with event %s", e), StatusCode: 400}}
+	}
+	if setupError != nil {
+		return EventResponse{}, APIError{events.APIGatewayProxyResponse{Body: "Bad setup", StatusCode: 500}}
 	}
 	logger.Debugf("Event %s", e)
 	id, err := eventClient.RecordEvent(e)
 	if err != nil {
-		return sendError(EventError{Event:apiEvent.Body, Msg: fmt.Sprintf("could not record event %s", err)})
+		logger.Errorf("error loading event %s", err)
+		return EventResponse{}, APIError{events.APIGatewayProxyResponse{Body: fmt.Sprintf("error loading event %s", err), StatusCode: 500}}
 	}
 	e.ID = id
 	err = resolveEvent(e)
 	if err != nil {
 		logger.Warnf("Error resolving %s %s", e, err)
 	}
-	return events.APIGatewayProxyResponse{Body: fmt.Sprintf("{\"id\":%d}", id), StatusCode: 202, Headers: header}, nil
+	return EventResponse{id}, nil
 }
 
 func main() {
