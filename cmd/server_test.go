@@ -18,10 +18,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/dougEfresh/passwd-pot/api"
-	"github.com/dougEfresh/passwd-pot/log"
-	"github.com/dougEfresh/passwd-pot/service"
-	klog "github.com/go-kit/kit/log"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -29,13 +25,18 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/log"
+	"github.com/dougEfresh/passwd-pot/service"
+	klog "github.com/go-kit/kit/log"
 )
 
 const (
 	requestBody       = `{"time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "1.2.3.4", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51" , "application": "OpenSSH" , "protocol": "ssh"}`
 	requestBodyOrigin = `{"time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "192.168.1.1", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51" , "originAddr" : "10.0.0.1", "application": "OpenSSH" , "protocol": "ssh" }`
 	//test_dsn          = "root@tcp(127.0.0.1:3306)/passwdpot?tls=false&parseTime=true&loc=UTC&timeout=50ms"
-	test_dsn string = "postgres://postgres:@%s/?sslmode=disable"
+	test_dsn string = "postgres://postgres:@127.0.0.1/?sslmode=disable"
 )
 
 var ts *httptest.Server
@@ -115,10 +116,10 @@ func TestServerRequest(t *testing.T) {
 		t.Fatalf("Not not find id %d", id)
 	}
 	if eventGeo.OriginCountry == "" {
-	//	t.Fatal("Origin Country is null")
+		//	t.Fatal("Origin Country is null")
 	}
 	if eventGeo.RemoteCountry == "" {
-	//	t.Fatal("Remote Country is null")
+		//	t.Fatal("Remote Country is null")
 	}
 }
 
@@ -149,10 +150,10 @@ func TestServerRequestWithOrigin(t *testing.T) {
 	}
 
 	if eventGeo.OriginCountry != "ZX" {
-	//	t.Fatalf("Origin Country is not ZX (%s)", eventGeo.OriginCountry)
+		//	t.Fatalf("Origin Country is not ZX (%s)", eventGeo.OriginCountry)
 	}
 
 	if eventGeo.RemoteCountry == "" {
-	//	t.Fatal("Remote Country is null")
+		//	t.Fatal("Remote Country is null")
 	}
 }

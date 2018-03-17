@@ -17,15 +17,16 @@ package service
 import (
 	"database/sql"
 	"encoding/json"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/log"
 	klog "github.com/go-kit/kit/log"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
-	"os"
-	"strings"
-	"testing"
-	"time"
 )
 
 var localGeo = make(map[string]string)
@@ -56,7 +57,7 @@ var testEventClient = &EventClient{}
 var testResolveClient = &ResolveClient{}
 
 func init() {
-	dsn := os.Getenv("PASSWDPOT_TESTDSN")
+	dsn := os.Getenv("PASSWDPOT_DSN")
 	var db *sql.DB
 	if dsn == "" {
 		db, _ = loadDSN(test_dsn)
