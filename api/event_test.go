@@ -15,12 +15,13 @@
 package api
 
 import (
-	"github.com/Sirupsen/logrus"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/Sirupsen/logrus"
 )
 
 var requestBody = `{"id": 1, "time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "192.168.1.1", "remotePort": 63185, "remoteName": "badguy.bad.com", "remoteVersion": "SSH-2.0-JSCH-0.1.51" , "originAddr" : "10.0.0.1", "application": "OpenSSH" , "protocol": "ssh" }`

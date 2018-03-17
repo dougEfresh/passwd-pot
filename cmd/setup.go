@@ -16,25 +16,17 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/dougEfresh/kitz"
-	"github.com/dougEfresh/passwd-pot/log"
-	klog "github.com/go-kit/kit/log"
-	"github.com/newrelic/go-agent"
-	"github.com/spf13/cobra"
 	"log/syslog"
 	"net/http"
 	"os"
+
+	"github.com/dougEfresh/kitz"
+	"github.com/dougEfresh/passwd-pot/log"
+	klog "github.com/go-kit/kit/log"
+	"github.com/spf13/cobra"
 )
 
 func setup(cmd *cobra.Command, args []string) {
-	var err error
-	if config.NewRelic != "" {
-		config := newrelic.NewConfig("passwd-pot", config.NewRelic)
-		if app, err = newrelic.NewApplication(config); err != nil {
-			logger.Errorf("Could not start new relic %s", err)
-		}
-		logger.Infof("Configured new relic agent")
-	}
 	if config.Pprof != "" {
 		go func() { logger.Error(http.ListenAndServe(config.Pprof, nil)) }()
 	}

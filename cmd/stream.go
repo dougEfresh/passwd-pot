@@ -23,14 +23,17 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"os"
+	"strings"
+
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/service"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
-	"net/http"
-	"os"
-	"strings"
 )
+
+var eventClient api.Transporter
 
 // streamCmd represents the stream command
 const (
