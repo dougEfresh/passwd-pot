@@ -25,7 +25,10 @@ var body = `{"originAddr": "127.0.0.1", "time": 1148797330161, "user": "admin", 
 
 func TestHandler(t *testing.T) {
 	var e api.Event
-	json.Unmarshal([]byte(body), e)
+	err := json.Unmarshal([]byte(body), &e)
+	if err != nil {
+		t.Fatalf("%s", err)
+	}
 	resp, err := Handle(e)
 	if err != nil {
 		t.Fatalf("%s", err)
