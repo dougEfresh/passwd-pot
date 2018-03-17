@@ -15,7 +15,7 @@ $dockerRun --region $REGION  s3 cp /tmp/aws/passwdpot.zip s3://$bucket/$f
 v=`$dockerRun --region $REGION lambda update-function-code --publish --function-name passwdpot-create-event --s3-bucket $bucket --query Version  --s3-key $f`
 awsversion=`echo $v | tr -d $'\r' |bc`
 
-aws lambda update-alias \
+$dockerRun lambda update-alias \
     --function-name passwdpot-create-event \
     --name $version \
     --function-version $awsversion \
