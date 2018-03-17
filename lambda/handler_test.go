@@ -38,10 +38,6 @@ func TestHandler(t *testing.T) {
 		t.Fatal("resp is crap")
 	}
 
-	if id, found := geoCache.Get("4.2.2.2"); !found {
-		t.Fatalf("Cannot find 4.2.2.2 ip in cache (%d)", id)
-	}
-
 	t.Logf("Response is %d", resp.ID)
 }
 

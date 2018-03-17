@@ -16,6 +16,8 @@ package log
 
 import (
 	"fmt"
+	"io"
+
 	klog "github.com/go-kit/kit/log"
 )
 
@@ -51,9 +53,21 @@ const (
 	DebugLevel
 )
 
+// Logger structure of Logger
 type Logger struct {
 	loggers []klog.Logger
 	level   Level
+}
+
+// DefaultLogger to STDOUT
+func DefaultLogger(w io.Writer) FieldLogger {
+	l := Logger{}
+	l.SetLevel(InfoLevel)
+	l.AddLogger(klog.NewJSONLogger(w))
+	l.With("app", "defaul")
+	l.With("ts", klog.DefaultTimestampUTC)
+	l.With("caller", klog.Caller(4))
+	return &l
 }
 
 func (logger Logger) Log(keyvals ...interface{}) error {
@@ -61,7 +75,7 @@ func (logger Logger) Log(keyvals ...interface{}) error {
 	return nil
 }
 
-func (logger *Logger) SetLevel(l Level) {
+func (logger Logger) SetLevel(l Level) {
 	logger.level = l
 }
 
@@ -88,7 +102,7 @@ func (logger *Logger) AddLogger(l klog.Logger) {
 	}
 }
 
-func (logger *Logger) Debugf(format string, args ...interface{}) {
+func (logger Logger) Debugf(format string, args ...interface{}) {
 	if logger.level >= DebugLevel {
 		for _, l := range logger.loggers {
 			l.Log("message", fmt.Sprintf(format, args...), "level", DebugLevel)
@@ -96,7 +110,7 @@ func (logger *Logger) Debugf(format string, args ...interface{}) {
 	}
 }
 
-func (logger *Logger) Infof(format string, args ...interface{}) {
+func (logger Logger) Infof(format string, args ...interface{}) {
 	if logger.level >= InfoLevel {
 		for _, l := range logger.loggers {
 			l.Log("message", fmt.Sprintf(format, args...), "level", InfoLevel)
@@ -104,7 +118,7 @@ func (logger *Logger) Infof(format string, args ...interface{}) {
 	}
 }
 
-func (logger *Logger) Warnf(format string, args ...interface{}) {
+func (logger Logger) Warnf(format string, args ...interface{}) {
 	if logger.level >= WarnLevel {
 		for _, l := range logger.loggers {
 			l.Log("message", fmt.Sprintf(format, args...), "level", WarnLevel)
@@ -112,13 +126,13 @@ func (logger *Logger) Warnf(format string, args ...interface{}) {
 	}
 }
 
-func (logger *Logger) Errorf(format string, args ...interface{}) {
+func (logger Logger) Errorf(format string, args ...interface{}) {
 	for _, l := range logger.loggers {
 		l.Log("message", fmt.Sprintf(format, args...), "level", ErrorLevel)
 	}
 }
 
-func (logger *Logger) Debug(msg interface{}) {
+func (logger Logger) Debug(msg ...interface{}) {
 	if logger.level >= DebugLevel {
 		for _, l := range logger.loggers {
 			l.Log("message", msg, "level", DebugLevel)
@@ -126,14 +140,14 @@ func (logger *Logger) Debug(msg interface{}) {
 	}
 }
 
-func (logger *Logger) Info(msg interface{}) {
+func (logger Logger) Info(msg ...interface{}) {
 	if logger.level >= InfoLevel {
 		for _, l := range logger.loggers {
 			l.Log("message", msg, "level", InfoLevel)
 		}
 	}
 }
-func (logger *Logger) Warn(msg interface{}) {
+func (logger Logger) Warn(msg ...interface{}) {
 	if logger.level >= WarnLevel {
 		for _, l := range logger.loggers {
 			l.Log("message", msg, "level", WarnLevel)
@@ -141,8 +155,24 @@ func (logger *Logger) Warn(msg interface{}) {
 	}
 }
 
-func (logger *Logger) Error(msg interface{}) {
+func (logger Logger) Error(msg ...interface{}) {
 	for _, l := range logger.loggers {
 		l.Log("message", msg, "level", ErrorLevel)
 	}
+}
+
+func (logger Logger) Fatal(msg ...interface{}) {
+	logger.Error(msg...)
+}
+
+func (logger Logger) Fatalf(format string, msg ...interface{}) {
+	logger.Errorf(format, msg...)
+}
+
+func (logger Logger) Panic(msg ...interface{}) {
+	logger.Error(msg...)
+}
+
+func (logger Logger) Panicf(format string, msg ...interface{}) {
+	logger.Errorf(format, msg...)
 }
