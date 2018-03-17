@@ -27,9 +27,9 @@ Parameters:
     Description: DB password
     Type: String
   PasswdPotDBOptions:
-    Description: MySql golang driver options
+    Description: golang driver options
     Type: String
-    Default: tls=skip-verify&parseTime=true&loc=UTC&timeout=100ms
+    Default: sslmod=require&connect_timeout=1
 Resources:
   PasswdPotLambdaRole:
     Type: 'AWS::IAM::Role'
@@ -65,12 +65,11 @@ Resources:
         Variables:
           PASSWDPOT_DSN: !Join 
             - ''
-            - - 'passwdpot:'
+            - - 'postgres://passwdpot:'
               - !Ref PasswdPotDBPassword
-              - '@tcp('
+              - '@'
               - !Ref PasswdPotDBHost
-              - ':3306'
-              - )/passwdpot?
+              - /passwdpot?
               - !Ref PasswdPotDBOptions
           PASSWDPOT_DEBUG: !Ref Debug
           LOGZ: !Ref LogzApi

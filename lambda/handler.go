@@ -20,6 +20,7 @@ import (
 )
 
 const defaultDsn = "postgres://postgres:@127.0.0.1/?sslmode=disable"
+
 var geoCache = cache.NewCache()
 var eventResolver service.EventResolver
 var eventClient *service.EventClient
