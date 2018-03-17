@@ -16,10 +16,10 @@ import (
 	"github.com/dougEfresh/passwd-pot/service"
 	klog "github.com/go-kit/kit/log"
 	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 )
 
-const defaultDsn = "root@tcp(127.0.0.1:3306)/passwdpot?tls=false&parseTime=true&loc=UTC&timeout=10ms"
-
+const defaultDsn = "postgres://postgres:@127.0.0.1/?sslmode=disable"
 var geoCache = cache.NewCache()
 var eventResolver service.EventResolver
 var eventClient *service.EventClient

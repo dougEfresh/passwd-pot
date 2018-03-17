@@ -49,15 +49,14 @@ func (c *mockGeoClient) GetLocationForAddr(ip string) (*Geo, error) {
 	return geo, err
 }
 
-const test_dsn = "root@tcp(127.0.0.1:3306)/passwdpot?tls=false&parseTime=true&loc=UTC&timeout=50ms"
-
-//const test_dsn string = "postgres://postgres:@%s/?sslmode=disable"
+//const test_dsn = "root@tcp(127.0.0.1:3306)/passwdpot?tls=false&parseTime=true&loc=UTC&timeout=50ms"
+const test_dsn string = "postgres://postgres:@127.0.0.1/?sslmode=disable"
 
 var testEventClient = &EventClient{}
 var testResolveClient = &ResolveClient{}
 
 func init() {
-	dsn := os.Getenv("PASSWDPOT_DSN")
+	dsn := os.Getenv("PASSWDPOT_TESTDSN")
 	var db *sql.DB
 	if dsn == "" {
 		db, _ = loadDSN(test_dsn)
@@ -227,27 +226,24 @@ func TestExpire(t *testing.T) {
 	}
 	var oldlastUpdate time.Time
 	var newerLastUpdate time.Time
-	r := testEventClient.db.QueryRow("select last_update from geo where ip = ? order by last_update DESC LIMIT 1", testEvent.RemoteAddr)
+	r := testEventClient.db.QueryRow(testEventClient.replaceParams("select last_update from geo where ip = ? LIMIT 1"), testEvent.RemoteAddr)
 	err = r.Scan(&oldlastUpdate)
 	if err != nil {
 		t.Fatalf("Error updating time %s", err)
 	}
-	_, err = testEventClient.db.Exec("UPDATE geo SET last_update = ?", time.Now().Add(time.Hour*24*-100))
+	_, err = testEventClient.db.Exec(testEventClient.replaceParams("UPDATE geo SET last_update = ?"), time.Now().Add(time.Hour*24*-100))
 	if err != nil {
 		t.Fatalf("Error updating time %s", err)
 	}
 	createEvent(&testEvent)
 	testResolveClient.ResolveEvent(testEvent)
-	//geoEvent, _ = testEventClient.GetEvent(testEvent.ID)
-
-	r = testEventClient.db.QueryRow("select last_update from geo where ip = ? order by last_update DESC LIMIT 1", testEvent.RemoteAddr)
+	r = testEventClient.db.QueryRow(testEventClient.replaceParams("select last_update from geo where ip = ? LIMIT 1"), testEvent.RemoteAddr)
 	err = r.Scan(&newerLastUpdate)
 
-	//if err != nil {
-	//	t.Fatalf("Error updating time %s", err)
-	//}
-
-	if oldlastUpdate.After(geoEvent.Time) {
+	if err != nil {
+		t.Fatalf("Error updating time %s", err)
+	}
+	if oldlastUpdate.After(newerLastUpdate) {
 		t.Fatalf("old is afer new %s > %s", oldlastUpdate, newerLastUpdate)
 	}
 }

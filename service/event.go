@@ -73,7 +73,7 @@ func (c *EventClient) RecordEvent(event api.Event) (int64, error) {
 		err    error
 		id     int64
 	)
-	if true {
+	if c.mysql {
 		result, err = c.db.Exec(`INSERT INTO event
 	(dt, username, passwd, remote_addr, remote_port, remote_name, remote_version, origin_addr, application, protocol)
         VALUES(?,?,?,?,?,?,?,?,?,?)
@@ -103,13 +103,12 @@ func (c *EventClient) RecordEvent(event api.Event) (int64, error) {
 }
 
 func (c *EventClient) GetEvent(id int64) (*api.EventGeo, error) {
-	//r := c.db.QueryRow(c.replaceParams(`SELECT
-	r := c.db.QueryRow(`SELECT
+	r := c.db.QueryRow(c.replaceParams(`SELECT
 	id, dt, username, passwd, remote_addr, remote_name, remote_version, remote_port, remote_country, remote_city,
 	origin_addr, origin_country, origin_city,
 	remote_latitude, remote_longitude,
         origin_latitude, origin_longitude
-	FROM event_geo WHERE id = ? LIMIT 1`, id)
+	FROM event_geo WHERE id = ?LIMIT 1`), id)
 	var event api.EventGeo
 	err := r.Scan(&event.ID, &event.Time, &event.User, &event.Passwd,
 		&event.RemoteAddr, &event.RemoteName, &event.RemoteVersion,
@@ -148,12 +147,10 @@ func (c *EventClient) GetCountryStats() ([]api.CountryStat, error) {
 var defaultLogger log.Logger
 
 func (c *EventClient) replaceParams(sql string) string {
-	return sql
-	/*if c.mysql {
+	if c.mysql {
 		return sql
 	}
 	return replaceParams(sql)
-	*/
 }
 
 func replaceParams(sql string) string {

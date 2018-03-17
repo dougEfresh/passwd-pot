@@ -5,10 +5,11 @@ go:
 services:
 - mysql
 - docker
+- postgresl
 before_install:
 - go get github.com/mattn/goveralls
 - go get golang.org/x/tools/cmd/cover
-- mysql -h127.0.0.1 -uroot < schema/mysql/schema_mysql.sql
+- psql -U postgres < schema/psql/schema_psql.sql
 os:
 - linux
 script:

@@ -112,7 +112,7 @@ func (c *ResolveClient) markEvent(id int64, geoID int64, remote bool) error {
 	if !remote {
 		field = "origin"
 	}
-	sql := fmt.Sprintf("UPDATE event SET %s_geo_id = ? where id = ?", field)
+	sql := c.replaceParams(fmt.Sprintf("UPDATE event SET %s_geo_id = ? where id = ?", field))
 	c.logger.Debug(sql)
 	_, err := c.db.Exec(sql, geoID, id)
 	return err
@@ -145,7 +145,7 @@ func (c *ResolveClient) ResolveEvent(event api.Event) ([]int64, error) {
 
 func insertGeo(geo *Geo, db *sql.DB, mysql bool) (int64, error) {
 	var id int64
-	if true {
+	if mysql {
 		res, err := db.Exec(`INSERT INTO geo
 	(ip, country_code, region_code, region_name, city, time_zone, latitude, longitude, metro_code, last_update)
 	VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -226,11 +226,8 @@ func (c *ResolveClient) resolveAddr(addr string) (int64, error) {
 }
 
 func (c *ResolveClient) replaceParams(sql string) string {
-	return sql
-	/*
-		if c.mysql {
-			return sql
-		}
-		return replaceParams(sql)
-	*/
+	if c.mysql {
+		return sql
+	}
+	return replaceParams(sql)
 }
