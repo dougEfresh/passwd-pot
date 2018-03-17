@@ -1,5 +1,7 @@
 #!/bin/bash -xe
-version="${1:?}"
+version=stg
+[ "$TRAVIS_BRANCH" == "master" ] && version="prod"
+[ "$TRAVIS_BRANCH" == "dev" ] && version="dev"
 f="passwdpot-${version}.zip"
 REGION=us-east-2
 bucket="passwdpot-$REGION"

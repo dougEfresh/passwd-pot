@@ -301,9 +301,9 @@ Resources:
       StageName: 'stg'
       Description: 'staging'
       RestApiId: !Ref PasswdPotRestApi
-      DeploymentId: !Ref RestApiStgDeployment
+      DeploymentId: !Ref RestApiDeployment
       Variables:
-        env: 'stg'
+        env: stg
 
   RestApiStageProd:
     Type: 'AWS::ApiGateway::Stage'
@@ -313,21 +313,14 @@ Resources:
       RestApiId: !Ref PasswdPotRestApi
       DeploymentId: !Ref RestApiDeployment
       Variables:
-        env: 'prod'
+        env: prod
 
   RestApiDeployment:
     Type: 'AWS::ApiGateway::Deployment'
     DependsOn: EventPost
     Properties:
       RestApiId: !Ref PasswdPotRestApi
-      StageName: v1
-
-  RestApiStgDeployment:
-    Type: 'AWS::ApiGateway::Deployment'
-    DependsOn: EventPost
-    Properties:
-      RestApiId: !Ref PasswdPotRestApi
-      StageName: stg
+      StageName: dev
 
 Outputs:
   LambdaArn:
