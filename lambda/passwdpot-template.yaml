@@ -256,8 +256,7 @@ Resources:
         IntegrationResponses:
           - ResponseTemplates:
               application/json: >-
-                #set($requestBody = $util.parseJson($input.path('$.body')))
-                $requestBody
+                $input.body
             StatusCode: 202
           - ResponseTemplates:
               application/json: >-

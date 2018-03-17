@@ -164,6 +164,10 @@ func Handle(e api.Event) (EventResponse, error) {
 		return EventResponse{}, APIError{events.APIGatewayProxyResponse{Body: "Bad setup", StatusCode: 500}}
 	}
 	logger.Debugf("Event %s", e)
+	if e.OriginAddr == "test-invoke-source-ip" {
+		// Stupid API gw
+		e.OriginAddr = "127.0.0.1"
+	}
 	id, err := eventClient.RecordEvent(e)
 	if err != nil {
 		logger.Errorf("error loading event %s", err)

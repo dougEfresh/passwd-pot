@@ -17,10 +17,11 @@ package service
 import (
 	"database/sql"
 	"fmt"
+	"strings"
+
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/log"
 	_ "github.com/go-sql-driver/mysql"
-	"strings"
 )
 
 type EventClient struct {
@@ -120,7 +121,6 @@ func (c *EventClient) GetEvent(id int64) (*api.EventGeo, error) {
 		c.logger.Errorf("Error getting event id %d %s", id, err)
 		return nil, err
 	}
-
 	return &event, nil
 }
 

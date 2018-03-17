@@ -165,7 +165,7 @@ func insertGeo(geo *Geo, db *sql.DB, mysql bool) (int64, error) {
 
 	defer r.Close()
 	if !r.Next() {
-		return 0, errors.New(fmt.Sprintf("Failed inserting %s", geo))
+		return 0, fmt.Errorf("Failed inserting %s", geo)
 	}
 	err = r.Scan(&id)
 	return id, err
@@ -177,7 +177,7 @@ func (c *ResolveClient) resolveAddr(addr string) (int64, error) {
 		addr = "127.0.0.1"
 	}
 	var geo = Geo{}
-	var id int64 = 0
+	var id int64
 	expire := time.Now().AddDate(0, -1, 0)
 	if c == nil {
 		return 0, errors.New("FATAL: Resolve client is null")
