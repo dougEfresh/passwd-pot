@@ -17,18 +17,21 @@ package http
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/dougEfresh/passwd-pot/api"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/log"
 )
 
 var submittedEvent *api.Event
 
 func init() {
-
+	logger = log.DefaultLogger(os.Stdout)
 }
 
 type BasicAuthTransport struct {

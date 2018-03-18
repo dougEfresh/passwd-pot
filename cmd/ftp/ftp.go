@@ -20,14 +20,15 @@ import (
 	"time"
 
 	"bufio"
+	"io"
+	"net"
+	"strconv"
+
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/cmd/listen"
 	"github.com/dougEfresh/passwd-pot/cmd/queue"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"github.com/dougEfresh/passwd-pot/log"
-	"io"
-	"net"
-	"strconv"
 )
 
 var unAuthorized []byte = []byte("530 Login authentication failed\r\n")
@@ -121,12 +122,12 @@ func readCommand(conn net.Conn) (string, []string, error) {
 	return cmd, args, nil
 }
 
-func Run(worker work.Worker, l log.Logger) {
+func Run(worker work.Worker, l log.FieldLogger) {
 	logger = l
 	p := &potHandler{
 		eventQueue: worker.EventQueue,
 	}
-	listen.Run(worker, p)
+	listen.Run(worker, p, l)
 }
 
-var logger log.Logger
+var logger log.FieldLogger

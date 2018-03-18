@@ -91,7 +91,7 @@ func SetGeoDb(db string) ResolveOptionFunc {
 	}
 }
 
-func SetLogger(l log.Logger) ResolveOptionFunc {
+func SetLogger(l log.FieldLogger) ResolveOptionFunc {
 	return func(c *ResolveClient) error {
 		c.logger = l
 		return nil

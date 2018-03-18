@@ -22,7 +22,7 @@ const defaultDsn = "postgres://postgres:@127.0.0.1/?sslmode=disable"
 
 var eventResolver resolver.EventResolver
 var eventClient *event.EventClient
-var logger log.Logger
+var logger = &log.Logger{}
 var dsn = os.Getenv("PASSWDPOT_DSN")
 var logz = os.Getenv("LOGZ")
 var setupError error

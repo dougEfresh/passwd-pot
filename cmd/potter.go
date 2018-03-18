@@ -16,6 +16,9 @@ package cmd
 
 import (
 	"fmt"
+	"net/http"
+	"sync"
+
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/cmd/ftp"
 	httppot "github.com/dougEfresh/passwd-pot/cmd/http"
@@ -24,8 +27,6 @@ import (
 	"github.com/dougEfresh/passwd-pot/cmd/queue"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"github.com/spf13/cobra"
-	"net/http"
-	"sync"
 )
 
 const (

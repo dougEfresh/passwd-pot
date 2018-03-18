@@ -15,10 +15,12 @@
 package cmd
 
 import (
-	"github.com/Sirupsen/logrus"
-	"github.com/dougEfresh/passwd-pot/api"
+	"os"
 	"testing"
 	"time"
+
+	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/log"
 )
 
 type mockEventClient struct {
@@ -40,9 +42,8 @@ func (c *mockEventClient) GetCountryStats() ([]api.CountryStat, error) {
 }
 
 func init() {
-	logrus.SetLevel(logrus.DebugLevel)
+	logger = log.DefaultLogger(os.Stdout)
 }
-
 func TestPotterClient_Send(t *testing.T) {
 	pc := &potterClient{
 		eventClient: &mockEventClient{},

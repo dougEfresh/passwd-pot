@@ -20,15 +20,16 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/dougEfresh/passwd-pot/api"
-	"github.com/dougEfresh/passwd-pot/cmd/listen"
-	"github.com/dougEfresh/passwd-pot/cmd/work"
-	"github.com/dougEfresh/passwd-pot/log"
 	"io"
 	"net"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/cmd/listen"
+	"github.com/dougEfresh/passwd-pot/cmd/work"
+	"github.com/dougEfresh/passwd-pot/log"
 )
 
 func sendEvent(worker work.Worker, user string, password string, params []byte, remoteAddrPair []string) {
@@ -231,9 +232,9 @@ func (s server) HandleConnection(conn net.Conn) {
 	cn.handleClient()
 }
 
-func Run(worker work.Worker, l log.Logger) {
+func Run(worker work.Worker, l log.FieldLogger) {
 	logger = l
-	listen.Run(worker, server{worker})
+	listen.Run(worker, server{worker}, l)
 }
 
-var logger log.Logger
+var logger log.FieldLogger

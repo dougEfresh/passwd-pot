@@ -10,4 +10,13 @@ Passwd pot is an open source application that captures user names and passwords 
 
 
 [Website](https://www.passwd-pot.io) | 
-[Documentation]|(https://golang.org
+
+
+## Getting Started 
+
+``` 
+go get github.com/dougEfresh/passwd-pot 
+go install github.com/dougEfresh/passwd-pot
+
+```
+

@@ -18,16 +18,17 @@ package pop
 
 import (
 	"bufio"
-	"github.com/dougEfresh/passwd-pot/api"
-	"github.com/dougEfresh/passwd-pot/cmd/listen"
-	"github.com/dougEfresh/passwd-pot/cmd/queue"
-	"github.com/dougEfresh/passwd-pot/cmd/work"
-	"github.com/dougEfresh/passwd-pot/log"
 	"io"
 	"net"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/cmd/listen"
+	"github.com/dougEfresh/passwd-pot/cmd/queue"
+	"github.com/dougEfresh/passwd-pot/cmd/work"
+	"github.com/dougEfresh/passwd-pot/log"
 )
 
 var helloMsg = []byte("+OK POP3 server\r\n")
@@ -112,11 +113,11 @@ func (p server) HandleConnection(conn net.Conn) {
 	}
 }
 
-func Run(worker work.Worker, l log.Logger) {
+func Run(worker work.Worker, l log.FieldLogger) {
 	logger = l
 	listen.Run(worker, server{
 		worker.EventQueue,
-	})
+	}, l)
 }
 
-var logger log.Logger
+var logger log.FieldLogger

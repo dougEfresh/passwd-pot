@@ -16,20 +16,22 @@ package pop
 
 import (
 	"bufio"
-	"github.com/dougEfresh/passwd-pot/api"
-	"github.com/dougEfresh/passwd-pot/cmd/work"
-	"github.com/dougEfresh/passwd-pot/log"
 	"net"
+	"os"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/cmd/work"
+	"github.com/dougEfresh/passwd-pot/log"
 )
 
 var submittedEvent *api.Event
 
 func init() {
-	logger = log.Logger{}
+	logger = log.DefaultLogger(os.Stdout)
 }
 
 type mockQueue struct {

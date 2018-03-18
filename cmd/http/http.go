@@ -21,12 +21,13 @@ import (
 
 	"time"
 
+	"net"
+	"strconv"
+
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/cmd/queue"
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"github.com/dougEfresh/passwd-pot/log"
-	"net"
-	"strconv"
 )
 
 var unAuthorieds []byte = []byte("401 Unauthorized\n")
@@ -98,7 +99,7 @@ func (p *potHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Run the worker
-func Run(worker work.Worker, l log.Logger) {
+func Run(worker work.Worker, l log.FieldLogger) {
 	logger = l
 	defer worker.Wg.Done()
 	if worker.Addr == "" {
@@ -119,4 +120,4 @@ func Run(worker work.Worker, l log.Logger) {
 	}
 }
 
-var logger log.Logger
+var logger log.FieldLogger

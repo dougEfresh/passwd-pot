@@ -16,6 +16,7 @@ package event
 
 import (
 	"database/sql"
+	"os"
 	"strings"
 
 	"github.com/dougEfresh/passwd-pot/potdb"
@@ -59,7 +60,7 @@ func WithDsn(dsn string) EventOptionFunc {
 	}
 }
 
-func SetEventLogger(l log.Logger) EventOptionFunc {
+func SetEventLogger(l log.FieldLogger) EventOptionFunc {
 	return func(c *EventClient) error {
 		c.logger = l
 		return nil
@@ -118,11 +119,10 @@ func (c *EventClient) GetCountryStats() ([]api.CountryStat, error) {
 	return stats[0:cnt], nil
 }
 
-var defaultLogger log.Logger
+var defaultLogger log.FieldLogger
 
 func init() {
-	defaultLogger = log.Logger{}
-	defaultLogger.SetLevel(log.InfoLevel)
+	defaultLogger = log.DefaultLogger(os.Stdout)
 }
 
 func loadDSN(dsn string) (*sql.DB, error) {

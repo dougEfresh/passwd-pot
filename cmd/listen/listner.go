@@ -15,9 +15,10 @@
 package listen
 
 import (
+	"net"
+
 	"github.com/dougEfresh/passwd-pot/cmd/work"
 	"github.com/dougEfresh/passwd-pot/log"
-	"net"
 )
 
 type Handler interface {
@@ -35,7 +36,8 @@ func AcceptConnection(listener net.Listener, listen chan<- net.Conn) {
 	}
 }
 
-func Run(worker work.Worker, h Handler) {
+func Run(worker work.Worker, h Handler, l log.FieldLogger) {
+	logger = l
 	defer worker.Wg.Done()
 	if worker.Addr == "" {
 		logger.Warnf("Not starting %s pot", worker.Name)
@@ -58,4 +60,4 @@ func Run(worker work.Worker, h Handler) {
 	}
 }
 
-var logger log.Logger
+var logger log.FieldLogger

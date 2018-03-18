@@ -38,6 +38,8 @@ func setup(cmd *cobra.Command, args []string) {
 }
 
 func setupLogger(name string) {
+	logger = &log.Logger{}
+	logger.SetLevel(log.InfoLevel)
 	h, _ := os.Hostname()
 	if config.Debug {
 		logger.SetLevel(log.DebugLevel)
@@ -67,10 +69,4 @@ func setupLogger(name string) {
 	logger.With("caller", klog.Caller(4))
 }
 
-var logger log.Logger
-
-func init() {
-	logger = log.Logger{}
-	logger.SetLevel(log.InfoLevel)
-
-}
+var logger log.FieldLogger

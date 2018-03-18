@@ -16,20 +16,22 @@ package psql
 
 import (
 	"database/sql"
-	"github.com/dougEfresh/passwd-pot/api"
-	"github.com/dougEfresh/passwd-pot/cmd/work"
-	"github.com/dougEfresh/passwd-pot/log"
-	_ "github.com/lib/pq"
+	"os"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/cmd/work"
+	"github.com/dougEfresh/passwd-pot/log"
+	_ "github.com/lib/pq"
 )
 
 var submittedEvent *api.Event
 
 func init() {
-	logger = log.Logger{}
+	logger = log.DefaultLogger(os.Stdout)
 }
 
 type mockQueue struct {
