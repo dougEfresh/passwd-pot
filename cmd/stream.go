@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"bytes"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -28,7 +27,8 @@ import (
 	"strings"
 
 	"github.com/dougEfresh/passwd-pot/api"
-	"github.com/dougEfresh/passwd-pot/service"
+	"github.com/dougEfresh/passwd-pot/event"
+	"github.com/dougEfresh/passwd-pot/potdb"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 )
@@ -55,7 +55,7 @@ var (
 	space   = []byte{' '}
 )
 
-var db *sql.DB
+var db potdb.DB
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -85,8 +85,12 @@ var streamCmd = &cobra.Command{
 		}
 
 		logger.Infof("Listing on %s", config.BindAddr)
-		db = loadDSN(config.Dsn)
-		eventClient, _ = service.NewEventClient(service.SetEventLogger(logger), service.SetEventDb(db))
+		db, err = potdb.Open(config.Dsn)
+		if err != nil {
+			logger.Errorf("Error loading DB %s", err)
+			os.Exit(1)
+		}
+		eventClient, _ = event.NewEventClient(event.SetEventLogger(logger), event.SetEventDb(db))
 		//websocket requests
 		go hub.run()
 		go randomDataHub.run()

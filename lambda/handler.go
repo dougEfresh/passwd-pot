@@ -9,10 +9,10 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/dougEfresh/kitz"
 	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/event"
 	"github.com/dougEfresh/passwd-pot/log"
 	"github.com/dougEfresh/passwd-pot/potdb"
 	"github.com/dougEfresh/passwd-pot/resolver"
-	"github.com/dougEfresh/passwd-pot/service"
 	klog "github.com/go-kit/kit/log"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
@@ -21,7 +21,7 @@ import (
 const defaultDsn = "postgres://postgres:@127.0.0.1/?sslmode=disable"
 
 var eventResolver resolver.EventResolver
-var eventClient *service.EventClient
+var eventClient *event.EventClient
 var logger log.Logger
 var dsn = os.Getenv("PASSWDPOT_DSN")
 var logz = os.Getenv("LOGZ")
@@ -65,7 +65,7 @@ func init() {
 		setupError = fmt.Errorf("resolver has bad setup %s", err)
 		return
 	}
-	eventClient, err = service.NewEventClient(service.SetEventLogger(logger), service.SetEventDb(db.Get()))
+	eventClient, err = event.NewEventClient(event.SetEventLogger(logger), event.SetEventDb(db))
 	if err != nil {
 		logger.Errorf("Error setting up eventClient %s", err)
 		setupError = fmt.Errorf("eventClient  has bad setup %s", err)
