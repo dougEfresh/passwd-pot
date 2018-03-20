@@ -2,6 +2,10 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: Passwd Pot resources
 Parameters:
+  Topic:
+    Description: "Alerts"
+    Type: String
+    Default: passwd-pot-alerts
   LogzApi:
     Description: logz.io api key
     Type: String
@@ -12,6 +16,9 @@ Parameters:
   Debug:
     Type: String
     Default: '0'
+  PasswdPotDBInstanceId:
+    Type: String
+    Default: 'i-0278ddaeaa8cdb8f3'
   ApiId:
     Description: API Gateway App Id. E.g. 1yc6td9zjj
     Type: String
@@ -319,7 +326,76 @@ Resources:
     Properties:
       RestApiId: !Ref PasswdPotRestApi
       StageName: dev
-
+  
+  CPUAlarmHigh:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: "90% for 5 minutes"
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Minimum
+      Period: 180
+      EvaluationPeriods: 2
+      Threshold: 90
+      AlarmActions:
+        - !Join
+            - '' 
+            - - 'arn:aws:sns:'
+              - !Ref 'AWS::Region'
+              - ':'
+              - !Ref 'AWS::AccountId'
+              - ':'
+              - !Ref Topic
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref PasswdPotDBInstanceId
+      ComparisonOperator: GreaterThanThreshold
+  
+  CPUCreditsLow:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: "< 200 credits"
+      MetricName: CPUCreditBalance
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 180
+      EvaluationPeriods: 2
+      Threshold: 90
+      TreatMissingData: notBreaching
+      AlarmActions: 
+        - !Join   
+          - '' 
+          - - 'arn:aws:sns:'
+            - !Ref 'AWS::Region'
+            - ':'
+            - !Ref 'AWS::AccountId'
+            - ':'
+            - !Ref Topic
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref PasswdPotDBInstanceId
+      ComparisonOperator: GreaterThanThreshold
+    
+  PasswdPotLambdaAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: "Error Count"
+      MetricName: Erros
+      Namespace: AWS/Lambda
+      Statistic: Minimum
+      Period: 180
+      EvaluationPeriods: 2
+      Threshold: .01
+      AlarmActions:
+        - !Join   
+          - '' 
+          - - 'arn:aws:sns:'
+            - !Ref 'AWS::Region'
+            - ':'
+            - !Ref 'AWS::AccountId'
+            - ':'
+            - !Ref Topic
+      ComparisonOperator: GreaterThanThreshold
 Outputs:
   LambdaArn:
     Value: !GetAtt 
