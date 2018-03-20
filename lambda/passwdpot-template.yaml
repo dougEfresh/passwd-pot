@@ -335,7 +335,7 @@ Resources:
       Namespace: AWS/EC2
       Statistic: Minimum
       Period: 180
-      EvaluationPeriods: 2
+      EvaluationPeriods: 1
       Threshold: 90
       AlarmActions:
         - !Join
@@ -359,8 +359,8 @@ Resources:
       Namespace: AWS/EC2
       Statistic: Average
       Period: 180
-      EvaluationPeriods: 2
-      Threshold: 90
+      EvaluationPeriods: 1
+      Threshold: 200
       TreatMissingData: notBreaching
       AlarmActions: 
         - !Join   
@@ -374,7 +374,7 @@ Resources:
       Dimensions:
         - Name: InstanceId
           Value: !Ref PasswdPotDBInstanceId
-      ComparisonOperator: GreaterThanThreshold
+      ComparisonOperator: LessThanThreshold
     
   PasswdPotLambdaAlarm:
     Type: 'AWS::CloudWatch::Alarm'
@@ -382,10 +382,10 @@ Resources:
       AlarmDescription: "Error Count"
       MetricName: Erros
       Namespace: AWS/Lambda
-      Statistic: Minimum
+      Statistic: Average
       Period: 180
-      EvaluationPeriods: 2
-      Threshold: .01
+      EvaluationPeriods: 1
+      Threshold: .015
       AlarmActions:
         - !Join   
           - '' 
