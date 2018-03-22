@@ -1,12 +1,12 @@
 title:
-  name: Passwdpot - A genric password honey api to store brute-force password attacks
+  name: Passwdpot - A generic password honey api to store brute-force password attacks
   description: "Passwdpot is both a server and client application to capture passwords from nodes running passwd-pot pottter app"
 user: dougEfresh
 project: passwd-pot
 installation: >-
   ```shell
 
-  $ go get -u github.com/dougEfresh/passwdpot
+  $ go get -u github.com/dougEfresh/passwdpot ; go install  github.com/dougEfresh/passwdpot
 
   ```
 quickStart:

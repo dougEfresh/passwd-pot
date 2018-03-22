@@ -37,14 +37,6 @@ func main() {
 
 Sends a password event to server
 
-## Getting Started
-
-### Get Logzio token
-1. Go to Logzio website
-2. Sign in with your Logzio account
-3. Click the top menu gear icon (Account)
-4. The Logzio token is given in the account page
-
 ## Usage
     
 TBD
