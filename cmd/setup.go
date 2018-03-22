@@ -20,10 +20,11 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/dougEfresh/kitz"
 	"github.com/dougEfresh/passwd-pot/log"
-	klog "github.com/go-kit/kit/log"
+	"github.com/dougEfresh/zapz"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func setup(cmd *cobra.Command, args []string) {
@@ -38,7 +39,7 @@ func setup(cmd *cobra.Command, args []string) {
 }
 
 func setupLogger(name string) {
-	logger = &log.Logger{}
+	logger = log.DefaultLogger(os.Stdout)
 	logger.SetLevel(log.InfoLevel)
 	h, _ := os.Hostname()
 	if config.Debug {
@@ -47,26 +48,23 @@ func setupLogger(name string) {
 	if config.Syslog != "" {
 		writer, err := syslog.Dial("tcp", config.Syslog, syslog.LOG_LOCAL0, name)
 		if err != nil {
-			logger.AddLogger(klog.NewJSONLogger(os.Stdout))
-			logger.Errorf("syslog failed %s", err)
+			en := zapcore.NewJSONEncoder(zapz.DefaultConfig)
+			c := zapcore.NewCore(en, zapcore.AddSync(writer), zap.DebugLevel)
+			logger.AddLogger(zap.New(c).With(zap.String("app", "default")))
 		} else {
-			logger.AddLogger(klog.NewJSONLogger(writer))
+			//logger.AddLogger(klog.NewJSONLogger(writer))
 		}
-	} else {
-		logger.AddLogger(klog.NewJSONLogger(os.Stdout))
 	}
 	if config.Logz != "" {
-		lz, err := kitz.New(config.Logz)
+		lz, err := zapz.New(config.Logz)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error connecting to logz %s\n", err)
 		} else {
 			logger.AddLogger(lz)
 		}
 	}
-	logger.With("app", name)
-	logger.With("host", h)
-	logger.With("ts", klog.DefaultTimestampUTC)
-	logger.With("caller", klog.Caller(4))
+	logger.With(zap.String("app", name))
+	logger.With(zap.String("host", h))
 }
 
 var logger log.FieldLogger

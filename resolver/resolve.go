@@ -18,7 +18,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"os"
 	"regexp"
 	"time"
 
@@ -26,7 +25,6 @@ import (
 	"github.com/dougEfresh/passwd-pot/potdb"
 
 	"github.com/dougEfresh/passwd-pot/api"
-	"github.com/dougEfresh/passwd-pot/log"
 	"github.com/fiorix/freegeoip"
 )
 
@@ -40,7 +38,6 @@ type EventResolver interface {
 type ResolveClient struct {
 	db        potdb.DB
 	geoClient GeoClientTransporter
-	logger    log.FieldLogger
 	useCache  bool
 }
 
@@ -57,9 +54,7 @@ func NewResolveClient(options ...ResolveOptionFunc) (*ResolveClient, error) {
 			return nil, err
 		}
 	}
-	if rc.logger == nil {
-		rc.logger = log.DefaultLogger(os.Stdout)
-	}
+
 	return rc, nil
 }
 
@@ -87,13 +82,6 @@ func SetGeoDb(db string) ResolveOptionFunc {
 		c.geoClient = &GeoClientDB{
 			db: geodb,
 		}
-		return nil
-	}
-}
-
-func SetLogger(l log.FieldLogger) ResolveOptionFunc {
-	return func(c *ResolveClient) error {
-		c.logger = l
 		return nil
 	}
 }
@@ -126,7 +114,6 @@ func (c *ResolveClient) markEvent(id int64, geoID int64, remote bool) error {
 		field = "origin"
 	}
 	sql := fmt.Sprintf("UPDATE event SET %s_geo_id = ? where id = ?", field)
-	c.logger.Debug(sql)
 	_, err := c.db.Exec(sql, geoID, id)
 	return err
 }
@@ -148,7 +135,6 @@ func (c *ResolveClient) ResolveEvent(event api.Event) ([]int64, error) {
 		}
 	}
 	if event.ID == 0 {
-		c.logger.Errorf("Got bad event: %s", event)
 		return geoIds, errors.New("bad event recv")
 	}
 	var appendedErrors []error
@@ -193,7 +179,6 @@ func insertGeo(geo *Geo, db potdb.DB) (int64, error) {
 
 func (c *ResolveClient) resolveAddr(addr string) (int64, error) {
 	if m, _ := regexp.MatchString("\\d{1,3}\\.\\d{1,3}\\.", addr); !m {
-		c.logger.Infof("%s is not an address", addr)
 		addr = "127.0.0.1"
 	}
 	var geo = Geo{}
@@ -213,7 +198,6 @@ func (c *ResolveClient) resolveAddr(addr string) (int64, error) {
 	}
 	id = geo.ID
 	if err == sql.ErrNoRows {
-		c.logger.Infof("New addr found %s", addr)
 		geo, err := c.geoClient.GetLocationForAddr(addr)
 		if err != nil {
 			return 0, err
@@ -223,19 +207,16 @@ func (c *ResolveClient) resolveAddr(addr string) (int64, error) {
 			return 0, err
 		}
 	} else if geo.LastUpdate.Before(expire) {
-		c.logger.Infof("Found expired addr %s (%s) (%s)", addr, geo.LastUpdate, expire)
 		var newGeo = &Geo{}
 		newGeo, err = c.geoClient.GetLocationForAddr(addr)
 		if err != nil {
 			return 0, err
 		}
 		if geo.equals(newGeo) {
-			c.logger.Infof("Updating last_update for id %d ", geo.ID)
 			if _, err = c.db.Exec("UPDATE geo SET last_update = now() WHERE id  = ?", geo.ID); err != nil {
 				return 0, err
 			}
 		} else {
-			c.logger.Infof("Inserting new record for id %d ", geo.ID)
 			id, err = insertGeo(newGeo, c.db)
 			if err != nil {
 				return 0, err

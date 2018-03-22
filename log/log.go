@@ -35,9 +35,11 @@ type FieldLogger interface {
 	Debug(args string)
 	Info(args string)
 	Warn(args string)
-	Error(args string)
+	Error(args interface{})
 	Fatal(args string)
 	Panic(args string)
+
+	With(f zapcore.Field) FieldLogger
 
 	AddLogger(l *zap.Logger)
 	SetLevel(level Level)
@@ -72,7 +74,7 @@ func DefaultLogger(w io.Writer) FieldLogger {
 	l := &Logger{}
 	l.SetLevel(InfoLevel)
 	en := zapcore.NewJSONEncoder(zapz.DefaultConfig)
-	c := zapcore.NewCore(en, zapcore.AddSync(w), zap.InfoLevel)
+	c := zapcore.NewCore(en, zapcore.AddSync(w), zap.DebugLevel)
 
 	l.AddLogger(zap.New(c).With(zap.String("app", "default")))
 	return l
@@ -157,9 +159,9 @@ func (logger *Logger) Warn(msg string) {
 	}
 }
 
-func (logger *Logger) Error(msg string) {
+func (logger *Logger) Error(msg interface{}) {
 	for _, l := range logger.loggers {
-		l.Error(msg)
+		l.Error(fmt.Sprintf("%s", msg))
 	}
 }
 
@@ -184,4 +186,8 @@ func (logger *Logger) Sync() error {
 		l.Sync()
 	}
 	return nil
+}
+
+func (logger *Logger) With(f zapcore.Field) FieldLogger {
+    return logger
 }

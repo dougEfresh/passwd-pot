@@ -15,19 +15,15 @@
 package event
 
 import (
-	"database/sql"
-	"os"
-	"strings"
 
 	"github.com/dougEfresh/passwd-pot/potdb"
 
 	"github.com/dougEfresh/passwd-pot/api"
-	"github.com/dougEfresh/passwd-pot/log"
+
 )
 
 type EventClient struct {
 	db     potdb.DB
-	logger log.FieldLogger
 }
 
 type EventOptionFunc func(*EventClient) error
@@ -39,30 +35,12 @@ func NewEventClient(options ...EventOptionFunc) (*EventClient, error) {
 			return nil, err
 		}
 	}
-	if ec.logger == nil {
-		ec.logger = defaultLogger
-	}
 	return ec, nil
 }
 
 func SetEventDb(db potdb.DB) EventOptionFunc {
 	return func(c *EventClient) error {
 		c.db = db
-		return nil
-	}
-}
-
-func WithDsn(dsn string) EventOptionFunc {
-	return func(c *EventClient) error {
-		var err error
-		c.db, err = potdb.Open(dsn)
-		return err
-	}
-}
-
-func SetEventLogger(l log.FieldLogger) EventOptionFunc {
-	return func(c *EventClient) error {
-		c.logger = l
 		return nil
 	}
 }
@@ -92,11 +70,8 @@ func (c *EventClient) GetEvent(id int64) (*api.EventGeo, error) {
 		&event.OriginAddr, &event.OriginCountry, &event.OriginCity,
 		&event.RemoteLatitude, &event.RemoteLongitude,
 		&event.OriginLatitude, &event.OriginLongitude)
-	if err != nil {
-		c.logger.Errorf("Error getting event id %d %s", id, err)
-		return nil, err
-	}
-	return &event, nil
+
+	return &event, err
 }
 
 func (c *EventClient) GetCountryStats() ([]api.CountryStat, error) {
@@ -117,28 +92,4 @@ func (c *EventClient) GetCountryStats() ([]api.CountryStat, error) {
 		cnt++
 	}
 	return stats[0:cnt], nil
-}
-
-var defaultLogger log.FieldLogger
-
-func init() {
-	defaultLogger = log.DefaultLogger(os.Stdout)
-}
-
-func loadDSN(dsn string) (*sql.DB, error) {
-	var db *sql.DB
-	var err error
-	if strings.Contains(dsn, "postgres") {
-		db, err = sql.Open("postgres", dsn)
-	} else {
-		db, err = sql.Open("mysql", dsn)
-	}
-	if err != nil {
-		return nil, err
-	}
-	err = db.Ping()
-	if err != nil {
-		return nil, err
-	}
-	return db, nil
 }

@@ -6,16 +6,18 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aws/aws-lambda-go/events"
+    "github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/dougEfresh/kitz"
-	"github.com/dougEfresh/passwd-pot/api"
+    "github.com/dougEfresh/lambdazap"
+    "github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/event"
-	"github.com/dougEfresh/passwd-pot/log"
 	"github.com/dougEfresh/passwd-pot/potdb"
 	"github.com/dougEfresh/passwd-pot/resolver"
+	"github.com/dougEfresh/zapz"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
+	"go.uber.org/zap"
+    "go.uber.org/zap/zapcore"
 )
 
 const defaultDsn = "postgres://postgres:@127.0.0.1/?sslmode=disable"
@@ -33,29 +35,7 @@ var header = map[string]string{
 	"Content-Type": "application/json",
 }
 
-func newLogger(ctx context.Context) log.FieldLogger {
-	var logger = &log.Logger{}
-	/*
-		kl := lambdalogcontext.Build(klog.NewJSONLogger(os.Stdout), ctx).WithBasic().Logger()
-		logger.AddLogger(kl)
-		logger.With("ts", klog.DefaultTimestampUTC)
-		logger.With("caller", klog.Caller(4))
-		if logz != "" {
-			lz, err := kitz.New(logz)
-			if err != nil {
-				logger.Errorf("Error connecting to logz %s\n", err)
-			} else {
-				logger.AddLogger(lambdalogcontext.Build(lz, ctx).WithBasic().Logger())
-			}
-		}
-		if os.Getenv("PASSWDPOT_DEBUG") == "1" {
-			logger.SetLevel(log.DebugLevel)
-		}
-	*/
-	return logger
-}
-
-var defaultLogger = log.DefaultLogger(os.Stdout)
+var logger *zap.Logger
 
 func setup() {
 	if dsn == "" {
@@ -67,7 +47,7 @@ func setup() {
 	}
 
 	if err = db.Ping(); err != nil {
-		defaultLogger.Errorf("Error loading db %s", err)
+		logger.Error(fmt.Sprintf("Error loading db %s", err))
 		setupError = err
 		return
 	}
@@ -76,16 +56,16 @@ func setup() {
 }
 
 func init() {
+    var err error
+    logger , _ = zap.NewProduction()
 	if logz != "" {
-		lz, err := kitz.New(logz)
+		logger , err  = zapz.New(logz)
 		if err != nil {
-			defaultLogger.Errorf("Error connecting to logz %s\n", err)
-		} else {
-			defaultLogger.AddLogger(lz)
+			fmt.Sprintf("Error loading logz %s", err)
 		}
 	}
-	eventClient, _ = event.NewEventClient(event.SetEventLogger(defaultLogger))
-	eventResolver, _ = resolver.NewResolveClient(resolver.SetLogger(defaultLogger), resolver.UseCache())
+	eventClient, _ = event.NewEventClient()
+	eventResolver, _ = resolver.NewResolveClient(resolver.UseCache())
 	setup()
 }
 
@@ -127,41 +107,52 @@ type EventResponse struct {
 	ID int64 `json:"id"`
 }
 
-func getLogger(ctx context.Context) log.FieldLogger {
-	return newLogger(ctx)
+var lc = lambdazap.New().WithBasic()
+
+func logThis(ctx context.Context, level zapcore.Level, msg string, args ...interface{}){
+    switch level {
+    case zap.ErrorLevel:
+        logger.Error(fmt.Sprintf(msg, args...), lc.ContextValues(ctx)...)
+    case zap.WarnLevel:
+        logger.Error(fmt.Sprintf(msg, args...), lc.ContextValues(ctx)...)
+    case zap.DebugLevel:
+        logger.Debug(fmt.Sprintf(msg, args...), lc.ContextValues(ctx)...)
+    default:
+        logger.Info(fmt.Sprintf(msg, args...), lc.ContextValues(ctx)...)
+    }
+
 }
 
 // Handle Password Event
 func Handle(ctx context.Context, e api.Event) (EventResponse, error) {
-	logger := defaultLogger
-	defer logger.Drain()
-	//resolver.SetLogger(logger)(eventResolver)
-	//event.SetEventLogger(logger)(eventClient)
 
+	defer logger.Sync()
 	if e.RemoteAddr == "" {
-		return EventResponse{}, APIError{events.APIGatewayProxyResponse{Body: fmt.Sprintf("error with event %s", e), StatusCode: 400}}
+        e := APIError{events.APIGatewayProxyResponse{Body: fmt.Sprintf("error with event %s", e), StatusCode: 400}}
+        logThis(ctx, zapcore.ErrorLevel, "error with event %s", e)
+		return EventResponse{}, e
 	}
 	if setupError != nil {
-		logger.Errorf("Setup is bad %s", setupError)
 		resp := APIError{events.APIGatewayProxyResponse{Body: fmt.Sprintf("Bad setup %s", setupError), StatusCode: 500}}
+        logThis(ctx, zapcore.ErrorLevel, "%s", resp)
 		setupError = nil
 		setup()
 		return EventResponse{}, resp
 	}
-	logger.Debugf("Event %s", e)
+	logThis(ctx, zapcore.DebugLevel,  "Event %s", e)
 	if e.OriginAddr == "test-invoke-source-ip" {
 		// Stupid API gw
 		e.OriginAddr = "127.0.0.1"
 	}
 	id, err := eventClient.RecordEvent(e)
 	if err != nil {
-		logger.Errorf("error loading event %s", err)
+        logThis(ctx, zapcore.ErrorLevel, "error loading event %s", err)
 		return EventResponse{}, APIError{events.APIGatewayProxyResponse{Body: fmt.Sprintf("error loading event %s", err), StatusCode: 500}}
 	}
 	e.ID = id
 	_, err = eventResolver.ResolveEvent(e)
 	if err != nil {
-		logger.Warnf("Error resolving %s %s", e, err)
+        logThis(ctx, zapcore.ErrorLevel, "Error resolving %s %s", e, err)
 	}
 	return EventResponse{id}, nil
 }

@@ -61,6 +61,7 @@ func TestBadSetup(t *testing.T) {
 		t.Fatal("error should NOT have occured")
 	}
 }
+
 func TestHandlerError(t *testing.T) {
 	e := api.Event{}
 	_, err := Handle(context.Background(), e)

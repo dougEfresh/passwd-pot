@@ -90,7 +90,7 @@ var streamCmd = &cobra.Command{
 			logger.Errorf("Error loading DB %s", err)
 			os.Exit(1)
 		}
-		eventClient, _ = event.NewEventClient(event.SetEventLogger(logger), event.SetEventDb(db))
+		eventClient, _ = event.NewEventClient(event.SetEventDb(db))
 		//websocket requests
 		go hub.run()
 		go randomDataHub.run()
@@ -199,7 +199,7 @@ func streamEvents(w http.ResponseWriter, r *http.Request) {
 func serveRandomWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		logger.Error(err)
+		logger.Error(fmt.Sprintf("%s", err))
 		return
 	}
 	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 512)}
@@ -212,7 +212,7 @@ func serveRandomWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		logger.Error(err)
+		logger.Error(fmt.Sprintf("%s", err))
 		return
 	}
 	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 512)}
