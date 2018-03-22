@@ -1,23 +1,21 @@
 title:
-  name: Name
-  description: "Something good"
+  name: Passwdpot - A genric password honey api to store brute-force password attacks
+  description: "Passwdpot is both a server and client application to capture passwords from nodes running passwd-pot pottter app"
 user: dougEfresh
-project: lambdazap
+project: passwd-pot
 installation: >-
   ```shell
 
-  $ go get -u github.com/dougEfresh/
+  $ go get -u github.com/dougEfresh/passwdpot
 
   ```
 quickStart:
-  code: |
-    ```go
-
-    ```
-  description: ""
+  code: ""
+  description: "Sends a password event to server"
 examples:
-  - "Example 1"
-  - "Example 2"
+  - ""
+usages:
+  - "TBD"
 tests:
   - |
     ```shell

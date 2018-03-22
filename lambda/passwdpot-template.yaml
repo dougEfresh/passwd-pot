@@ -1,4 +1,3 @@
-
 AWSTemplateFormatVersion: 2010-09-09
 Description: Passwd Pot resources
 Parameters:
@@ -360,7 +359,7 @@ Resources:
       Statistic: Average
       Period: 180
       EvaluationPeriods: 1
-      Threshold: 200
+      Threshold: 180
       TreatMissingData: notBreaching
       AlarmActions: 
         - !Join   
@@ -386,6 +385,12 @@ Resources:
       Period: 180
       EvaluationPeriods: 1
       Threshold: .015
+      TreatMissingData: notBreaching
+      Dimensions:
+        - Name: FunctionName
+          Value: passwdpot-create-event
+        - Name: Resource
+          Value: passwdpot-create-event:prod
       AlarmActions:
         - !Join   
           - '' 

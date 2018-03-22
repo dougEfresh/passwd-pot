@@ -18,7 +18,9 @@ import (
 	"fmt"
 	"io"
 
-	klog "github.com/go-kit/kit/log"
+	"github.com/dougEfresh/zapz"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // FieldLogger for passwd-pot
@@ -30,17 +32,17 @@ type FieldLogger interface {
 	Fatalf(format string, args ...interface{})
 	Panicf(format string, args ...interface{})
 
-	Debug(args ...interface{})
-	Info(args ...interface{})
-	Warn(args ...interface{})
-	Error(args ...interface{})
-	Fatal(args ...interface{})
-	Panic(args ...interface{})
+	Debug(args string)
+	Info(args string)
+	Warn(args string)
+	Error(args string)
+	Fatal(args string)
+	Panic(args string)
 
-	With(key string, value interface{})
-	AddLogger(l klog.Logger)
+	AddLogger(l *zap.Logger)
 	SetLevel(level Level)
 	GetLevel() Level
+	Sync() error
 }
 
 // Level type
@@ -61,7 +63,7 @@ const (
 
 // Logger structure of Logger
 type Logger struct {
-	loggers []klog.Logger
+	loggers []*zap.Logger
 	level   Level
 }
 
@@ -69,14 +71,14 @@ type Logger struct {
 func DefaultLogger(w io.Writer) FieldLogger {
 	l := &Logger{}
 	l.SetLevel(InfoLevel)
-	l.AddLogger(klog.NewJSONLogger(w))
-	l.With("app", "defaul")
-	l.With("ts", klog.DefaultTimestampUTC)
-	l.With("caller", klog.Caller(4))
+	en := zapcore.NewJSONEncoder(zapz.DefaultConfig)
+	c := zapcore.NewCore(en, zapcore.AddSync(w), zap.InfoLevel)
+
+	l.AddLogger(zap.New(c).With(zap.String("app", "default")))
 	return l
 }
 
-func (logger *Logger) Log(keyvals ...interface{}) error {
+func (logger *Logger) Log(keyvals string) error {
 	return nil
 }
 
@@ -88,19 +90,14 @@ func (logger *Logger) GetLevel() Level {
 	return logger.level
 }
 
-func (logger *Logger) With(key string, value interface{}) {
-	for i, _ := range logger.loggers {
-		logger.loggers[i] = klog.With(logger.loggers[i], key, value)
-	}
-}
-
 func (logger *Logger) IsDebug() bool {
 	return logger.level == DebugLevel
 }
 
-func (logger *Logger) AddLogger(l klog.Logger) {
+func (logger *Logger) AddLogger(l *zap.Logger) {
+	logger.loggers = append(logger.loggers, l)
 	if logger.loggers == nil {
-		logger.loggers = make([]klog.Logger, 1)
+		logger.loggers = make([]*zap.Logger, 1)
 		logger.loggers[0] = l
 	} else {
 		logger.loggers = append(logger.loggers, l)
@@ -110,7 +107,7 @@ func (logger *Logger) AddLogger(l klog.Logger) {
 func (logger *Logger) Debugf(format string, args ...interface{}) {
 	if logger.level >= DebugLevel {
 		for _, l := range logger.loggers {
-			l.Log("message", fmt.Sprintf(format, args...), "level", DebugLevel)
+			l.Debug(fmt.Sprintf(format, args...))
 		}
 	}
 }
@@ -118,7 +115,7 @@ func (logger *Logger) Debugf(format string, args ...interface{}) {
 func (logger *Logger) Infof(format string, args ...interface{}) {
 	if logger.level >= InfoLevel {
 		for _, l := range logger.loggers {
-			l.Log("message", fmt.Sprintf(format, args...), "level", InfoLevel)
+			l.Info(fmt.Sprintf(format, args...))
 		}
 	}
 }
@@ -126,58 +123,65 @@ func (logger *Logger) Infof(format string, args ...interface{}) {
 func (logger *Logger) Warnf(format string, args ...interface{}) {
 	if logger.level >= WarnLevel {
 		for _, l := range logger.loggers {
-			l.Log("message", fmt.Sprintf(format, args...), "level", WarnLevel)
+			l.Warn(fmt.Sprintf(format, args...))
 		}
 	}
 }
 
 func (logger *Logger) Errorf(format string, args ...interface{}) {
 	for _, l := range logger.loggers {
-		l.Log("message", fmt.Sprintf(format, args...), "level", ErrorLevel)
+		l.Error(fmt.Sprintf(format, args...))
 	}
 }
 
-func (logger *Logger) Debug(msg ...interface{}) {
+func (logger *Logger) Debug(msg string) {
 	if logger.level >= DebugLevel {
 		for _, l := range logger.loggers {
-			l.Log("message", msg, "level", DebugLevel)
+			l.Debug(msg)
 		}
 	}
 }
 
-func (logger *Logger) Info(msg ...interface{}) {
+func (logger *Logger) Info(msg string) {
 	if logger.level >= InfoLevel {
 		for _, l := range logger.loggers {
-			l.Log("message", msg, "level", InfoLevel)
+			l.Info(msg)
 		}
 	}
 }
-func (logger *Logger) Warn(msg ...interface{}) {
+func (logger *Logger) Warn(msg string) {
 	if logger.level >= WarnLevel {
 		for _, l := range logger.loggers {
-			l.Log("message", msg, "level", WarnLevel)
+			l.Warn(msg)
 		}
 	}
 }
 
-func (logger *Logger) Error(msg ...interface{}) {
+func (logger *Logger) Error(msg string) {
 	for _, l := range logger.loggers {
-		l.Log("message", msg, "level", ErrorLevel)
+		l.Error(msg)
 	}
 }
 
-func (logger *Logger) Fatal(msg ...interface{}) {
-	logger.Error(msg...)
+func (logger *Logger) Fatal(msg string) {
+	logger.Error(msg)
 }
 
 func (logger *Logger) Fatalf(format string, msg ...interface{}) {
-	logger.Errorf(format, msg...)
+	logger.Errorf(format, msg)
 }
 
-func (logger *Logger) Panic(msg ...interface{}) {
-	logger.Error(msg...)
+func (logger *Logger) Panic(msg string) {
+	logger.Error(msg)
 }
 
 func (logger *Logger) Panicf(format string, msg ...interface{}) {
 	logger.Errorf(format, msg...)
+}
+
+func (logger *Logger) Sync() error {
+	for _, l := range logger.loggers {
+		l.Sync()
+	}
+	return nil
 }

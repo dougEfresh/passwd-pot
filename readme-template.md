@@ -8,14 +8,49 @@
 {{ .installation }}
 
 ## Quick Start
+ 
+ ```go
+package main
 
+import (
+  "os"
+
+  "github.com/dougEfresh/zapz"
+    )
+
+func main() {
+  l, err := zapz.New(os.Args[1]) //logzio token required
+  if err != nil {
+    panic(err)
+  }
+
+  l.Info("tester")
+  // Logs are buffered on disk, this will flush it
+  if l.Sync() != nil {
+      panic("oops")
+  }
+}
+```
 {{ .quickStart.code}}
 
 {{ .quickStart.description }}
 
+## Getting Started
+
+### Get Logzio token
+1. Go to Logzio website
+2. Sign in with your Logzio account
+3. Click the top menu gear icon (Account)
+4. The Logzio token is given in the account page
+
 ## Usage 
 
-{{ .usage }}
+{{- range .usages }}
+    
+{{.}}
+    
+{{- end }}
+
 
 ## Examples 
 
@@ -38,8 +73,6 @@ go 1.x
     
 {{- end }}
 
-## Deployment
-
 ## Contributing
  All PRs are welcome
 
@@ -52,6 +85,8 @@ go 1.x
 This project is licensed under the Apache License - see the [LICENSE](LICENSE) file for details
 
 ## Acknowledgments
+
+  [logz java](https://github.com/logzio/logzio-java-sender)
 
 ### TODO 
 

@@ -1,5 +1,6 @@
 // Copyright © 2017 Douglas Chimento <dchimento@gmail.com>
 //
+
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -15,7 +16,9 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/dougEfresh/passwd-pot/api"
@@ -29,7 +32,7 @@ func TestHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s", err)
 	}
-	resp, err := Handle(e)
+	resp, err := Handle(context.Background(), e)
 	if err != nil {
 		t.Fatalf("%s", err)
 	}
@@ -39,11 +42,28 @@ func TestHandler(t *testing.T) {
 	}
 
 	t.Logf("Response is %d", resp.ID)
+
 }
 
+func TestBadSetup(t *testing.T) {
+	setupError = fmt.Errorf("Oh no %s", "bad bad ")
+	var e api.Event
+	err := json.Unmarshal([]byte(body), &e)
+	if err != nil {
+		t.Fatalf("%s", err)
+	}
+	_, err = Handle(context.TODO(), e)
+	if err == nil {
+		t.Fatal("error should have occured")
+	}
+	_, err = Handle(context.TODO(), e)
+	if err != nil {
+		t.Fatal("error should NOT have occured")
+	}
+}
 func TestHandlerError(t *testing.T) {
 	e := api.Event{}
-	_, err := Handle(e)
+	_, err := Handle(context.Background(), e)
 	if err == nil {
 		t.Fatal("There should be an error")
 	}

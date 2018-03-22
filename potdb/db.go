@@ -53,14 +53,11 @@ func (psql psqlDialect) RowsAffected() (int64, error) {
 // Open a new DB connection pool
 func Open(dsn string) (DB, error) {
 	db, err := loadDSN(dsn)
-	if err != nil {
-		return nil, err
-	}
-
-	return &potDB{
+	p := &potDB{
 		db:    db,
 		mysql: !strings.Contains(dsn, "postgres"),
-	}, nil
+	}
+	return p, err
 }
 
 func (p *potDB) Exec(query string, args ...interface{}) (sql.Result, error) {
