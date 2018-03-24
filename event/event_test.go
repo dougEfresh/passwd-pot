@@ -90,6 +90,25 @@ func TestRecordEvent(t *testing.T) {
 	}
 }
 
+func TestBatchInsert(t *testing.T) {
+	clearDb(testEventClient.db, t)
+	events := make([]api.Event, 1000)
+	for i := 0; i < 1000; i++ {
+		events[i] = testEvent
+	}
+	d, err := testEventClient.RecordBatch(events)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var num int64
+	r := testEventClient.db.QueryRow("select count(*) from event")
+	r.Scan(&num)
+	if num != 1000 {
+		t.Fatal("Number of rows is not 1000 ", num)
+	}
+	t.Log("Batch event took ", d.Nanoseconds()/1000000)
+}
+
 /*func TestEventClient_GetCountryStats(t *testing.T) {
 	testEventClient.db.Query("DELETE FROM country_stats")
 	testEventClient.db.Query("INSERT INTO country_stats VALUES ('US',1.0,2.0,1234)")

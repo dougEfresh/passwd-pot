@@ -86,7 +86,7 @@ Resources:
             - !Ref 'AWS::Region'
         S3Key: !Ref S3Key
       Runtime: go1.x
-      Timeout: 2
+      Timeout: 6
 
   CreateEventPostLambdaStg:
     Type: 'AWS::Lambda::Alias'
@@ -332,8 +332,8 @@ Resources:
       AlarmDescription: "90% for 5 minutes"
       MetricName: CPUUtilization
       Namespace: AWS/EC2
-      Statistic: Minimum
-      Period: 180
+      Statistic: Average
+      Period: 120
       EvaluationPeriods: 1
       Threshold: 90
       AlarmActions:
@@ -357,7 +357,7 @@ Resources:
       MetricName: CPUCreditBalance
       Namespace: AWS/EC2
       Statistic: Average
-      Period: 180
+      Period: 60
       EvaluationPeriods: 1
       Threshold: 180
       TreatMissingData: notBreaching
@@ -375,17 +375,17 @@ Resources:
           Value: !Ref PasswdPotDBInstanceId
       ComparisonOperator: LessThanThreshold
     
-  PasswdPotLambdaAlarm:
+  PasswdPotCreateErrorLambdaAlarm:
     Type: 'AWS::CloudWatch::Alarm'
     Properties:
       AlarmDescription: "Error Count"
-      MetricName: Erros
+      MetricName: Errors
       Namespace: AWS/Lambda
-      Statistic: Average
-      Period: 180
+      Statistic: Sum
+      Period: 60
       EvaluationPeriods: 1
       Threshold: .015
-      TreatMissingData: notBreaching
+      TreatMissingData: breaching
       Dimensions:
         - Name: FunctionName
           Value: passwdpot-create-event
@@ -401,6 +401,91 @@ Resources:
             - ':'
             - !Ref Topic
       ComparisonOperator: GreaterThanThreshold
+
+  PasswdPotCreateDurationAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmDescription: "Trigger an alarm if the duration is over 500ms"
+      MetricName: "Duration"
+      Namespace: "AWS/Lambda"
+      Dimensions:
+                -
+                  Name: "FunctionName"
+                  Value: passwdpot-create-event
+                -
+                  Name: "Resource"
+                  Value: passwdpot-create-event:prod
+      Statistic: "Average"
+      AlarmActions:
+        - !Join
+          - ''
+          - - 'arn:aws:sns:'
+            - !Ref 'AWS::Region'
+            - ':'
+            - !Ref 'AWS::AccountId'
+            - ':'
+            - !Ref Topic
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1000
+      ComparisonOperator: "GreaterThanThreshold"
+
+  PasswdPotCreateThrottleAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmDescription: "Trigger an alarm if a throttle is recorded"
+      MetricName: "Throttles"
+      Namespace: "AWS/Lambda"
+      Dimensions:
+        -
+          Name: "FunctionName"
+          Value: passwdpot-create-event
+        -
+          Name: "Resource"
+          Value: passwdpot-create-event:prod
+      Statistic: "Sum"
+      AlarmActions:
+        - !Join
+          - ''
+          - - 'arn:aws:sns:'
+            - !Ref 'AWS::Region'
+            - ':'
+            - !Ref 'AWS::AccountId'
+            - ':'
+            - !Ref Topic
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: "GreaterThanThreshold"
+#  PasswdPotCreateLogGroup:
+#    Type: "AWS::Logs::LogGroup"
+#    Properties:
+#      LogGroupName: /aws/lambda/passwdpot-create-event
+
+  PasswdPotCreateMaxMemoryUsed:
+    Type: "AWS::Logs::MetricFilter"
+    DependsOn: CreateEventPostLambda
+    Properties:
+      LogGroupName: /aws/lambda/passwdpot-create-event
+      FilterPattern: "[..., maxMemoryLabel=\"Used:\", maxMemory, maxMemoryUnit=MB]"
+      MetricTransformations:
+        -
+          MetricValue: "$maxMemory"
+          MetricNamespace: passwdpot-create-event
+          MetricName: "MaxMemoryUsedMB"
+
+  PasswdPotCreateMemorySize:
+    Type: "AWS::Logs::MetricFilter"
+    DependsOn: CreateEventPostLambda
+    Properties:
+      LogGroupName: /aws/lambda/passwdpot-create-event
+      FilterPattern: "[..., sizeLabel=\"Size:\", sizeMemory, sizeMemoryUnit=MB, maxLabel, memoryLabel, maxMemoryLabel=\"Used:\", maxMemory, maxMemoryUnit=MB]"
+      MetricTransformations:
+        -
+          MetricValue: "$sizeMemory"
+          MetricNamespace: passwdpot-create-event
+          MetricName: "MemorySizeMB"
+
 Outputs:
   LambdaArn:
     Value: !GetAtt 

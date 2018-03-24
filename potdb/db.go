@@ -57,6 +57,7 @@ func Open(dsn string) (DB, error) {
 		db:    db,
 		mysql: !strings.Contains(dsn, "postgres"),
 	}
+
 	return p, err
 }
 

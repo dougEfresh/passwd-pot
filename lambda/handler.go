@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"os"
 
-    "github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-    "github.com/dougEfresh/lambdazap"
-    "github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/lambdazap"
+	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/event"
 	"github.com/dougEfresh/passwd-pot/potdb"
 	"github.com/dougEfresh/passwd-pot/resolver"
@@ -17,7 +17,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
-    "go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zapcore"
 )
 
 const defaultDsn = "postgres://postgres:@127.0.0.1/?sslmode=disable"
@@ -56,10 +56,10 @@ func setup() {
 }
 
 func init() {
-    var err error
-    logger , _ = zap.NewProduction()
+	var err error
+	logger, _ = zap.NewProduction()
 	if logz != "" {
-		logger , err  = zapz.New(logz)
+		logger, err = zapz.New(logz)
 		if err != nil {
 			fmt.Sprintf("Error loading logz %s", err)
 		}
@@ -109,17 +109,17 @@ type EventResponse struct {
 
 var lc = lambdazap.New().WithBasic()
 
-func logThis(ctx context.Context, level zapcore.Level, msg string, args ...interface{}){
-    switch level {
-    case zap.ErrorLevel:
-        logger.Error(fmt.Sprintf(msg, args...), lc.ContextValues(ctx)...)
-    case zap.WarnLevel:
-        logger.Error(fmt.Sprintf(msg, args...), lc.ContextValues(ctx)...)
-    case zap.DebugLevel:
-        logger.Debug(fmt.Sprintf(msg, args...), lc.ContextValues(ctx)...)
-    default:
-        logger.Info(fmt.Sprintf(msg, args...), lc.ContextValues(ctx)...)
-    }
+func logThis(ctx context.Context, level zapcore.Level, msg string, args ...interface{}) {
+	switch level {
+	case zap.ErrorLevel:
+		logger.Error(fmt.Sprintf(msg, args...), lc.ContextValues(ctx)...)
+	case zap.WarnLevel:
+		logger.Error(fmt.Sprintf(msg, args...), lc.ContextValues(ctx)...)
+	case zap.DebugLevel:
+		logger.Debug(fmt.Sprintf(msg, args...), lc.ContextValues(ctx)...)
+	default:
+		logger.Info(fmt.Sprintf(msg, args...), lc.ContextValues(ctx)...)
+	}
 
 }
 
@@ -128,31 +128,31 @@ func Handle(ctx context.Context, e api.Event) (EventResponse, error) {
 
 	defer logger.Sync()
 	if e.RemoteAddr == "" {
-        e := APIError{events.APIGatewayProxyResponse{Body: fmt.Sprintf("error with event %s", e), StatusCode: 400}}
-        logThis(ctx, zapcore.ErrorLevel, "error with event %s", e)
+		e := APIError{events.APIGatewayProxyResponse{Body: fmt.Sprintf("error with event %s", e), StatusCode: 400}}
+		logThis(ctx, zapcore.ErrorLevel, "error with event %s", e)
 		return EventResponse{}, e
 	}
 	if setupError != nil {
 		resp := APIError{events.APIGatewayProxyResponse{Body: fmt.Sprintf("Bad setup %s", setupError), StatusCode: 500}}
-        logThis(ctx, zapcore.ErrorLevel, "%s", resp)
+		logThis(ctx, zapcore.ErrorLevel, "%s", resp)
 		setupError = nil
 		setup()
 		return EventResponse{}, resp
 	}
-	logThis(ctx, zapcore.DebugLevel,  "Event %s", e)
+	logThis(ctx, zapcore.DebugLevel, "Event %s", e)
 	if e.OriginAddr == "test-invoke-source-ip" {
 		// Stupid API gw
 		e.OriginAddr = "127.0.0.1"
 	}
 	id, err := eventClient.RecordEvent(e)
 	if err != nil {
-        logThis(ctx, zapcore.ErrorLevel, "error loading event %s", err)
+		logThis(ctx, zapcore.ErrorLevel, "error loading event %s", err)
 		return EventResponse{}, APIError{events.APIGatewayProxyResponse{Body: fmt.Sprintf("error loading event %s", err), StatusCode: 500}}
 	}
 	e.ID = id
 	_, err = eventResolver.ResolveEvent(e)
 	if err != nil {
-        logThis(ctx, zapcore.ErrorLevel, "Error resolving %s %s", e, err)
+		logThis(ctx, zapcore.ErrorLevel, "Error resolving %s %s", e, err)
 	}
 	return EventResponse{id}, nil
 }

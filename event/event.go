@@ -15,19 +15,23 @@
 package event
 
 import (
+	"time"
 
 	"github.com/dougEfresh/passwd-pot/potdb"
+	"github.com/lib/pq"
 
 	"github.com/dougEfresh/passwd-pot/api"
-
 )
 
+// EventClient struct
 type EventClient struct {
-	db     potdb.DB
+	db potdb.DB
 }
 
+// EventOptionFunc options
 type EventOptionFunc func(*EventClient) error
 
+// NewEventClient builder of new client
 func NewEventClient(options ...EventOptionFunc) (*EventClient, error) {
 	ec := &EventClient{}
 	for _, option := range options {
@@ -54,6 +58,36 @@ func (c *EventClient) RecordEvent(event api.Event) (int64, error) {
 		return result.LastInsertId()
 	}
 	return 0, err
+}
+
+func (c *EventClient) RecordBatch(events []api.Event) (time.Duration, error) {
+	d := c.db.Get()
+	a := time.Now()
+	t, err := d.Begin()
+	if err != nil {
+		return time.Now().Sub(a), err
+	}
+	stmt, err := t.Prepare(pq.CopyIn("event", "dt", "username", "passwd", "remote_addr", "remote_port", "remote_name", "remote_version", "origin_addr", "application", "protocol"))
+	if err != nil {
+		return time.Now().Sub(a), err
+	}
+
+	for _, event := range events {
+		_, err = stmt.Exec(event.Time, event.User, event.Passwd, event.RemoteAddr, event.RemotePort, event.RemoteName, event.RemoteVersion, event.OriginAddr, event.Application, event.Protocol)
+		if err != nil {
+			return time.Now().Sub(a), err
+		}
+	}
+	err = stmt.Close()
+	if err != nil {
+		return time.Now().Sub(a), err
+	}
+
+	err = t.Commit()
+	if err != nil {
+		return time.Now().Sub(a), err
+	}
+	return time.Now().Sub(a), nil
 }
 
 func (c *EventClient) GetEvent(id int64) (*api.EventGeo, error) {
