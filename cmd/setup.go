@@ -34,7 +34,7 @@ func setup(cmd *cobra.Command, args []string) {
 	if len(args) > 0 {
 		logger.Infof("Running %s with %s", cmd.Name(), args)
 	} else {
-		logger.Infof("Running %s", cmd.Name())
+		logger.Infof("Running - %s", cmd.Name())
 	}
 }
 

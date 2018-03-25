@@ -48,6 +48,9 @@ const (
 
 	// Maximum message size allowed from peer.
 	maxMessageSize = 512
+
+	eventTable    = "event"
+	eventGeoTable = "event_geo"
 )
 
 var (

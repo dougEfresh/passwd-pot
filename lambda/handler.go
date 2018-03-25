@@ -132,11 +132,11 @@ func HandleBatch(ctx context.Context, events BatchEvent) (api.BatchEventResponse
 	if events.OriginAddr == "test-invoke-source-ip" {
 		events.OriginAddr = "127.0.0.1"
 	}
-	id, err := resolveAddr(ctx, events.OriginAddr)
+	var id int64
+	gid, err := resolveAddr(ctx, events.OriginAddr)
 	if err != nil {
 		return api.BatchEventResponse{}, err
 	}
-	geoIds[events.OriginAddr] = id
 	for i := 0; i < len(events.Events); i++ {
 		e := &events.Events[i]
 		if e.RemoteAddr == "" {
@@ -150,10 +150,11 @@ func HandleBatch(ctx context.Context, events BatchEvent) (api.BatchEventResponse
 			}
 			geoIds[e.RemoteAddr] = id
 		}
-		e.OriginAddr = events.OriginAddr
+		e.RemoteGeoID = id
+		e.OriginGeoID = gid
 	}
 
-	resp, err := eventClient.RecordBatchEvents(events.Events, geoIds)
+	resp, err := eventClient.RecordBatchEvents(events.Events)
 	if err != nil {
 		return api.BatchEventResponse{}, APIError{GatewayError: awsevents.APIGatewayProxyResponse{StatusCode: 500, Headers: header, Body: fmt.Sprintf("Error with batch insert %s", err)}}
 	}

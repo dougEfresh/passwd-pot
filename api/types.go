@@ -16,8 +16,6 @@ package api
 
 import (
 	"time"
-
-	"github.com/hashicorp/consul/api"
 )
 
 // EventTime Custom Serializer
@@ -30,10 +28,12 @@ type Event struct {
 	User          string    `json:"user"`
 	Passwd        string    `json:"passwd"`
 	RemoteAddr    string    `json:"remoteAddr"`
+	RemoteGeoID   int64     `json:"remoteGeoId"`
 	RemotePort    int       `json:"remotePort"`
 	RemoteName    string    `json:"remoteName"`
 	RemoteVersion string    `json:"remoteVersion"`
 	OriginAddr    string    `json:"originAddr"`
+	OriginGeoID   int64     `json:"originGeoId"`
 	Application   string    `json:"application"`
 	Protocol      string    `json:"protocol"`
 }
@@ -77,11 +77,17 @@ type BatchEventResponse struct {
 
 // Transporter for event Client
 type Transporter interface {
+	ReadTransporter
+	RecordTransporter
+}
+
+// ReadTransporter for data
+type ReadTransporter interface {
 	GetEvent(id int64) (*EventGeo, error)
 }
 
 // RecordTransporter Methods to records password events
 type RecordTransporter interface {
 	RecordEvent(event Event) (int64, error)
-	RecordBatchEvents(events []api.Event) (BatchEventResponse, error)
+	RecordBatchEvents(events []Event) (BatchEventResponse, error)
 }

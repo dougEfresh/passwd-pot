@@ -51,8 +51,7 @@ var potConfig struct {
 }
 
 type potterClient struct {
-	eventClient  api.Transporter
-	recordClient api.RecordTransporter
+	eventClient api.Transporter
 }
 
 type dryRunClient struct {
@@ -62,7 +61,7 @@ type dryRunClient struct {
 func (p *potterClient) Send(event *api.Event) {
 	go func(e *api.Event) {
 		logger.Infof("Sending %s", e)
-		if _, err := p.recordClient.RecordEvent(*e); err != nil {
+		if _, err := p.eventClient.RecordEvent(*e); err != nil {
 			logger.Errorf("Error sending event %s %s", e, err)
 		}
 	}(event)

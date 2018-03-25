@@ -60,7 +60,7 @@ func (c *EventClient) RecordEvent(event api.Event) (int64, error) {
 	return 0, err
 }
 
-func (c *EventClient) RecordBatchEvents(events []api.Event, geo map[string]int64) (api.BatchEventResponse, error) {
+func (c *EventClient) RecordBatchEvents(events []api.Event) (api.BatchEventResponse, error) {
 	d := c.db.Get()
 	a := time.Now()
 	var rowsAffected int64
@@ -74,7 +74,7 @@ func (c *EventClient) RecordBatchEvents(events []api.Event, geo map[string]int64
 	}
 
 	for _, event := range events {
-		r, err := stmt.Exec(event.Time, event.User, event.Passwd, event.RemoteAddr, geo[event.RemoteAddr], event.RemotePort, event.RemoteName, event.RemoteVersion, event.OriginAddr, geo[event.OriginAddr], event.Application, event.Protocol)
+		r, err := stmt.Exec(event.Time, event.User, event.Passwd, event.RemoteAddr, event.RemoteGeoID, event.RemotePort, event.RemoteName, event.RemoteVersion, event.OriginAddr, event.OriginGeoID, event.Application, event.Protocol)
 
 		if err != nil {
 			return api.BatchEventResponse{}, err

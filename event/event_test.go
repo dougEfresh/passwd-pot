@@ -107,11 +107,13 @@ func TestBatchInsert(t *testing.T) {
 		geoIDs[k] = id
 	}
 	t.Log(geoIDs)
+	testEvent.RemoteGeoID = geoIDs[testEvent.RemoteAddr]
+	testEvent.OriginGeoID = geoIDs[testEvent.OriginAddr]
 	events := make([]api.Event, 1000)
 	for i := 0; i < 1000; i++ {
 		events[i] = testEvent
 	}
-	d, err := testEventClient.RecordBatch(events, geoIDs)
+	d, err := testEventClient.RecordBatchEvents(events)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,5 +123,5 @@ func TestBatchInsert(t *testing.T) {
 	if num != 1000 {
 		t.Fatal("Number of rows is not 1000 ", num)
 	}
-	t.Log("Batch event took ", d.Nanoseconds()/1000000)
+	t.Log("Batch event took ", d.Duration)
 }

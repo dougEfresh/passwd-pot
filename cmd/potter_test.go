@@ -33,6 +33,10 @@ func (c *mockEventClient) RecordEvent(event api.Event) (int64, error) {
 	return 0, nil
 }
 
+func (c *mockEventClient) RecordBatchEvents(event []api.Event) (api.BatchEventResponse, error) {
+	return api.BatchEventResponse{}, nil
+}
+
 func (c *mockEventClient) GetEvent(id int64) (*api.EventGeo, error) {
 	return &api.EventGeo{}, nil
 }
