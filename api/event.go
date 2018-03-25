@@ -16,10 +16,12 @@ package api
 
 import (
 	"bytes"
+	"compress/gzip"
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"github.com/cenkalti/backoff"
 	"io/ioutil"
 	"net/http"
@@ -27,12 +29,13 @@ import (
 	"time"
 )
 
+// EventsURL post single evente
 const EventURL = "/v1/event"
+
+// BatchEventsURL post batch events
+const BatchEventsURL = "/v1/event/batch"
 const EventCountryStatsUrl = "/v1/event/stats/country"
 const StreamURL = "/v1/event/stream"
-
-//Custom Serializer
-type EventTime time.Time
 
 // Time is in epoch ms
 func (et *EventTime) UnmarshalJSON(data []byte) (err error) {
@@ -83,9 +86,8 @@ func (e *EventClient) RecordEvent(event Event) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	var body []byte
 	err = backoff.Retry(func() error {
-		body, err = e.transport("POST", EventURL, b)
+		_, err = e.transport("POST", EventURL, b)
 		return err
 	}, backoff.NewExponentialBackOff())
 	if err != nil {
@@ -94,11 +96,58 @@ func (e *EventClient) RecordEvent(event Event) (int64, error) {
 	return 0, nil
 }
 
-//TODO
+func (e *EventClient) RecordBatchEvents(events []Event) (BatchEventResponse, error) {
+	var body []byte
+	var compressed bytes.Buffer
+
+	b, err := json.Marshal(events)
+	if err != nil {
+		return BatchEventResponse{}, err
+	}
+	gz := gzip.NewWriter(&compressed)
+
+	if _, err = gz.Write(b); err != nil {
+		return BatchEventResponse{}, err
+	}
+	if err = gz.Flush(); err != nil {
+		return BatchEventResponse{}, err
+	}
+	if err = gz.Close(); err != nil {
+		return BatchEventResponse{}, err
+	}
+
+	req, nil := http.NewRequest("POST", fmt.Sprintf("%s%s", e.server, BatchEventsURL), bytes.NewReader(compressed.Bytes()))
+	req.Header.Add("Content-Type", "application-json")
+	req.Header.Add("Content-Encoding", "gzip")
+
+	err = backoff.Retry(func() error {
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusOK {
+			body, err = ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return err
+			}
+		}
+		return fmt.Errorf("error sending batch request %d %b", resp.StatusCode, body)
+	}, backoff.NewExponentialBackOff())
+	if err != nil {
+		return BatchEventResponse{}, err
+	}
+
+	var resp BatchEventResponse
+	json.Unmarshal(body, &resp)
+	return resp, nil
+}
+
+// GetEvent TODO
 func (e *EventClient) GetEvent(id int64) (*EventGeo, error) {
 	return nil, nil
 }
 
+// GetCountryStats country stats
 func (e *EventClient) GetCountryStats() ([]CountryStat, error) {
 	var stats []CountryStat
 	resp, err := e.transport("GET", EventCountryStatsUrl, nil)
@@ -129,7 +178,7 @@ func (e *EventClient) transport(method string, endpoint string, body []byte) ([]
 	if res.StatusCode == http.StatusAccepted || res.StatusCode == http.StatusOK {
 		return b, nil
 	}
-	return nil, errors.New(fmt.Sprintf("Something when wrong http status code: %d", res.StatusCode))
+	return nil, err
 
 }
 

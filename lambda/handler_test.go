@@ -51,8 +51,8 @@ func TestHandlerBatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s", err)
 	}
-	var events = make([]api.Event, 5)
-	for i := 0; i < 5; i++ {
+	var events = make([]api.Event, 500)
+	for i := 0; i < 500; i++ {
 		events[i] = e
 	}
 	b := BatchEvent{
@@ -64,8 +64,11 @@ func TestHandlerBatch(t *testing.T) {
 		t.Fatalf("%s", err)
 	}
 
-	if resp.ID != 0 {
-		t.Fatal("resp is crap")
+	if resp.Duration == 0 {
+		t.Fatal("resp is nonsense", resp)
+	}
+	if resp.Rows == 0 {
+		t.Fatal("resp is crap", resp)
 	}
 
 	//t.Logf("Response is %d", resp.ID)

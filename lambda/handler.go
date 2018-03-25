@@ -125,7 +125,7 @@ func resolveAddr(ctx context.Context, addr string) (int64, error) {
 }
 
 // HandleBatch from GW
-func HandleBatch(ctx context.Context, events BatchEvent) (EventResponse, error) {
+func HandleBatch(ctx context.Context, events BatchEvent) (api.BatchEventResponse, error) {
 	defer logger.Sync()
 	var geoIds = make(map[string]int64)
 	// Stupid API GW
@@ -134,31 +134,31 @@ func HandleBatch(ctx context.Context, events BatchEvent) (EventResponse, error) 
 	}
 	id, err := resolveAddr(ctx, events.OriginAddr)
 	if err != nil {
-		return EventResponse{}, err
+		return api.BatchEventResponse{}, err
 	}
 	geoIds[events.OriginAddr] = id
 	for i := 0; i < len(events.Events); i++ {
 		e := &events.Events[i]
 		if e.RemoteAddr == "" {
-			return EventResponse{}, APIError{GatewayError: awsevents.APIGatewayProxyResponse{StatusCode: 500, Headers: header, Body: fmt.Sprintf("Error event %s", e)}}
+			return api.BatchEventResponse{}, APIError{GatewayError: awsevents.APIGatewayProxyResponse{StatusCode: 500, Headers: header, Body: fmt.Sprintf("Error event %s", e)}}
 		}
 		_, ok := geoIds[e.RemoteAddr]
 		if !ok {
 			id, err = resolveAddr(ctx, e.RemoteAddr)
 			if err != nil {
-				return EventResponse{}, err
+				return api.BatchEventResponse{}, err
 			}
 			geoIds[e.RemoteAddr] = id
 		}
 		e.OriginAddr = events.OriginAddr
 	}
 
-	dur, err := eventClient.RecordBatch(events.Events, geoIds)
+	resp, err := eventClient.RecordBatchEvents(events.Events, geoIds)
 	if err != nil {
-		return EventResponse{}, APIError{GatewayError: awsevents.APIGatewayProxyResponse{StatusCode: 500, Headers: header, Body: fmt.Sprintf("Error with batch insert %s", err)}}
+		return api.BatchEventResponse{}, APIError{GatewayError: awsevents.APIGatewayProxyResponse{StatusCode: 500, Headers: header, Body: fmt.Sprintf("Error with batch insert %s", err)}}
 	}
-	logThis(ctx, zapcore.InfoLevel, "batchDuration:%d", dur.Nanoseconds()/1000000)
-	return EventResponse{dur.Nanoseconds() / 1000000}, nil
+	logThis(ctx, zapcore.InfoLevel, "batchDuration:%d", resp.Duration)
+	return resp, nil
 }
 
 // Handle Password Event

@@ -60,34 +60,38 @@ func (c *EventClient) RecordEvent(event api.Event) (int64, error) {
 	return 0, err
 }
 
-func (c *EventClient) RecordBatch(events []api.Event, geo map[string]int64) (time.Duration, error) {
+func (c *EventClient) RecordBatchEvents(events []api.Event, geo map[string]int64) (api.BatchEventResponse, error) {
 	d := c.db.Get()
 	a := time.Now()
+	var rowsAffected int64
 	t, err := d.Begin()
 	if err != nil {
-		return time.Now().Sub(a), err
+		return api.BatchEventResponse{}, err
 	}
 	stmt, err := t.Prepare(pq.CopyIn("event", "dt", "username", "passwd", "remote_addr", "remote_geo_id", "remote_port", "remote_name", "remote_version", "origin_addr", "origin_geo_id", "application", "protocol"))
 	if err != nil {
-		return time.Now().Sub(a), err
+		return api.BatchEventResponse{}, err
 	}
 
 	for _, event := range events {
-		_, err = stmt.Exec(event.Time, event.User, event.Passwd, event.RemoteAddr, geo[event.RemoteAddr], event.RemotePort, event.RemoteName, event.RemoteVersion, event.OriginAddr, geo[event.OriginAddr], event.Application, event.Protocol)
+		r, err := stmt.Exec(event.Time, event.User, event.Passwd, event.RemoteAddr, geo[event.RemoteAddr], event.RemotePort, event.RemoteName, event.RemoteVersion, event.OriginAddr, geo[event.OriginAddr], event.Application, event.Protocol)
+
 		if err != nil {
-			return time.Now().Sub(a), err
+			return api.BatchEventResponse{}, err
 		}
+		rows, _ := r.RowsAffected()
+		rowsAffected += rows
 	}
 	err = stmt.Close()
 	if err != nil {
-		return time.Now().Sub(a), err
+		return api.BatchEventResponse{}, err
 	}
 
 	err = t.Commit()
 	if err != nil {
-		return time.Now().Sub(a), err
+		return api.BatchEventResponse{}, err
 	}
-	return time.Now().Sub(a), nil
+	return api.BatchEventResponse{Duration: time.Now().Sub(a) / 1000000, Rows: int64(len(events))}, nil
 }
 
 func (c *EventClient) GetEvent(id int64) (*api.EventGeo, error) {

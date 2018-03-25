@@ -51,7 +51,8 @@ var potConfig struct {
 }
 
 type potterClient struct {
-	eventClient api.Transporter
+	eventClient  api.Transporter
+	recordClient api.RecordTransporter
 }
 
 type dryRunClient struct {
@@ -61,7 +62,7 @@ type dryRunClient struct {
 func (p *potterClient) Send(event *api.Event) {
 	go func(e *api.Event) {
 		logger.Infof("Sending %s", e)
-		if _, err := p.eventClient.RecordEvent(*e); err != nil {
+		if _, err := p.recordClient.RecordEvent(*e); err != nil {
 			logger.Errorf("Error sending event %s %s", e, err)
 		}
 	}(event)
@@ -74,6 +75,11 @@ func (d *dryRunClient) Send(event *api.Event) {
 func (d *dryRunClient) RecordEvent(event api.Event) (int64, error) {
 	return 0, nil
 }
+
+func (d *dryRunClient) RecordBatchEvents(events []api.Event) (api.BatchEventResponse, error) {
+	return api.BatchEventResponse{}, nil
+}
+
 func (d *dryRunClient) GetEvent(id int64) (*api.EventGeo, error) {
 	return nil, nil
 }

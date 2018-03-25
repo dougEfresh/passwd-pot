@@ -14,7 +14,14 @@
 
 package api
 
-import "time"
+import (
+	"time"
+
+	"github.com/hashicorp/consul/api"
+)
+
+// EventTime Custom Serializer
+type EventTime time.Time
 
 //Event to record
 type Event struct {
@@ -31,7 +38,7 @@ type Event struct {
 	Protocol      string    `json:"protocol"`
 }
 
-//Event to record
+//CountryStat stats on cc
 type CountryStat struct {
 	Country   string
 	Latitude  float64
@@ -61,8 +68,20 @@ type EventGeo struct {
 	MetroCode       uint
 }
 
+// BatchEventResponse response for batch inserts
+type BatchEventResponse struct {
+	Duration time.Duration `json:"duration"`
+	Rows     int64         `json:"rows"`
+	LastID   int64         `json:"lastId"`
+}
+
+// Transporter for event Client
 type Transporter interface {
-	RecordEvent(event Event) (int64, error)
 	GetEvent(id int64) (*EventGeo, error)
-	GetCountryStats() ([]CountryStat, error)
+}
+
+// RecordTransporter Methods to records password events
+type RecordTransporter interface {
+	RecordEvent(event Event) (int64, error)
+	RecordBatchEvents(events []api.Event) (BatchEventResponse, error)
 }

@@ -456,10 +456,10 @@ Resources:
         PassthroughBehavior: NEVER
         RequestTemplates:
           application/json: >-
-            #set($requestBody = $util.parseJson($input.json('$')))
-            { "events": [#foreach($element in $requestBody)
-            {"user":"$element.user","time":$element.time,"passwd":"$element.passwd","remoteAddr":"$element.remoteAddr","remotePort":$element.remotePort,"remoteName":"$element.remoteName","remoteVersion":"$element.remoteVersion","application":"$element.application","protocol":"$element.protocol"}#if($foreach.hasNext),#end
-             #end],"originAddr":"$context.identity.sourceIp" }
+            {
+              "originAddr": "$context.identity.sourceIp",
+              "events": $input.body
+            }
       RequestModels:
         application/json: !Ref EventModel
       MethodResponses:
