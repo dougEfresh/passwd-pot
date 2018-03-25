@@ -189,5 +189,5 @@ func (logger *Logger) Sync() error {
 }
 
 func (logger *Logger) With(f zapcore.Field) FieldLogger {
-    return logger
+	return logger
 }

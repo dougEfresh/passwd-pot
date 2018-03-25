@@ -23,6 +23,7 @@ import (
 
 	"github.com/dougEfresh/passwd-pot/cache"
 	"github.com/dougEfresh/passwd-pot/potdb"
+	"go.uber.org/multierr"
 
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/fiorix/freegeoip"
@@ -31,6 +32,7 @@ import (
 // EventResolver interface
 type EventResolver interface {
 	ResolveEvent(event api.Event) ([]int64, error)
+	Resolve(addr string) (int64, error)
 	MarkRemoteEvent(id int64, geoID int64) error
 	MarkOriginEvent(id int64, geoID int64) error
 }
@@ -56,14 +58,6 @@ func NewResolveClient(options ...ResolveOptionFunc) (*ResolveClient, error) {
 	}
 
 	return rc, nil
-}
-
-func WithDsn(dsn string) ResolveOptionFunc {
-	return func(c *ResolveClient) error {
-		var err error
-		c.db, err = potdb.Open(dsn)
-		return err
-	}
 }
 
 func SetDb(db potdb.DB) ResolveOptionFunc {
@@ -100,6 +94,16 @@ func UseCache() ResolveOptionFunc {
 	}
 }
 
+func (c *ResolveClient) Resolve(addr string) (int64, error) {
+	if c.useCache {
+		id, ok := geoCache.Get(addr)
+		if ok {
+			return id, nil
+		}
+	}
+	return c.resolveAddr(addr)
+}
+
 func (c *ResolveClient) MarkOriginEvent(id int64, geoID int64) error {
 	return c.markEvent(id, geoID, false)
 }
@@ -120,6 +124,9 @@ func (c *ResolveClient) markEvent(id int64, geoID int64, remote bool) error {
 
 func (c *ResolveClient) ResolveEvent(event api.Event) ([]int64, error) {
 	var geoIds = []int64{0, 0}
+	if event.ID == 0 {
+		return geoIds, errors.New("bad event recv")
+	}
 	if c.useCache {
 		rID, _ := geoCache.Get(event.RemoteAddr)
 		oID, _ := geoCache.Get(event.OriginAddr)
@@ -134,36 +141,31 @@ func (c *ResolveClient) ResolveEvent(event api.Event) ([]int64, error) {
 			return []int64{rID, oID}, err
 		}
 	}
-	if event.ID == 0 {
-		return geoIds, errors.New("bad event recv")
-	}
-	var appendedErrors []error
+
+	var rerr error
 	var err error
 	var geoId int64
 	if geoId, err = c.resolveAddr(event.RemoteAddr); err != nil {
-		appendedErrors = append(appendedErrors, err)
+		rerr = multierr.Append(rerr, err)
 	}
 	if c.useCache && geoId > 0 {
 		geoCache.Set(event.RemoteAddr, geoId)
 	}
 	geoIds[0] = geoId
 	if err = c.MarkRemoteEvent(event.ID, geoId); err != nil {
-		appendedErrors = append(appendedErrors, err)
+		rerr = multierr.Append(rerr, err)
 	}
 	if geoId, err = c.resolveAddr(event.OriginAddr); err != nil {
-		appendedErrors = append(appendedErrors, err)
+		rerr = multierr.Append(rerr, err)
 	}
 	if c.useCache && geoId > 0 {
 		geoCache.Set(event.RemoteAddr, geoId)
 	}
 	if err = c.MarkOriginEvent(event.ID, geoId); err != nil {
-		appendedErrors = append(appendedErrors, err)
+		rerr = multierr.Append(rerr, err)
 	}
 	geoIds[1] = geoId
-	if len(appendedErrors) > 0 {
-		return geoIds, appendedErrors[0]
-	}
-	return geoIds, nil
+	return geoIds, rerr
 }
 
 func insertGeo(geo *Geo, db potdb.DB) (int64, error) {

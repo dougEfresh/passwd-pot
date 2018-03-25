@@ -51,6 +51,10 @@ func clearDb(db potdb.DB, t *testing.T) {
 }
 
 var now = time.Now()
+var geoIDs = map[string]int64{
+	"1.2.3.4":   1,
+	"127.0.0.1": 2,
+}
 var testEvent = api.Event{
 	RemoteAddr:    "1.2.3.4",
 	RemotePort:    3432,
@@ -80,6 +84,7 @@ func createEvent(event *api.Event) error {
 
 func TestRecordEvent(t *testing.T) {
 	clearDb(testEventClient.db, t)
+	defer clearDb(testEventClient.db, t)
 	err := createEvent(&testEvent)
 	if err != nil {
 		t.Fatalf("Error creting event %s", err)
@@ -92,11 +97,21 @@ func TestRecordEvent(t *testing.T) {
 
 func TestBatchInsert(t *testing.T) {
 	clearDb(testEventClient.db, t)
+	defer clearDb(testEventClient.db, t)
+	for k, _ := range geoIDs {
+		r, err := testEventClient.db.Insert("INSERT INTO geo (ip, country_code, last_update) VALUES(?, ?, ?) ", k, "US", time.Now())
+		if err != nil {
+			t.Fatal(err)
+		}
+		id, _ := r.LastInsertId()
+		geoIDs[k] = id
+	}
+	t.Log(geoIDs)
 	events := make([]api.Event, 1000)
 	for i := 0; i < 1000; i++ {
 		events[i] = testEvent
 	}
-	d, err := testEventClient.RecordBatch(events)
+	d, err := testEventClient.RecordBatch(events, geoIDs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,41 +123,3 @@ func TestBatchInsert(t *testing.T) {
 	}
 	t.Log("Batch event took ", d.Nanoseconds()/1000000)
 }
-
-/*func TestEventClient_GetCountryStats(t *testing.T) {
-	testEventClient.db.Query("DELETE FROM country_stats")
-	testEventClient.db.Query("INSERT INTO country_stats VALUES ('US',1.0,2.0,1234)")
-	testEventClient.db.Query("INSERT INTO country_stats VALUES ('CA',3.0,4.0,56789)")
-	stats, err := testEventClient.GetCountryStats()
-	if err != nil {
-		t.Fatalf("Error getting stats %s", err)
-	}
-	if len(stats) != 2 {
-		t.Fatalf("Stats != 2 (%d)", len(stats))
-	}
-	var s = stats[1]
-	if s.Country != "US" {
-		t.Fatalf("!= US '%s'", s.Country)
-	}
-	if s.Latitude != 0.0 {
-		t.Fatalf("!= 0.0")
-	}
-
-	if s.Longitude != 0.0 {
-		t.Fatalf("!= 0.0")
-	}
-
-	if s.Hits != 1234 {
-		t.Fatalf("!= 12345")
-	}
-
-	testEventClient.db.Query("INSERT INTO country_stats VALUES ('CH',5.0,6.0,56789)")
-	stats, err = testEventClient.GetCountryStats()
-	if err != nil {
-		t.Fatalf("Error getting stats %s", err)
-	}
-	if len(stats) != 3 {
-		t.Fatalf("Stats != 3 (%d)", len(stats))
-	}
-}
-*/

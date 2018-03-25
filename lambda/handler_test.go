@@ -32,7 +32,7 @@ func TestHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s", err)
 	}
-	resp, err := Handle(context.Background(), e)
+	resp, err := Handle(context.TODO(), e)
 	if err != nil {
 		t.Fatalf("%s", err)
 	}
@@ -41,7 +41,34 @@ func TestHandler(t *testing.T) {
 		t.Fatal("resp is crap")
 	}
 
-	t.Logf("Response is %d", resp.ID)
+	//t.Logf("Response is %d", resp.ID)
+
+}
+
+func TestHandlerBatch(t *testing.T) {
+	var e api.Event
+	err := json.Unmarshal([]byte(body), &e)
+	if err != nil {
+		t.Fatalf("%s", err)
+	}
+	var events = make([]api.Event, 5)
+	for i := 0; i < 5; i++ {
+		events[i] = e
+	}
+	b := BatchEvent{
+		OriginAddr: e.OriginAddr,
+		Events:     events,
+	}
+	resp, err := HandleBatch(context.TODO(), b)
+	if err != nil {
+		t.Fatalf("%s", err)
+	}
+
+	if resp.ID != 0 {
+		t.Fatal("resp is crap")
+	}
+
+	//t.Logf("Response is %d", resp.ID)
 
 }
 

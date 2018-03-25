@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
-	"github.com/aws/aws-lambda-go/events"
+	awsevents "github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/dougEfresh/lambdazap"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/dougEfresh/passwd-pot/event"
@@ -61,7 +63,7 @@ func init() {
 	if logz != "" {
 		logger, err = zapz.New(logz)
 		if err != nil {
-			fmt.Sprintf("Error loading logz %s", err)
+			fmt.Fprintf(os.Stderr, "Error loading logz %s", err)
 		}
 	}
 	eventClient, _ = event.NewEventClient()
@@ -71,7 +73,7 @@ func init() {
 
 // APIError Custom error msg
 type APIError struct {
-	GatewayError events.APIGatewayProxyResponse
+	GatewayError awsevents.APIGatewayProxyResponse
 }
 
 func (e APIError) Error() string {
@@ -86,25 +88,15 @@ func (e APIError) String() string {
 	return e.Error()
 }
 
-func sendError(e events.APIGatewayProxyResponse) events.APIGatewayProxyResponse {
-	body, err := json.Marshal(e)
-	if err != nil {
-		return events.APIGatewayProxyResponse{
-			StatusCode: 500,
-			Body:       fmt.Sprintf("%s", err),
-			Headers:    header,
-		}
-	}
-	return events.APIGatewayProxyResponse{
-		Body:       string(body),
-		StatusCode: e.StatusCode,
-		Headers:    header,
-	}
-}
-
 // EventResponse Send the ID
 type EventResponse struct {
 	ID int64 `json:"id"`
+}
+
+// BatchEvent API gw
+type BatchEvent struct {
+	OriginAddr string      `json:"originAddr"`
+	Events     []api.Event `json:"events"`
 }
 
 var lc = lambdazap.New().WithBasic()
@@ -114,7 +106,7 @@ func logThis(ctx context.Context, level zapcore.Level, msg string, args ...inter
 	case zap.ErrorLevel:
 		logger.Error(fmt.Sprintf(msg, args...), lc.ContextValues(ctx)...)
 	case zap.WarnLevel:
-		logger.Error(fmt.Sprintf(msg, args...), lc.ContextValues(ctx)...)
+		logger.Warn(fmt.Sprintf(msg, args...), lc.ContextValues(ctx)...)
 	case zap.DebugLevel:
 		logger.Debug(fmt.Sprintf(msg, args...), lc.ContextValues(ctx)...)
 	default:
@@ -123,17 +115,63 @@ func logThis(ctx context.Context, level zapcore.Level, msg string, args ...inter
 
 }
 
+func resolveAddr(ctx context.Context, addr string) (int64, error) {
+	rID, err := eventResolver.Resolve(addr)
+	if err != nil {
+		logThis(ctx, zapcore.ErrorLevel, "error resolving %s (%s)", addr, err)
+		return 0, APIError{GatewayError: awsevents.APIGatewayProxyResponse{Body: "Batch insert error", StatusCode: 500}}
+	}
+	return rID, nil
+}
+
+// HandleBatch from GW
+func HandleBatch(ctx context.Context, events BatchEvent) (EventResponse, error) {
+	defer logger.Sync()
+	var geoIds = make(map[string]int64)
+	// Stupid API GW
+	if events.OriginAddr == "test-invoke-source-ip" {
+		events.OriginAddr = "127.0.0.1"
+	}
+	id, err := resolveAddr(ctx, events.OriginAddr)
+	if err != nil {
+		return EventResponse{}, err
+	}
+	geoIds[events.OriginAddr] = id
+	for i := 0; i < len(events.Events); i++ {
+		e := &events.Events[i]
+		if e.RemoteAddr == "" {
+			return EventResponse{}, APIError{GatewayError: awsevents.APIGatewayProxyResponse{StatusCode: 500, Headers: header, Body: fmt.Sprintf("Error event %s", e)}}
+		}
+		_, ok := geoIds[e.RemoteAddr]
+		if !ok {
+			id, err = resolveAddr(ctx, e.RemoteAddr)
+			if err != nil {
+				return EventResponse{}, err
+			}
+			geoIds[e.RemoteAddr] = id
+		}
+		e.OriginAddr = events.OriginAddr
+	}
+
+	dur, err := eventClient.RecordBatch(events.Events, geoIds)
+	if err != nil {
+		return EventResponse{}, APIError{GatewayError: awsevents.APIGatewayProxyResponse{StatusCode: 500, Headers: header, Body: fmt.Sprintf("Error with batch insert %s", err)}}
+	}
+	logThis(ctx, zapcore.InfoLevel, "batchDuration:%d", dur.Nanoseconds()/1000000)
+	return EventResponse{dur.Nanoseconds() / 1000000}, nil
+}
+
 // Handle Password Event
 func Handle(ctx context.Context, e api.Event) (EventResponse, error) {
 
 	defer logger.Sync()
 	if e.RemoteAddr == "" {
-		e := APIError{events.APIGatewayProxyResponse{Body: fmt.Sprintf("error with event %s", e), StatusCode: 400}}
+		e := APIError{awsevents.APIGatewayProxyResponse{Body: fmt.Sprintf("error with event %s", e), StatusCode: 400}}
 		logThis(ctx, zapcore.ErrorLevel, "error with event %s", e)
 		return EventResponse{}, e
 	}
 	if setupError != nil {
-		resp := APIError{events.APIGatewayProxyResponse{Body: fmt.Sprintf("Bad setup %s", setupError), StatusCode: 500}}
+		resp := APIError{awsevents.APIGatewayProxyResponse{Body: fmt.Sprintf("Bad setup %s", setupError), StatusCode: 500}}
 		logThis(ctx, zapcore.ErrorLevel, "%s", resp)
 		setupError = nil
 		setup()
@@ -147,16 +185,20 @@ func Handle(ctx context.Context, e api.Event) (EventResponse, error) {
 	id, err := eventClient.RecordEvent(e)
 	if err != nil {
 		logThis(ctx, zapcore.ErrorLevel, "error loading event %s", err)
-		return EventResponse{}, APIError{events.APIGatewayProxyResponse{Body: fmt.Sprintf("error loading event %s", err), StatusCode: 500}}
+		return EventResponse{}, APIError{awsevents.APIGatewayProxyResponse{Body: fmt.Sprintf("error loading event %s", err), StatusCode: 500}}
 	}
 	e.ID = id
 	_, err = eventResolver.ResolveEvent(e)
 	if err != nil {
-		logThis(ctx, zapcore.ErrorLevel, "Error resolving %s %s", e, err)
+		logThis(ctx, zapcore.WarnLevel, "Error resolving %s %s %s", e.RemoteAddr, e.OriginAddr, err)
 	}
 	return EventResponse{id}, nil
 }
 
 func main() {
-	lambda.Start(Handle)
+	if strings.Contains(lambdacontext.FunctionName, "batch") {
+		lambda.Start(HandleBatch)
+	} else {
+		lambda.Start(Handle)
+	}
 }

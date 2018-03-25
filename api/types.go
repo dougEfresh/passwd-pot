@@ -19,16 +19,16 @@ import "time"
 //Event to record
 type Event struct {
 	ID            int64
-	Time          EventTime
-	User          string
-	Passwd        string
-	RemoteAddr    string
-	RemotePort    int
-	RemoteName    string
-	RemoteVersion string
-	OriginAddr    string
-	Application   string
-	Protocol      string
+	Time          EventTime `json:"time"`
+	User          string    `json:"user"`
+	Passwd        string    `json:"passwd"`
+	RemoteAddr    string    `json:"remoteAddr"`
+	RemotePort    int       `json:"remotePort"`
+	RemoteName    string    `json:"remoteName"`
+	RemoteVersion string    `json:"remoteVersion"`
+	OriginAddr    string    `json:"originAddr"`
+	Application   string    `json:"application"`
+	Protocol      string    `json:"protocol"`
 }
 
 //Event to record

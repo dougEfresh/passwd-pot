@@ -21,6 +21,17 @@ $dockerRun lambda update-alias \
     --function-version $awsversion \
     --region $REGION
 
+v=`$dockerRun --region $REGION lambda update-function-code --publish --function-name passwdpot-create-batch-events --s3-bucket $bucket --query Version  --s3-key $f`
+awsversion=`echo $v | tr -d $'\r' |bc`
+
+$dockerRun lambda update-alias \
+    --function-name passwdpot-create-batch-events \
+    --name $version \
+    --function-version $awsversion \
+    --region $REGION
+
 $dockerRun --region $REGION lambda invoke /dev/stdout  --function-name passwdpot-create-event --qualifier $version --invocation-type RequestResponse  \
-    --payload '{ "originAddr": "203.116.142.113", "time": 2, "user": "admin", "passwd": "12345678", "remoteAddr": "158.69.243.135", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51", "application": "OpenSSH", "protocol": "ssh"}'
+    --payload '{ "originAddr": "203.116.142.113", "time": 2, "user": "admin", "passwd": "12345678", "remoteAddr": "158.69.243.135", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51", "application": "OpenSSH", "protocol": "ssh"}' && \
+$dockerRun --region $REGION lambda invoke /dev/stdout  --function-name passwdpot-create-batch-events --qualifier $version --invocation-type RequestResponse  \
+    --payload '{ "originAddr": "203.116.142.113", "events":[{ "time": 20000000, "user": "admin", "passwd": "12345678", "remoteAddr": "158.69.243.135", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51", "application": "OpenSSH", "protocol": "ssh"}]}'
 
