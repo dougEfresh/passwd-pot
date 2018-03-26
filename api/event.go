@@ -99,7 +99,7 @@ func (e *EventClient) RecordEvent(event Event) (int64, error) {
 func (e *EventClient) RecordBatchEvents(events []Event) (BatchEventResponse, error) {
 	var body []byte
 	var compressed bytes.Buffer
-
+	var err error
 	b, err := json.Marshal(events)
 	if err != nil {
 		return BatchEventResponse{}, err
@@ -132,7 +132,7 @@ func (e *EventClient) RecordBatchEvents(events []Event) (BatchEventResponse, err
 			}
 		}
 		return fmt.Errorf("error sending batch request %d %b", resp.StatusCode, body)
-	}, backoff.NewExponentialBackOff())
+	}, backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Minute), 5))
 	if err != nil {
 		return BatchEventResponse{}, err
 	}

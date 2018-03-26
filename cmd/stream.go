@@ -16,26 +16,12 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-
-	"time"
-
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"os"
-	"strings"
-
-	"github.com/dougEfresh/passwd-pot/api"
-	"github.com/dougEfresh/passwd-pot/event"
-	"github.com/dougEfresh/passwd-pot/potdb"
-	"github.com/gorilla/mux"
-	"github.com/gorilla/websocket"
 )
 
-var eventClient api.Transporter
+//var eventClient api.Transporter
 
 // streamCmd represents the stream command
+/*
 const (
 	// Time allowed to write a message to the peer.
 	writeWait = 10 * time.Second
@@ -67,12 +53,16 @@ var upgrader = websocket.Upgrader{
 		return true
 	},
 }
-
+*/
 var streamCmd = &cobra.Command{
 	Use:   "stream",
 	Short: "Stream events to websocket clients",
 	Long:  "",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run:   runCobra,
+}
+
+func runCobra(cmd *cobra.Command, args []string) {
+	/*
 		var err error
 		setupLogger(cmd.Name())
 		setup(cmd, args)
@@ -93,7 +83,7 @@ var streamCmd = &cobra.Command{
 			logger.Errorf("Error loading DB %s", err)
 			os.Exit(1)
 		}
-		eventClient, _ = event.NewEventClient(event.SetEventDb(db))
+		eventClient, _ = event.New(event.SetDB(db))
 		//websocket requests
 		go hub.run()
 		go randomDataHub.run()
@@ -104,9 +94,10 @@ var streamCmd = &cobra.Command{
 			logger.Errorf("Caught error %s", err)
 			os.Exit(-1)
 		}
-	},
+	*/
 }
 
+/*
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
 	hub *Hub
@@ -275,7 +266,7 @@ func broadcastEvent(id int64, hub *Hub) *api.EventGeo {
 	}
 	return gEvent
 }
-
+*/
 func init() {
 	RootCmd.AddCommand(streamCmd)
 	streamCmd.PersistentFlags().StringVar(&config.Dsn, "dsn", "postgres://postgres:@172.17.0.1/?sslmode=disable", "DSN database url")

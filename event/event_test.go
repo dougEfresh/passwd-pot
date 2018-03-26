@@ -25,7 +25,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-var testEventClient = &EventClient{}
+var testEventClient = &Client{}
 
 //const test_dsn = "root@tcp(127.0.0.1:3306)/passwdpot?tls=false&parseTime=true&loc=UTC&timeout=50ms"
 const testdsn string = "postgres://postgres:@127.0.0.1/?sslmode=disable"
@@ -38,7 +38,7 @@ func init() {
 	} else {
 		db, _ = potdb.Open(dsn)
 	}
-	testEventClient, _ = NewEventClient(SetEventDb(db))
+	testEventClient, _ = New(SetDB(db))
 }
 
 func clearDb(db potdb.DB, t *testing.T) {
@@ -98,7 +98,7 @@ func TestRecordEvent(t *testing.T) {
 func TestBatchInsert(t *testing.T) {
 	clearDb(testEventClient.db, t)
 	defer clearDb(testEventClient.db, t)
-	for k, _ := range geoIDs {
+	for k := range geoIDs {
 		r, err := testEventClient.db.Insert("INSERT INTO geo (ip, country_code, last_update) VALUES(?, ?, ?) ", k, "US", time.Now())
 		if err != nil {
 			t.Fatal(err)

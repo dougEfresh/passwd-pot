@@ -15,66 +15,88 @@ package cmd
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"net"
+	"net/http"
+	"os"
 	"testing"
 	"time"
+
+	"github.com/dougEfresh/passwd-pot/api"
 )
 
-type mockSender struct {
-}
-
-func (ms mockSender) Send(r []byte) error {
-	sent = r
-	return nil
-}
-
 var request []byte
-var sent []byte
 
 const (
-	requestBody       = `{"time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "1.2.3.4", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51" , "application": "OpenSSH" , "protocol": "ssh"}`
+	//requestBody       = `{"time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "1.2.3.4", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51" , "application": "OpenSSH" , "protocol": "ssh"}`
 	requestBodyOrigin = `{"time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "192.168.1.1", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-0.1.51" , "originAddr" : "10.0.0.1", "application": "OpenSSH" , "protocol": "ssh" }`
 	//test_dsn          = "root@tcp(127.0.0.1:3306)/passwdpot?tls=false&parseTime=true&loc=UTC&timeout=50ms"
-	test_dsn string = "postgres://postgres:@127.0.0.1/?sslmode=disable"
 )
 
 func init() {
 	b := new(bytes.Buffer)
-	b.WriteString("Host: localhost:8080\r\n")
-	b.WriteString("User-Agent: curl/7.50.1\r\n")
-	b.WriteString("Accept: */*\r\n")
-	b.WriteString("Content-Length: 228\r\n\r\n")
 	b.WriteString(requestBodyOrigin)
 	request = b.Bytes()
+	socketConfig.DryRun = true
 }
 
 func TestSocketRequest(t *testing.T) {
 	socketConfig.Socket = t.Name()
-	go runSocketServer(mockSender{})
+	config.Debug = true
+	defer func() {
+		os.Remove(t.Name())
+	}()
+	go run(t.Name())
 	time.Sleep(500 * time.Millisecond)
-	c, err := net.Dial("unix", t.Name())
-
+	httpc := http.Client{
+		Transport: &http.Transport{
+			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+				return net.Dial("unix", t.Name())
+			},
+		},
+	}
+	resp, err := httpc.Post("http://unix/"+t.Name(), "application/octet-stream", bytes.NewReader(request))
+	//c, err := net.Dial("unix", t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer c.Close()
-	_, err = c.Write(request)
-
-	if err != nil {
-		t.Fatal(err)
+	if resp.StatusCode != http.StatusAccepted {
+		t.Fatal("status code")
 	}
-	var resp []byte = make([]byte, 128)
-	if _, err = c.Read(resp); err != nil {
-		t.Fatal(err)
-	}
-	time.Sleep(250 * time.Millisecond)
-	if sent == nil || len(sent) == 0 {
-		t.Fatal("Relay not setn")
+	socketRelayer.Drain()
+	time.Sleep(350 * time.Millisecond)
+	if len(sockerDryRunner.events) == 0 {
+		t.Fatal("Relay not sent")
 	}
 
-	if !bytes.Equal(sent, request) {
-		t.Fatalf("Not the same %s %s", string(sent), string(request))
+	var event api.Event
+	json.Unmarshal(request, &event)
+
+	if event.User != sockerDryRunner.events[0].User {
+		t.Fatal("!=user")
 	}
+
+	if event.Protocol != sockerDryRunner.events[0].Protocol {
+		t.Fatal("!=")
+	}
+
+	if event.Passwd != sockerDryRunner.events[0].Passwd {
+		t.Fatal("!=")
+	}
+
+	if event.Application != sockerDryRunner.events[0].Application {
+		t.Fatal("!=")
+	}
+
+	if event.RemoteVersion != sockerDryRunner.events[0].RemoteVersion {
+		t.Fatal("!=")
+	}
+
+	if event.RemotePort != sockerDryRunner.events[0].RemotePort {
+		t.Fatal("!=")
+	}
+
 }
 
 /* Fails

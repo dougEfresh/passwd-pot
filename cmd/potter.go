@@ -30,16 +30,15 @@ import (
 )
 
 const (
-	defaultFtpPort    = 2121
-	defaultHttpPort   = 8080
-	defaultPopPort    = 1110
-	defaultTelnetPort = 2323
-	defaultPsqlPort   = 5432
+	defaultFtpPort  = 2121
+	defaultHTTPPort = 8080
+	defaultPopPort  = 1110
+	defaultPsqlPort = 5432
 )
 
 var potConfig struct {
 	Ftp    int
-	Http   int
+	HTTP   int
 	Telnet int
 	Pop    int
 	Psql   int
@@ -55,7 +54,6 @@ type potterClient struct {
 }
 
 type dryRunClient struct {
-	eventClient api.Transporter
 }
 
 func (p *potterClient) Send(event *api.Event) {
@@ -121,7 +119,7 @@ func runPotter() {
 
 	if potConfig.All {
 		wg.Add(1)
-		go httppot.Run(getWorker(pc, &wg, getPort(defaultHttpPort, potConfig.Http), "http"), logger)
+		go httppot.Run(getWorker(pc, &wg, getPort(defaultHTTPPort, potConfig.HTTP), "http"), logger)
 		wg.Add(1)
 		go ftp.Run(getWorker(pc, &wg, getPort(defaultFtpPort, potConfig.Ftp), "ftp"), logger)
 		wg.Add(1)
@@ -129,9 +127,9 @@ func runPotter() {
 		wg.Add(1)
 		go psql.Run(getWorker(pc, &wg, getPort(defaultPsqlPort, potConfig.Psql), "psql"), logger)
 	} else {
-		if potConfig.Http > 0 {
+		if potConfig.HTTP > 0 {
 			wg.Add(1)
-			go httppot.Run(getWorker(pc, &wg, getPort(defaultHttpPort, potConfig.Http), "http"), logger)
+			go httppot.Run(getWorker(pc, &wg, getPort(defaultHTTPPort, potConfig.HTTP), "http"), logger)
 		}
 		if potConfig.Ftp > 0 {
 			wg.Add(1)
@@ -161,7 +159,7 @@ func getPort(defaultPort int, customPort int) int {
 
 func init() {
 	RootCmd.AddCommand(potterCmd)
-	potterCmd.PersistentFlags().IntVar(&potConfig.Http, "http", 0, "create http pot")
+	potterCmd.PersistentFlags().IntVar(&potConfig.HTTP, "http", 0, "create http pot")
 	potterCmd.PersistentFlags().IntVar(&potConfig.Ftp, "ftp", 0, "create ftp pot")
 	potterCmd.PersistentFlags().IntVar(&potConfig.Psql, "psql", 0, "create ftp pot")
 	potterCmd.PersistentFlags().IntVar(&potConfig.Pop, "pop", 0, "create pop pot")

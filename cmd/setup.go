@@ -51,8 +51,6 @@ func setupLogger(name string) {
 			en := zapcore.NewJSONEncoder(zapz.DefaultConfig)
 			c := zapcore.NewCore(en, zapcore.AddSync(writer), zap.DebugLevel)
 			logger.AddLogger(zap.New(c).With(zap.String("app", "default")))
-		} else {
-			//logger.AddLogger(klog.NewJSONLogger(writer))
 		}
 	}
 	if config.Logz != "" {
@@ -63,8 +61,7 @@ func setupLogger(name string) {
 			logger.AddLogger(lz)
 		}
 	}
-	logger.With(zap.String("app", name))
-	logger.With(zap.String("host", h))
+	logger = logger.With(zap.String("app", name)).With(zap.String("host", h))
 }
 
 var logger log.FieldLogger

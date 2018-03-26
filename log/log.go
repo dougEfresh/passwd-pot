@@ -76,7 +76,7 @@ func DefaultLogger(w io.Writer) FieldLogger {
 	en := zapcore.NewJSONEncoder(zapz.DefaultConfig)
 	c := zapcore.NewCore(en, zapcore.AddSync(w), zap.DebugLevel)
 
-	l.AddLogger(zap.New(c).With(zap.String("app", "default")))
+	l.AddLogger(zap.New(c))
 	return l
 }
 
@@ -98,12 +98,6 @@ func (logger *Logger) IsDebug() bool {
 
 func (logger *Logger) AddLogger(l *zap.Logger) {
 	logger.loggers = append(logger.loggers, l)
-	if logger.loggers == nil {
-		logger.loggers = make([]*zap.Logger, 1)
-		logger.loggers[0] = l
-	} else {
-		logger.loggers = append(logger.loggers, l)
-	}
 }
 
 func (logger *Logger) Debugf(format string, args ...interface{}) {

@@ -23,17 +23,17 @@ import (
 	"github.com/dougEfresh/passwd-pot/api"
 )
 
-// EventClient struct
-type EventClient struct {
+// Client struct
+type Client struct {
 	db potdb.DB
 }
 
-// EventOptionFunc options
-type EventOptionFunc func(*EventClient) error
+// OptionFunc options
+type OptionFunc func(*Client) error
 
-// NewEventClient builder of new client
-func NewEventClient(options ...EventOptionFunc) (*EventClient, error) {
-	ec := &EventClient{}
+// New builder of new client
+func New(options ...OptionFunc) (*Client, error) {
+	ec := &Client{}
 	for _, option := range options {
 		if err := option(ec); err != nil {
 			return nil, err
@@ -42,14 +42,15 @@ func NewEventClient(options ...EventOptionFunc) (*EventClient, error) {
 	return ec, nil
 }
 
-func SetEventDb(db potdb.DB) EventOptionFunc {
-	return func(c *EventClient) error {
+// SetDB set the db
+func SetDB(db potdb.DB) OptionFunc {
+	return func(c *Client) error {
 		c.db = db
 		return nil
 	}
 }
 
-func (c *EventClient) RecordEvent(event api.Event) (int64, error) {
+func (c *Client) RecordEvent(event api.Event) (int64, error) {
 	result, err := c.db.Insert(`INSERT INTO event
 	(dt, username, passwd, remote_addr, remote_port, remote_name, remote_version, origin_addr, application, protocol)
         VALUES(?,?,?,?,?,?,?,?,?,?)
@@ -60,7 +61,7 @@ func (c *EventClient) RecordEvent(event api.Event) (int64, error) {
 	return 0, err
 }
 
-func (c *EventClient) RecordBatchEvents(events []api.Event) (api.BatchEventResponse, error) {
+func (c *Client) RecordBatchEvents(events []api.Event) (api.BatchEventResponse, error) {
 	d := c.db.Get()
 	a := time.Now()
 	var rowsAffected int64
@@ -91,10 +92,10 @@ func (c *EventClient) RecordBatchEvents(events []api.Event) (api.BatchEventRespo
 	if err != nil {
 		return api.BatchEventResponse{}, err
 	}
-	return api.BatchEventResponse{Duration: time.Now().Sub(a) / 1000000, Rows: int64(len(events))}, nil
+	return api.BatchEventResponse{Duration: time.Since(a) / time.Millisecond, Rows: int64(len(events))}, nil
 }
 
-func (c *EventClient) GetEvent(id int64) (*api.EventGeo, error) {
+func (c *Client) GetEvent(id int64) (*api.EventGeo, error) {
 	r := c.db.QueryRow(`SELECT
 	id, dt, username, passwd, remote_addr, remote_name, remote_version, remote_port, remote_country, remote_city,
 	origin_addr, origin_country, origin_city,
@@ -112,7 +113,8 @@ func (c *EventClient) GetEvent(id int64) (*api.EventGeo, error) {
 	return &event, err
 }
 
-func (c *EventClient) GetCountryStats() ([]api.CountryStat, error) {
+/*
+func (c *Client) GetCountryStats() ([]api.CountryStat, error) {
 	r, err := c.db.Query(`SELECT country_code,sum(hits) as hits FROM country_stats GROUP BY country_code ORDER BY country_code`)
 	var stats = make([]api.CountryStat, 5000)
 	var cnt = 0
@@ -131,3 +133,4 @@ func (c *EventClient) GetCountryStats() ([]api.CountryStat, error) {
 	}
 	return stats[0:cnt], nil
 }
+*/

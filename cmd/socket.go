@@ -15,134 +15,197 @@
 package cmd
 
 import (
-	"bytes"
-	"crypto/tls"
-	"github.com/cenkalti/backoff"
-	"github.com/dougEfresh/passwd-pot/cmd/listen"
-	"github.com/dougEfresh/passwd-pot/log"
+	"encoding/json"
+	"fmt"
+	"io"
+
+	"github.com/beeker1121/goque"
+	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/spf13/cobra"
+
 	"net"
 	"net/http"
 	"os"
 	"sync"
+	"time"
 )
 
-var socketResponse []byte = []byte("HTTP/1.1 202 Accepted\r\n\r\n")
-var bufferPool = sync.Pool{
-	New: func() interface{} {
-		return make([]byte, 2038)
-	},
-}
-
-type socketRelayer interface {
-	Send(r []byte) error
-}
+const (
+	maxSize = 9 * 1024 * 1024
+)
 
 type socketRelay struct {
+	q             *goque.Queue
+	drainDuration time.Duration
+	mux           sync.Mutex
+	c             api.RecordTransporter
 }
 
-func (s socketRelay) Send(r []byte) error {
-	if socketConfig.DryRun {
-		return nil
-	}
-	conn, err := tls.Dial("tcp", socketConfig.Server, &tls.Config{})
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	_, err = conn.Write(r)
-	if err != nil {
-		return err
-	}
-	resp := bufferPool.Get().([]byte)
-	defer bufferPool.Put(resp)
-	_, err = conn.Read(resp)
-	if err != nil {
-		return err
-	}
-	if logger.GetLevel() == log.DebugLevel {
-		logger.Debugf("Response %s", string(resp[:bytes.IndexByte(resp, 0)]))
-	}
-	return nil
+type socketDryRun struct {
+	events []api.Event
 }
+
+func (d *socketDryRun) RecordEvent(event api.Event) (int64, error) {
+	return 0, nil
+}
+
+func (d *socketDryRun) RecordBatchEvents(events []api.Event) (api.BatchEventResponse, error) {
+	d.events = events
+	logger.Infof("Sending %d events", len(d.events))
+	return api.BatchEventResponse{}, nil
+}
+
+var sockerDryRunner = &socketDryRun{}
+var socketRelayer = &socketRelay{}
 
 var socketConfig struct {
-	Pprof  string
-	Server string
-	Socket string
-	DryRun bool
+	Pprof    string
+	Server   string
+	Socket   string
+	DryRun   bool
+	Duration time.Duration
+}
+
+func cobrearun(cmd *cobra.Command, args []string) {
+	run(cmd.Name())
+}
+
+func run(name string) {
+	setupLogger(name)
+	if config.Pprof != "" {
+		go func() { logger.Error(http.ListenAndServe(config.Pprof, nil)) }()
+	}
+	q, err := goque.OpenQueue(fmt.Sprintf("%s%s%s%s%d", os.TempDir(), string(os.PathSeparator), name, string(os.PathSeparator), time.Now().UnixNano()))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error setting up queue %s", err)
+		os.Exit(1)
+	}
+
+	socketRelayer.q = q
+	socketRelayer.drainDuration = socketConfig.Duration
+	if socketConfig.DryRun {
+		socketRelayer.c = sockerDryRunner
+	} else {
+		c, err := api.NewClient(socketConfig.Server)
+		if err != nil {
+			logger.Errorf("error setting up client %s", err)
+			os.Exit(2)
+		}
+		socketRelayer.c = c
+	}
+	logger.Infof("Running with %s", socketConfig)
+	runSocketServer(socketRelayer)
 }
 
 var socketCmd = &cobra.Command{
 	Use:   "socket",
 	Short: "A brief description of your command",
 	Long:  "",
-	Run: func(cmd *cobra.Command, args []string) {
-		setupLogger(cmd.Name())
-		if config.Pprof != "" {
-			go func() { logger.Error(http.ListenAndServe(config.Pprof, nil)) }()
+	Run:   cobrearun,
+}
+
+func (s *socketRelay) start() {
+	for {
+		time.Sleep(s.drainDuration)
+		s.Drain()
+	}
+}
+
+// Drain - Send remaining logs
+func (s *socketRelay) Drain() {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	var (
+		err     error
+		item    *goque.Item
+		bufSize int
+		events  []api.Event
+	)
+	logger.Debugf("Draining socket buffer %d", s.q.Length())
+	events = make([]api.Event, s.q.Length())
+	var i = 0
+	for bufSize < maxSize && err == nil {
+		item, err = s.q.Dequeue()
+		if err != nil {
+			logger.Warnf("could not dequeue item  %s", err)
 		}
-		runSocketServer(socketRelay{})
-	},
+		var e api.Event
+		if item != nil {
+			// NewLine is appended tp item.Value
+			bufSize += len(item.Value)
+			if bufSize > maxSize {
+				break
+			}
+			err = json.Unmarshal(item.Value, &e)
+			if err != nil {
+				logger.Errorf("Error decoding  item %b", item.Value)
+				return
+			}
+			if len(events) < i-1 {
+				break
+			}
+			events[i] = e
+			i++
+			logger.Debugf("Adding event %s\n", e)
+		} else {
+			break
+		}
+	}
+	if i == 0 {
+		return
+	}
+	_, err = s.c.RecordBatchEvents(events[0:i])
+	if err != nil {
+		logger.Errorf("error sending batch %d %s", i, err)
+	}
+	logger.Infof("Sent %d events ", i)
 }
 
-func handleSocketRequest(c net.Conn, sr socketRelayer) {
-	defer c.Close()
-	request := bufferPool.Get().([]byte)
-	defer bufferPool.Put(request)
-	_, err := c.Read(request)
-	if err != nil {
-		logger.Errorf("Error reading %s", err)
+func (s *socketRelay) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	logger.Debugf("Got request %s %d", r.RemoteAddr, r.ContentLength)
+	var body = make([]byte, r.ContentLength)
+	n, err := r.Body.Read(body)
+
+	if n == 0 || err != nil {
+		if err != io.EOF {
+			logger.Errorf("error ready body %d %s %b ", n, err, body)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 	}
-	go sendEvent(request[:bytes.IndexByte(request, 0)], sr)
-	c.Write(socketResponse)
+	if err = r.Body.Close(); err != nil {
+		logger.Warnf("error closing body buffer %s", err)
+	}
+	if err = s.send(body); err != nil {
+		logger.Warnf("could not send event %s", err)
+	}
+	w.WriteHeader(202)
+	if _, err = w.Write([]byte("ok")); err != nil {
+		logger.Warnf("could not set status code %s", err)
+	}
 }
 
-func sendEvent(request []byte, sr socketRelayer) {
-	if logger.GetLevel() == log.DebugLevel {
-		logger.Debugf("Socket Request %s", string(request))
-	}
-	err := backoff.Retry(func() error {
-		return sr.Send(request)
-	}, backoff.NewExponentialBackOff())
-
-	if err != nil {
-		logger.Errorf("Error sending %s (%s)", string(request), err)
-	}
+func (s *socketRelay) send(payload []byte) error {
+	_, err := s.q.Enqueue(payload)
+	return err
 }
 
-func runSocketServer(sr socketRelayer) {
-
-	f, err := os.Open(socketConfig.Socket)
-	if err != nil {
-		f.Close()
-		os.Remove(socketConfig.Socket)
-	}
+func runSocketServer(sr *socketRelay) {
+	logger.Infof("Starting Socket server %s ", socketConfig.Socket)
 	l, err := net.Listen("unix", socketConfig.Socket)
 	if err != nil {
 		logger.Errorf("listen error %s", err)
 		return
 	}
-	lc := make(chan net.Conn, 100)
-	go listen.AcceptConnection(l, lc)
-	defer func() {
-		l.Close()
-		os.Remove(socketConfig.Socket)
-	}()
-	for {
-		select {
-		case conn := <-lc:
-			go handleSocketRequest(conn, sr)
-		}
-	}
+	defer sr.Drain()
+	go sr.start()
+	logger.Infof("Server ended %s", http.Serve(l, sr))
 }
 
 func init() {
 	RootCmd.AddCommand(socketCmd)
 	socketCmd.PersistentFlags().StringVar(&socketConfig.Server, "server", "http://localhost:8080", "send events to this server")
 	socketCmd.PersistentFlags().StringVar(&socketConfig.Socket, "socket", "/tmp/pot.socket", "use this socket")
+	socketCmd.PersistentFlags().DurationVar(&socketConfig.Duration, "duration", time.Minute*5, "send events every X minutes (default 5 min)")
 	socketCmd.PersistentFlags().BoolVar(&socketConfig.DryRun, "dry-run", false, "don't send events")
-	for i := 0; i < 100; i++ {
-		bufferPool.Put(make([]byte, 2048))
-	}
 }

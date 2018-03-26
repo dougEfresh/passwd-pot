@@ -51,7 +51,7 @@ func (c *mockGeoClient) GetLocationForAddr(ip string) (*Geo, error) {
 //const test_dsn = "root@tcp(127.0.0.1:3306)/passwdpot?tls=false&parseTime=true&loc=UTC&timeout=50ms"
 const testdsn string = "postgres://postgres:@127.0.0.1/?sslmode=disable"
 
-var testEventClient = &event.EventClient{}
+var testEventClient = &event.Client{}
 var testResolveClient = &ResolveClient{}
 
 func init() {
@@ -62,7 +62,7 @@ func init() {
 	} else {
 		db, _ = potdb.Open(dsn)
 	}
-	testEventClient, _ = event.NewEventClient(event.SetEventDb(db))
+	testEventClient, _ = event.New(event.SetDB(db))
 	testResolveClient, _ = NewResolveClient(SetDb(db), SetGeoClient(&mockGeoClient{}))
 }
 

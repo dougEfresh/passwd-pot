@@ -26,7 +26,7 @@ const defaultDsn = "postgres://postgres:@127.0.0.1/?sslmode=disable"
 
 var (
 	eventResolver *resolver.ResolveClient
-	eventClient   *event.EventClient
+	eventClient   *event.Client
 	dsn           = os.Getenv("PASSWDPOT_DSN")
 	logz          = os.Getenv("LOGZ")
 	setupError    error
@@ -53,7 +53,7 @@ func setup() {
 		setupError = err
 		return
 	}
-	event.SetEventDb(db)(eventClient)
+	event.SetDB(db)(eventClient)
 	resolver.SetDb(db)(eventResolver)
 }
 
@@ -66,7 +66,7 @@ func init() {
 			fmt.Fprintf(os.Stderr, "Error loading logz %s", err)
 		}
 	}
-	eventClient, _ = event.NewEventClient()
+	eventClient, _ = event.New()
 	eventResolver, _ = resolver.NewResolveClient(resolver.UseCache())
 	setup()
 }
@@ -158,7 +158,7 @@ func HandleBatch(ctx context.Context, events BatchEvent) (api.BatchEventResponse
 	if err != nil {
 		return api.BatchEventResponse{}, APIError{GatewayError: awsevents.APIGatewayProxyResponse{StatusCode: 500, Headers: header, Body: fmt.Sprintf("Error with batch insert %s", err)}}
 	}
-	logThis(ctx, zapcore.InfoLevel, "batchDuration:%d", resp.Duration)
+	logThis(ctx, zapcore.InfoLevel, "batchDuration:%d rows:%d", resp.Duration, resp.Rows)
 	return resp, nil
 }
 

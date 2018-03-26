@@ -26,15 +26,15 @@ import (
 
 var config struct {
 	BindAddr string
-	Debug    bool
 	Syslog   string
 	Dsn      string
 	Pprof    string
 	NewRelic string
-	NoCache  bool
-	Trace    bool
 	Logz     string
 	GeoDB    string
+	NoCache  bool
+	Trace    bool
+	Debug    bool
 }
 
 var cfgFile string
