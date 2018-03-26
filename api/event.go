@@ -130,6 +130,7 @@ func (e *EventClient) RecordBatchEvents(events []Event) (BatchEventResponse, err
 			if err != nil {
 				return err
 			}
+			return nil
 		}
 		return fmt.Errorf("error sending batch request %d %b", resp.StatusCode, body)
 	}, backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Minute), 5))

@@ -157,11 +157,12 @@ func (s *socketRelay) Drain() {
 	if i == 0 {
 		return
 	}
-	_, err = s.c.RecordBatchEvents(events[0:i])
-	if err != nil {
+
+	if _, err = s.c.RecordBatchEvents(events[0:i]); err != nil {
 		logger.Errorf("error sending batch %d %s", i, err)
+	} else {
+		logger.Debugf("Sent %d events ", i)
 	}
-	logger.Infof("Sent %d events ", i)
 }
 
 func (s *socketRelay) ServeHTTP(w http.ResponseWriter, r *http.Request) {
