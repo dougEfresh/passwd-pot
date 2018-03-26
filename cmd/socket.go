@@ -122,6 +122,9 @@ func (s *socketRelay) Drain() {
 		events  []api.Event
 	)
 	logger.Debugf("Draining socket buffer %d", s.q.Length())
+	if s.q.Length() == 0 {
+		return
+	}
 	events = make([]api.Event, s.q.Length())
 	var i = 0
 	for bufSize < maxSize && err == nil {

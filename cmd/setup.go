@@ -45,7 +45,7 @@ func setupLogger(name string) {
 	if config.Debug {
 		logger.SetLevel(log.DebugLevel)
 	}
-	if config.Syslog != "" {
+	if config.Syslog == "nothing" {
 		writer, err := syslog.Dial("tcp", config.Syslog, syslog.LOG_LOCAL0, name)
 		if err != nil {
 			en := zapcore.NewJSONEncoder(zapz.DefaultConfig)
