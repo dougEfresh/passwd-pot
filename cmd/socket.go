@@ -122,7 +122,7 @@ func (s *socketRelay) Drain() {
 		events  []api.Event
 	)
 	logger.Debugf("Draining socket buffer %d", s.q.Length())
-	if s.q.Length() == 0 {
+	if s.q.Length() <= 0 {
 		return
 	}
 	events = make([]api.Event, s.q.Length())
@@ -209,6 +209,6 @@ func init() {
 	RootCmd.AddCommand(socketCmd)
 	socketCmd.PersistentFlags().StringVar(&socketConfig.Server, "server", "http://localhost:8080", "send events to this server")
 	socketCmd.PersistentFlags().StringVar(&socketConfig.Socket, "socket", "/tmp/pot.socket", "use this socket")
-	socketCmd.PersistentFlags().DurationVar(&socketConfig.Duration, "duration", time.Minute*5, "send events every X minutes (default 5 min)")
+	socketCmd.PersistentFlags().DurationVar(&socketConfig.Duration, "duration", time.Minute*10, "send events every X minutes (default 5 min)")
 	socketCmd.PersistentFlags().BoolVar(&socketConfig.DryRun, "dry-run", false, "don't send events")
 }

@@ -1,4 +1,17 @@
 #!/usr/bin/env bash
+yum update -y aws-cfn-bootstrap
+yum install -y docker rsyslog
+echo 'OPTIONS="-p 2222"' > /etc/sysconfig/sshd
+systemctl restart sshd
+systemctl restart docker
+systemctl stop rpcbind
+systemctl disable rpcbind
+systemctl mask rpcbind
+systemctl stop rpcbind.socket
+systemctl disable rpcbind.socket
+echo -e 'module(load="imtcp")\ninput(type="imtcp" port="514" address="172.17.0.1")' > /etc/rsyslog.d/99_listen.conf
+systemctl daemon-reload
+systemctl restart rsyslog;
 
 image=${IMAGE:-"dougefresh/docker-passwd-pot:dev"}
 

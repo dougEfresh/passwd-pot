@@ -175,54 +175,24 @@ Resources:
               exec > >(tee /var/log/user-data.log|logger -t user-data ) 2>&1
             - |
               (
-              yum update -y aws-cfn-bootstrap
-              yum install -y docker rsyslog
-              echo 'OPTIONS="-p 2222"' > /etc/sysconfig/sshd
-              systemctl restart sshd
-              systemctl restart docker
-              systemctl stop rpcbind
-              systemctl disable rpcbind
-              systemctl mask rpcbind
-              systemctl stop rpcbind.socket
-              systemctl disable rpcbind.socket
-              echo 'module(load="imtcp")
-              input(type="imtcp" port="514" address="172.17.0.1")' >>
-              /etc/rsyslog.d/listen.conf
-              systemctl daemon-reload
-              systemctl restart rsyslog;
-
             - API_SERVER=
             - !Ref PasswdPotApiServer
-            - |+
+            - "; LOGZ="
+            - !Ref LogzKey
+            - |
 
-            - >
-              export SSHD_OPTS="-o Audit=yes -o AuditSocket=/tmp/pot.socket -o
-              MaxAuthTries=200 -o AuditUrl=http://$API_SERVER/v1/event"
-            - >-
-              export PASSWD_POT_OPTS="--all --bind 0.0.0.0  --syslog
-              172.17.0.1:514 --server https://$API_SERVER --logz 
-            - !Ref LogzKey
-            - >-
-              "
-              export PASSWD_POT_SOCKET_OPTS="--syslog 172.17.0.1:514  --socket
-              /tmp/pot.socket --server ${API_SERVER}:443 --logz 
-            - !Ref LogzKey
-            - >-
-              export IMAGE=
+              export SSHD_OPTS="-o Audit=yes -o AuditSocket=/tmp/pot.socket -o MaxAuthTries=200 -o AuditUrl=http://$API_SERVER/v1/event";
+              export PASSWD_POT_OPTS="--all --bind 0.0.0.0  --syslog 172.17.0.1:514 --server https://$API_SERVER --logz $LOGZ";
+              export PASSWD_POT_SOCKET_OPTS="--duration 30m --syslog 172.17.0.1:514  --socket /tmp/pot.socket --server https://$API_SERVER --logz $LOGZ";
+
+            - export IMAGE=
             - !Ref PasswdPotDockerImage
-            - |
-              "; curl -s  https://s3.us-east-2.amazonaws.com/docker-passwd-pot/passwdpot.sh | bash"
-            - |
-              )
-            - |
-              # Signal the status from cfn-init
-            - '/opt/aws/bin/cfn-signal -e $? '
-            - '         --stack '
+            - ; curl -s  https://s3.us-east-2.amazonaws.com/docker-passwd-pot/passwdpot-aws-bootstrap.sh | bash);
+            - '/opt/aws/bin/cfn-signal -e $?  --stack '
             - !Ref 'AWS::StackName'
             - '         --resource PasswdPotServerInstance '
             - '         --region '
             - !Ref 'AWS::Region'
-            - |+
 
     CreationPolicy:
       ResourceSignal:
