@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-image=${1:-"dougefresh/docker-passwd-pot:dev"}
+image=${IMAGE:-"dougefresh/docker-passwd-pot:dev"}
 
 dockerId=`docker ps -q -f name=docker_passwd_pot`
 

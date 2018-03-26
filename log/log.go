@@ -183,5 +183,8 @@ func (logger *Logger) Sync() error {
 }
 
 func (logger *Logger) With(f zapcore.Field) FieldLogger {
+	for i, l := range logger.loggers {
+		logger.loggers[i] = l.With(f)
+	}
 	return logger
 }

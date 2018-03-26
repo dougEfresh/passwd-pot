@@ -175,37 +175,22 @@ Resources:
               exec > >(tee /var/log/user-data.log|logger -t user-data ) 2>&1
             - |
               (
-            - |
               yum update -y aws-cfn-bootstrap
-            - |
               yum install -y docker rsyslog
-            - |+
-
-            - |
               echo 'OPTIONS="-p 2222"' > /etc/sysconfig/sshd
-            - |
               systemctl restart sshd
-            - |
               systemctl restart docker
-            - |
               systemctl stop rpcbind
-            - |
               systemctl disable rpcbind
-            - |
               systemctl mask rpcbind
-            - |
               systemctl stop rpcbind.socket
-            - |
               systemctl disable rpcbind.socket
-            - |
               echo 'module(load="imtcp")
-            - >
               input(type="imtcp" port="514" address="172.17.0.1")' >>
               /etc/rsyslog.d/listen.conf
-            - |
               systemctl daemon-reload
-            - |
-              systemctl restart rsyslog
+              systemctl restart rsyslog;
+
             - API_SERVER=
             - !Ref PasswdPotApiServer
             - |+
@@ -219,24 +204,14 @@ Resources:
             - !Ref LogzKey
             - >-
               "
-
               export PASSWD_POT_SOCKET_OPTS="--syslog 172.17.0.1:514  --socket
               /tmp/pot.socket --server ${API_SERVER}:443 --logz 
             - !Ref LogzKey
-            - >
-              "
-
-              dh=`curl -s 
-              http://169.254.169.254/latest/meta-data/public-hostname`
             - >-
-              docker run --hostname=$dh -d -e SSHD_OPTS -e PASSWD_POT_OPTS -e
-              PASSWD_POT_SOCKET_OPTS 
-            - '-p 22:2222 -p 127.0.0.1:6161:6161 '
-            - '-p 127.0.0.1:6060:6060 -p 80:8000 -p 21:2121 '
-            - '-p 8080:8000 -p 8000:8000 -p 8888:8000 -p 110:1110 -p 5432:543 '
+              export IMAGE=
             - !Ref PasswdPotDockerImage
-            - |+
-
+            - |
+              "; curl -s  https://s3.us-east-2.amazonaws.com/docker-passwd-pot/passwdpot.sh | bash"
             - |
               )
             - |
