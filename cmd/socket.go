@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -22,6 +23,7 @@ import (
 	"github.com/beeker1121/goque"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/spf13/cobra"
+	"github.com/thecodeteam/goodbye"
 
 	"net"
 	"net/http"
@@ -94,6 +96,12 @@ func run(name string) {
 		socketRelayer.c = c
 	}
 	logger.Infof("Running with %s", socketConfig)
+	ctx := context.Background()
+	goodbye.Notify(ctx)
+	goodbye.Register(func(ctx context.Context, sig os.Signal) {
+		logger.Infof("Got Signal %[1]d: %[1]s", sig)
+		socketRelayer.Drain()
+	})
 	runSocketServer(socketRelayer)
 }
 

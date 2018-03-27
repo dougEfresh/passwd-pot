@@ -13,16 +13,36 @@ echo -e 'module(load="imtcp")\ninput(type="imtcp" port="514" address="172.17.0.1
 systemctl daemon-reload
 systemctl restart rsyslog;
 
-image=${IMAGE:-"dougefresh/docker-passwd-pot:dev"}
+wget -O /usr/bin/systemd-docker https://github.com/ibuildthecloud/systemd-docker/releases/download/v0.2.1/systemd-docker
+chmod 755 /usr/bin/systemd-docker
 
-dockerId=`docker ps -q -f name=docker_passwd_pot`
+echo "[Unit]
+Description=docker-passwd-pot
+After=network.target auditd.service docker.service
+Requires=docker.service
 
-[ -n "$dockerId" ] &&  echo "Stopping existing docker $dockerId" && \
-    docker stop $dockerId > /dev/null  && docker rm $dockerId > /dev/null
+[Service]
+EnvironmentFile=/etc/default/docker-passwd-pot
+TimeoutStartSec=0
+Restart=always
+ExecStart=/usr/bin/systemd-docker run \$DOCKER_OPTS
 
+[Install]
+WantedBy=multi-user.target
+" > /etc/systemd/system/docker-passwd-pot.service
+
+if [ -z "$API_SERVER" ]; then
+API_SERVER="https://api.passwd-pot.io"
+fi
 dh=`curl -s http://169.254.169.254/latest/meta-data/public-hostname`
 PORTS="-p 22:2222 -p 127.0.0.1:6161:6161  -p 127.0.0.1:6060:6060 -p 80:8000 -p 21:2121 -p 8080:8000 -p 8000:8000 -p 8888:8000 -p 110:1110 -p 5432:5432"
 
-docker rm docker_passwd_pot > /dev/null 2>&1
-set -x
-docker run $PORTS -d --name docker_passwd_pot --hostname=${dh:-"passwdpot"} -e SSHD_OPTS -e PASSWD_POT_OPTS -e PASSWD_POT_SOCKET_OPTS $image
+echo "SSHD_OPTS=\"-o Audit=yes -o MaxAuthTries=200 -o AuditSocket=/tmp/passwd.socket -o AuditUrl=${API_SERVER}\"" > /etc/default/docker-passwd-pot
+echo "PASSWD_POT_OPTS=\" --all --bind 0.0.0.0  --syslog 172.17.0.1:514 --server $API_SERVER --logz $LOGZ\"" >> /etc/default/docker-passwd-pot
+echo "PASSWD_POT_SOCKET_OPTS=\"--duration 30m --syslog 172.17.0.1:514 --server https://$API_SERVER --socket /tmp/passwd.socket --logz $LOGZ\"" >> /etc/default/docker-passwd-pot
+echo "DOCKER_OPTS=\"-e SSHD_OPTS -e PASSWD_POT_OPTS -e PASSWD_POT_SOCKET_OPTS  $PORTS  --hostname=$db  --rm --name docker-passwd-pot $IMAGE\"" >> /etc/default/docker-passwd-pot
+
+systemctl daemon-reload
+systemctl start docker-passwd-pot
+sleep 10
+systemctl status docker-passwd-pot

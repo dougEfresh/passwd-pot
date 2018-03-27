@@ -150,6 +150,9 @@ Resources:
   PasswdPotServerInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
+      Tags:
+        - Key: name
+        - Value: passwdpotter
       InstanceType: !Ref InstanceType
       ImageId: !FindInMap 
         - AWSRegionArch2AMI

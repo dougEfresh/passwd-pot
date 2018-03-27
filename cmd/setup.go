@@ -59,7 +59,7 @@ func setupLogger(name string) {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error connecting to logz %s\n", err)
 		} else {
-			lz = lz.WithOptions(zap.AddCaller())
+			lz = lz.WithOptions(zap.AddCaller(), zap.AddCallerSkip(1))
 			logger.AddLogger(lz)
 		}
 	}

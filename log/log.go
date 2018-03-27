@@ -76,7 +76,7 @@ func DefaultLogger(w io.Writer) FieldLogger {
 	en := zapcore.NewJSONEncoder(zapz.DefaultConfig)
 	c := zapcore.NewCore(en, zapcore.AddSync(w), zap.DebugLevel)
 
-	l.AddLogger(zap.New(c))
+	l.AddLogger(zap.New(c).WithOptions(zap.AddCaller(), zap.AddCallerSkip(1)))
 	return l
 }
 
