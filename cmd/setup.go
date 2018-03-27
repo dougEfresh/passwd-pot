@@ -55,9 +55,11 @@ func setupLogger(name string) {
 	}
 	if config.Logz != "" {
 		lz, err := zapz.New(config.Logz)
+
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error connecting to logz %s\n", err)
 		} else {
+			lz = lz.WithOptions(zap.AddCaller())
 			logger.AddLogger(lz)
 		}
 	}
