@@ -10,6 +10,7 @@ before_install:
 - go get github.com/mattn/goveralls
 - go get golang.org/x/tools/cmd/cover
 - psql -U postgres < schema/psql/schema_psql.sql
+- apt-get -y install musl-tools
 os:
 - linux
 script:
