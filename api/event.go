@@ -29,7 +29,7 @@ import (
 	"time"
 )
 
-// EventsURL post single evente
+// EventsURL post single event
 const EventURL = "/v1/event"
 
 // BatchEventsURL post batch events
@@ -126,21 +126,23 @@ func (e *EventClient) RecordBatchEvents(events []Event) (BatchEventResponse, err
 			return err
 		}
 		if resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusOK {
-			body, err = ioutil.ReadAll(resp.Body)
-			if err != nil {
-				return err
-			}
+			/*
+				body, err = ioutil.ReadAll(resp.Body)
+				if err != nil {
+					return err
+				}
+			*/
 			return nil
 		}
 		return fmt.Errorf("error sending batch request %d %b", resp.StatusCode, body)
 	}, backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Minute), 5))
-	if err != nil {
-		return BatchEventResponse{}, err
-	}
 
-	var resp BatchEventResponse
-	json.Unmarshal(body, &resp)
-	return resp, nil
+	return BatchEventResponse{}, err
+	/*
+		var resp BatchEventResponse
+		json.Unmarshal(body, &resp)
+		return resp, nil
+	*/
 }
 
 // GetEvent TODO

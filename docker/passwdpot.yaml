@@ -151,8 +151,8 @@ Resources:
     Type: 'AWS::EC2::Instance'
     Properties:
       Tags:
-        - Key: name
-        - Value: passwdpotter
+        - Key: Name
+          Value: passwdpotter
       InstanceType: !Ref InstanceType
       ImageId: !FindInMap 
         - AWSRegionArch2AMI
@@ -178,17 +178,11 @@ Resources:
               exec > >(tee /var/log/user-data.log|logger -t user-data ) 2>&1
             - |
               (
-            - API_SERVER=
+            - export API_SERVER=
             - !Ref PasswdPotApiServer
-            - "; LOGZ="
+            - "; export LOGZ="
             - !Ref LogzKey
-            - |
-
-              export SSHD_OPTS="-o Audit=yes -o AuditSocket=/tmp/pot.socket -o MaxAuthTries=200 -o AuditUrl=http://$API_SERVER/v1/event";
-              export PASSWD_POT_OPTS="--all --bind 0.0.0.0  --syslog 172.17.0.1:514 --server https://$API_SERVER --logz $LOGZ";
-              export PASSWD_POT_SOCKET_OPTS="--duration 30m --syslog 172.17.0.1:514  --socket /tmp/pot.socket --server https://$API_SERVER --logz $LOGZ";
-
-            - export IMAGE=
+            - ;export IMAGE=
             - !Ref PasswdPotDockerImage
             - ; curl -s  https://s3.us-east-2.amazonaws.com/docker-passwd-pot/passwdpot-aws-bootstrap.sh | bash);
             - '/opt/aws/bin/cfn-signal -e $?  --stack '
