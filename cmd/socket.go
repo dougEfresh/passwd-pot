@@ -137,9 +137,6 @@ func (s *socketRelay) Drain() {
 	var i = 0
 	for bufSize < maxSize && err == nil {
 		item, err = s.q.Dequeue()
-		if err != nil {
-			logger.Warnf("could not dequeue item  %s", err)
-		}
 		var e api.Event
 		if item != nil {
 			// NewLine is appended tp item.Value
