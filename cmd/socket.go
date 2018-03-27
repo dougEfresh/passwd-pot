@@ -15,15 +15,15 @@
 package cmd
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"os/signal"
+	"syscall"
 
 	"github.com/beeker1121/goque"
 	"github.com/dougEfresh/passwd-pot/api"
 	"github.com/spf13/cobra"
-	"github.com/thecodeteam/goodbye"
 
 	"net"
 	"net/http"
@@ -96,12 +96,29 @@ func run(name string) {
 		socketRelayer.c = c
 	}
 	logger.Infof("Running with %s", socketConfig)
-	ctx := context.Background()
-	goodbye.Notify(ctx)
-	goodbye.Register(func(ctx context.Context, sig os.Signal) {
-		logger.Infof("Got Signal %[1]d: %[1]s", sig)
-		socketRelayer.Drain()
-	})
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT)
+	exitChan := make(chan int)
+	go func() {
+		for {
+			s := <-signalChan
+			switch s {
+			case syscall.SIGHUP:
+				socketRelayer.Drain()
+			default:
+				socketRelayer.Drain()
+				exitChan <- 0
+			}
+		}
+	}()
+	go func() {
+		code := <-exitChan
+		os.Exit(code)
+	}()
 	runSocketServer(socketRelayer)
 }
 
@@ -136,16 +153,16 @@ func (s *socketRelay) Drain() {
 	events = make([]api.Event, s.q.Length())
 	var i = 0
 	for bufSize < maxSize && err == nil {
-		item, err = s.q.Dequeue()
+		item, _ = s.q.Dequeue()
 		var e api.Event
 		if item != nil {
-			// NewLine is appended tp item.Value
 			bufSize += len(item.Value)
 			if bufSize > maxSize {
 				break
 			}
 			err = json.Unmarshal(item.Value, &e)
 			if err != nil {
+				//TODO handle error
 				logger.Errorf("Error decoding  item %b", item.Value)
 				return
 			}
@@ -163,10 +180,10 @@ func (s *socketRelay) Drain() {
 		return
 	}
 
-	if _, err = s.c.RecordBatchEvents(events[0:i]); err != nil {
+	if resp, err := s.c.RecordBatchEvents(events[0:i]); err != nil {
 		logger.Errorf("error sending batch %d %s", i, err)
 	} else {
-		logger.Debugf("Sent %d events ", i)
+		logger.Debugf("Sent %d events %s", i, resp)
 	}
 }
 

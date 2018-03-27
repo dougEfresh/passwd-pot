@@ -96,53 +96,58 @@ func (e *EventClient) RecordEvent(event Event) (int64, error) {
 	return 0, nil
 }
 
+func gZipData(data []byte) ([]byte, error) {
+	var b bytes.Buffer
+	gz := gzip.NewWriter(&b)
+
+	_, err := gz.Write(data)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = gz.Flush(); err != nil {
+		return nil, err
+	}
+
+	if err = gz.Close(); err != nil {
+		return nil, err
+	}
+
+	return b.Bytes(), nil
+}
+
 func (e *EventClient) RecordBatchEvents(events []Event) (BatchEventResponse, error) {
 	var body []byte
-	var compressed bytes.Buffer
 	var err error
 	b, err := json.Marshal(events)
+	compressed, err := gZipData(b)
 	if err != nil {
 		return BatchEventResponse{}, err
 	}
-	gz := gzip.NewWriter(&compressed)
-
-	if _, err = gz.Write(b); err != nil {
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s%s", e.server, BatchEventsURL), bytes.NewReader(compressed))
+	if err != nil {
 		return BatchEventResponse{}, err
 	}
-	if err = gz.Flush(); err != nil {
-		return BatchEventResponse{}, err
-	}
-	if err = gz.Close(); err != nil {
-		return BatchEventResponse{}, err
-	}
-
-	req, nil := http.NewRequest("POST", fmt.Sprintf("%s%s", e.server, BatchEventsURL), bytes.NewReader(compressed.Bytes()))
-	req.Header.Add("Content-Type", "application-json")
+	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Content-Encoding", "gzip")
 
 	err = backoff.Retry(func() error {
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			return err
+			return fmt.Errorf("error with resp %d %s ", resp.StatusCode, err)
 		}
+		body, err = ioutil.ReadAll(resp.Body)
 		if resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusOK {
-			/*
-				body, err = ioutil.ReadAll(resp.Body)
-				if err != nil {
-					return err
-				}
-			*/
 			return nil
 		}
-		return fmt.Errorf("error sending batch request %d %b", resp.StatusCode, body)
-	}, backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Minute), 5))
-
-	return BatchEventResponse{}, err
-	/*
-		var resp BatchEventResponse
-		json.Unmarshal(body, &resp)
-		return resp, nil
-	*/
+		return fmt.Errorf("error with resp %d %s", resp.StatusCode, body)
+	}, backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Second), 5))
+	if err != nil {
+		return BatchEventResponse{}, nil
+	}
+	var resp BatchEventResponse
+	json.Unmarshal(body, &resp)
+	return resp, nil
 }
 
 // GetEvent TODO

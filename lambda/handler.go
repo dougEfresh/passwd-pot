@@ -152,6 +152,7 @@ func HandleBatch(ctx context.Context, events BatchEvent) (api.BatchEventResponse
 		}
 		e.RemoteGeoID = id
 		e.OriginGeoID = gid
+		e.OriginAddr = events.OriginAddr
 	}
 
 	resp, err := eventClient.RecordBatchEvents(events.Events)

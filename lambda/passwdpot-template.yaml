@@ -560,7 +560,7 @@ Resources:
       Period: 60
       EvaluationPeriods: 1
       Threshold: .015
-      TreatMissingData: breaching
+      TreatMissingData: notBreaching
       Dimensions:
         - Name: FunctionName
           Value: passwdpot-create-event
@@ -583,6 +583,7 @@ Resources:
       AlarmDescription: "Trigger an alarm if the duration is over 500ms"
       MetricName: "Duration"
       Namespace: "AWS/Lambda"
+      TreatMissingData: notBreaching
       Dimensions:
                 -
                   Name: "FunctionName"
@@ -611,6 +612,7 @@ Resources:
       AlarmDescription: "Trigger an alarm if a throttle is recorded"
       MetricName: "Throttles"
       Namespace: "AWS/Lambda"
+      TreatMissingData: notBreaching
       Dimensions:
         -
           Name: "FunctionName"

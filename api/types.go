@@ -23,7 +23,7 @@ type EventTime time.Time
 
 //Event to record
 type Event struct {
-	ID            int64
+	ID            int64     `json:"id"`
 	Time          EventTime `json:"time"`
 	User          string    `json:"user"`
 	Passwd        string    `json:"passwd"`
