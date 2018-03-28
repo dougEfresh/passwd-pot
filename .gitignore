@@ -47,4 +47,8 @@ bin/
 ssh-password-pot
 prof.*
 handler.so
-handler.zip
+lambda/handler.zip
+lambda/lambda
+passwdpot.zip
+.vscode/
+docker/passwd-pot
