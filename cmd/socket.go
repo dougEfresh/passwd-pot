@@ -88,7 +88,7 @@ func run(name string) {
 	if socketConfig.DryRun {
 		socketRelayer.c = sockerDryRunner
 	} else {
-		c, err := api.NewClient(socketConfig.Server)
+		c, err := api.New(socketConfig.Server)
 		if err != nil {
 			logger.Errorf("error setting up client %s", err)
 			os.Exit(2)
@@ -150,40 +150,34 @@ func (s *socketRelay) Drain() {
 	if s.q.Length() <= 0 {
 		return
 	}
-	events = make([]api.Event, s.q.Length())
-	var i = 0
+	events = make([]api.Event, 0)
 	for bufSize < maxSize && err == nil {
 		item, _ = s.q.Dequeue()
-		var e api.Event
-		if item != nil {
-			bufSize += len(item.Value)
-			if bufSize > maxSize {
-				break
-			}
-			err = json.Unmarshal(item.Value, &e)
-			if err != nil {
-				//TODO handle error
-				logger.Errorf("Error decoding  item %b", item.Value)
-				return
-			}
-			if len(events) < i-1 {
-				break
-			}
-			events[i] = e
-			i++
-			logger.Debugf("Adding event %s\n", e)
-		} else {
+		if item == nil {
 			break
 		}
+		var e api.Event
+		bufSize += len(item.Value)
+		if bufSize > maxSize {
+			break
+		}
+		err = json.Unmarshal(item.Value, &e)
+		if err != nil {
+			//TODO handle error
+			logger.Errorf("Error decoding  item %b", item.Value)
+			return
+		}
+		events = append(events, e)
+		logger.Debugf("Adding event %s\n", e)
 	}
-	if i == 0 {
+	if len(events) <= 0 {
 		return
 	}
 
-	if resp, err := s.c.RecordBatchEvents(events[0:i]); err != nil {
-		logger.Errorf("error sending batch %d %s", i, err)
+	if resp, err := s.c.RecordBatchEvents(events); err != nil {
+		logger.Errorf("error sending batch %s", err)
 	} else {
-		logger.Debugf("Sent %d events %s", i, resp)
+		logger.Debugf("Sent %d events %s", len(events), resp)
 	}
 }
 

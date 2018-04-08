@@ -38,7 +38,7 @@ var handler = func(w http.ResponseWriter, r *http.Request) {
 var server = httptest.NewServer(http.HandlerFunc(handler))
 
 func TestSend(t *testing.T) {
-	ec, err := NewClient(server.URL)
+	ec, err := New(server.URL)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}

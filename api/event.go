@@ -19,7 +19,6 @@ import (
 	"compress/gzip"
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/cenkalti/backoff"
@@ -29,19 +28,22 @@ import (
 	"time"
 )
 
-// EventsURL post single event
+// EventURL post single event
 const EventURL = "/v1/event"
 
 // BatchEventsURL post batch events
 const BatchEventsURL = "/v1/event/batch"
-const EventCountryStatsUrl = "/v1/event/stats/country"
+
+// EventCountryStatsURL stats per country
+const EventCountryStatsURL = "/v1/event/stats/country"
+
+// StreamURL websockets
 const StreamURL = "/v1/event/stream"
 
-// Time is in epoch ms
 func (et *EventTime) UnmarshalJSON(data []byte) (err error) {
 	ts, err := strconv.ParseInt(string(data), 10, 64)
 	if err != nil {
-		return errors.New(fmt.Sprintf("could not decode time %s err:%s", data, err))
+		return fmt.Errorf("could not decode time %s err:%s", data, err)
 	}
 	*et = EventTime(time.Unix(ts/1000, (ts%1000)*1000000).UTC())
 	return nil
@@ -58,7 +60,7 @@ func (et EventTime) Value() (driver.Value, error) {
 	return time.Time(et), nil
 }
 
-// Gets the value from epoch time
+// Scan Gets the value from epoch time
 func (et *EventTime) Scan(value interface{}) error {
 	if value == nil {
 		return nil
@@ -68,19 +70,19 @@ func (et *EventTime) Scan(value interface{}) error {
 	case time.Time:
 		return nil
 	case []byte:
-		et.UnmarshalJSON(v)
-		return nil
+		return et.UnmarshalJSON(v)
 	case string:
-		et.UnmarshalJSON([]byte(v))
-		return nil
+		return et.UnmarshalJSON([]byte(v))
 	}
 	return nil
 }
 
+// EventClient hods the endpoint url
 type EventClient struct {
 	server string
 }
 
+// RecordEvent send a single event
 func (e *EventClient) RecordEvent(event Event) (int64, error) {
 	b, err := json.Marshal(event)
 	if err != nil {
@@ -116,10 +118,14 @@ func gZipData(data []byte) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
+// RecordBatchEvents send compressed events
 func (e *EventClient) RecordBatchEvents(events []Event) (BatchEventResponse, error) {
 	var body []byte
 	var err error
 	b, err := json.Marshal(events)
+	if err != nil {
+		return BatchEventResponse{}, err
+	}
 	compressed, err := gZipData(b)
 	if err != nil {
 		return BatchEventResponse{}, err
@@ -140,7 +146,7 @@ func (e *EventClient) RecordBatchEvents(events []Event) (BatchEventResponse, err
 		if resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusOK {
 			return nil
 		}
-		return fmt.Errorf("error with resp %d %s", resp.StatusCode, body)
+		return fmt.Errorf("error with resp %d %s (%s)", resp.StatusCode, body, err)
 	}, backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Second), 5))
 	if err != nil {
 		return BatchEventResponse{}, nil
@@ -158,7 +164,7 @@ func (e *EventClient) GetEvent(id int64) (*EventGeo, error) {
 // GetCountryStats country stats
 func (e *EventClient) GetCountryStats() ([]CountryStat, error) {
 	var stats []CountryStat
-	resp, err := e.transport("GET", EventCountryStatsUrl, nil)
+	resp, err := e.transport("GET", EventCountryStatsURL, nil)
 	if err != nil {
 		return stats, err
 	}
@@ -190,7 +196,8 @@ func (e *EventClient) transport(method string, endpoint string, body []byte) ([]
 
 }
 
-func NewClient(server string, options ...func(*EventClient) error) (*EventClient, error) {
+// New client for API
+func New(server string, options ...func(*EventClient) error) (*EventClient, error) {
 	ec := &EventClient{
 		server: server,
 	}

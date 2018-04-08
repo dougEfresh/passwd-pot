@@ -610,8 +610,8 @@ Resources:
     Type: "AWS::CloudWatch::Alarm"
     Properties:
       AlarmDescription: "Trigger an alarm if a throttle is recorded"
-      MetricName: "Throttles"
-      Namespace: "AWS/Lambda"
+      MetricName: Throttles
+      Namespace: AWS/Lambda
       TreatMissingData: notBreaching
       Dimensions:
         -
@@ -620,6 +620,91 @@ Resources:
         -
           Name: "Resource"
           Value: passwdpot-create-event:prod
+      Statistic: "Sum"
+      AlarmActions:
+        - !Join
+          - ''
+          - - 'arn:aws:sns:'
+            - !Ref 'AWS::Region'
+            - ':'
+            - !Ref 'AWS::AccountId'
+            - ':'
+            - !Ref Topic
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: "GreaterThanThreshold"
+
+  PasswdPotCreateErrorLambdaAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: "Error Count"
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 0
+      TreatMissingData: notBreaching
+      Dimensions:
+        - Name: FunctionName
+          Value: passwdpot-create-batch-events
+        - Name: Resource
+          Value: passwdpot-create-batch-events:prod
+      AlarmActions:
+        - !Join
+          - ''
+          - - 'arn:aws:sns:'
+            - !Ref 'AWS::Region'
+            - ':'
+            - !Ref 'AWS::AccountId'
+            - ':'
+            - !Ref Topic
+      ComparisonOperator: GreaterThanThreshold
+
+  PasswdPotCreateBatchDurationAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmDescription: "Trigger an alarm if the duration is over 500ms"
+      MetricName: "Duration"
+      Namespace: "AWS/Lambda"
+      TreatMissingData: notBreaching
+      Dimensions:
+                -
+                  Name: "FunctionName"
+                  Value: passwdpot-create-batch-events
+                -
+                  Name: "Resource"
+                  Value: passwdpot-create-batch-events:prod
+      Statistic: "Average"
+      AlarmActions:
+        - !Join
+          - ''
+          - - 'arn:aws:sns:'
+            - !Ref 'AWS::Region'
+            - ':'
+            - !Ref 'AWS::AccountId'
+            - ':'
+            - !Ref Topic
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 3000
+      ComparisonOperator: "GreaterThanThreshold"
+
+  PasswdPotCreateThrottleAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmDescription: "Trigger an alarm if a throttle is recorded"
+      MetricName: "Throttles"
+      Namespace: "AWS/Lambda"
+      TreatMissingData: notBreaching
+      Dimensions:
+        -
+          Name: "FunctionName"
+          Value: passwdpot-create-batch-events
+        -
+          Name: "Resource"
+          Value: passwdpot-create-batch-events:prod
       Statistic: "Sum"
       AlarmActions:
         - !Join

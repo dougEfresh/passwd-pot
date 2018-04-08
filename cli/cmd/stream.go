@@ -42,7 +42,7 @@ func streamEvents() {
 	signal.Notify(interrupt, os.Interrupt)
 	c, resp, err := websocket.DefaultDialer.Dial(streamingEndpoint, nil)
 	if err != nil {
-		log.Errorf("websocket.NewClient Error: %s\nResp:%+v", err, resp)
+		log.Errorf("websocket.New Error: %s\nResp:%+v", err, resp)
 		return
 	}
 

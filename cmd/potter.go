@@ -107,7 +107,7 @@ func runPotter() {
 	if potConfig.DryRun {
 		c = &dryRunClient{}
 	} else {
-		c, err = api.NewClient(potConfig.Server)
+		c, err = api.New(potConfig.Server)
 	}
 	if err != nil {
 		logger.Errorf("Error creating eventCLient %s %s", potConfig.Server, err)
