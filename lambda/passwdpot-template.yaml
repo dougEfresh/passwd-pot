@@ -760,6 +760,18 @@ Resources:
           MetricNamespace: passwdpot-create-event
           MetricName: "MaxMemoryUsedMB"
 
+  PasswdPotCreateBatchMemorySize:
+    Type: "AWS::Logs::MetricFilter"
+    DependsOn: CreateEventPostLambda
+    Properties:
+      LogGroupName: /aws/lambda/passwdpot-create-batch-events
+      FilterPattern: "[..., sizeLabel=\"Size:\", sizeMemory, sizeMemoryUnit=MB, maxLabel, memoryLabel, maxMemoryLabel=\"Used:\", maxMemory, maxMemoryUnit=MB]"
+      MetricTransformations:
+        -
+          MetricValue: "$sizeMemory"
+          MetricNamespace: passwdpot-create-event
+          MetricName: "MemorySizeMB"
+
   PasswdPotBatchCreateMemorySize:
     Type: "AWS::Logs::MetricFilter"
     DependsOn: CreateEventPostLambda
