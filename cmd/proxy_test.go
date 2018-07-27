@@ -15,11 +15,8 @@ package cmd
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
-	"net"
 	"net/http"
-	"os"
 	"testing"
 	"time"
 
@@ -38,72 +35,62 @@ func init() {
 	b := new(bytes.Buffer)
 	b.WriteString(requestBodyOrigin)
 	request = b.Bytes()
-	socketConfig.DryRun = true
+	proxyConfig.DryRun = true
 }
 
-func TestSocketRequest(t *testing.T) {
-	socketConfig.Socket = t.Name()
+func TestProxy(t *testing.T) {
+	proxyConfig.bind = "localhost:8889"
 	config.Debug = true
-	defer func() {
-		os.Remove(t.Name())
-	}()
-	go run(t.Name())
+	go proxyrun("proxy")
 	time.Sleep(500 * time.Millisecond)
-	httpc := http.Client{
-		Transport: &http.Transport{
-			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-				return net.Dial("unix", t.Name())
-			},
-		},
-	}
-	resp, err := httpc.Post("http://unix/"+t.Name(), "application/octet-stream", bytes.NewReader(request))
-	//c, err := net.Dial("unix", t.Name())
+
+	resp, err := http.Post("http://localhost:8889", "application/octet-stream", bytes.NewReader(request))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if resp.StatusCode != http.StatusAccepted {
 		t.Fatal("status code")
 	}
-	socketRelayer.Drain()
+	proxyRelayer.Drain()
 	time.Sleep(350 * time.Millisecond)
-	if len(sockerDryRunner.events) == 0 {
+	if len(proxyDryRunner.events) == 0 {
 		t.Fatal("Relay not sent")
 	}
 
 	var event api.Event
 	json.Unmarshal(request, &event)
 
-	if event.User != sockerDryRunner.events[0].User {
+	if event.User != proxyDryRunner.events[0].User {
 		t.Fatal("!=user")
 	}
 
-	if event.Protocol != sockerDryRunner.events[0].Protocol {
+	if event.Protocol != proxyDryRunner.events[0].Protocol {
 		t.Fatal("!=")
 	}
 
-	if event.Passwd != sockerDryRunner.events[0].Passwd {
+	if event.Passwd != proxyDryRunner.events[0].Passwd {
 		t.Fatal("!=")
 	}
 
-	if event.Application != sockerDryRunner.events[0].Application {
+	if event.Application != proxyDryRunner.events[0].Application {
 		t.Fatal("!=")
 	}
 
-	if event.RemoteVersion != sockerDryRunner.events[0].RemoteVersion {
+	if event.RemoteVersion != proxyDryRunner.events[0].RemoteVersion {
 		t.Fatal("!=")
 	}
 
-	if event.RemotePort != sockerDryRunner.events[0].RemotePort {
+	if event.RemotePort != proxyDryRunner.events[0].RemotePort {
 		t.Fatal("!=")
 	}
 
 }
 
 /* Fails
-func BenchmarkSocketRelay_Send(b *testing.B) {
+func BenchmarkproxyRelay_Send(b *testing.B) {
 	b.ReportAllocs()
-	socketConfig.Socket = b.Name()
-	go runSocketServer(mockSender{})
+	proxyConfig.proxy = b.Name()
+	go runproxyServer(mockSender{})
 	time.Sleep(500 * time.Millisecond)
 
 	for i := 0; i < b.N; i++ {

@@ -1,4 +1,4 @@
-// Copyright © 2017 Douglas Chimento <dchimento@gmail.com>
+// Copyright © 20178Douglas Chimento <dchimento@gmail.com>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,46 +33,46 @@ import (
 )
 
 const (
-	maxSize = 9 * 1024 * 1024
+	maxBatchSize = 9 * 1024 * 1024
 )
 
-type socketRelay struct {
+type proxyRelay struct {
 	q             *goque.Queue
 	drainDuration time.Duration
 	mux           sync.Mutex
 	c             api.RecordTransporter
 }
 
-type socketDryRun struct {
+type proxyDryRun struct {
 	events []api.Event
 }
 
-func (d *socketDryRun) RecordEvent(event api.Event) (int64, error) {
+func (d *proxyDryRun) RecordEvent(event api.Event) (int64, error) {
 	return 0, nil
 }
 
-func (d *socketDryRun) RecordBatchEvents(events []api.Event) (api.BatchEventResponse, error) {
+func (d *proxyDryRun) RecordBatchEvents(events []api.Event) (api.BatchEventResponse, error) {
 	d.events = events
 	logger.Infof("Sending %d events", len(d.events))
 	return api.BatchEventResponse{}, nil
 }
 
-var sockerDryRunner = &socketDryRun{}
-var socketRelayer = &socketRelay{}
+var proxyDryRunner = &proxyDryRun{}
+var proxyRelayer = &proxyRelay{}
 
-var socketConfig struct {
+var proxyConfig struct {
 	Pprof    string
 	Server   string
-	Socket   string
+	bind     string
 	DryRun   bool
 	Duration time.Duration
 }
 
-func cobrearun(cmd *cobra.Command, args []string) {
-	run(cmd.Name())
+func proxyCobraRun(cmd *cobra.Command, args []string) {
+	proxyrun(cmd.Name())
 }
 
-func run(name string) {
+func proxyrun(name string) {
 	setupLogger(name)
 	if config.Pprof != "" {
 		go func() { logger.Error(http.ListenAndServe(config.Pprof, nil)) }()
@@ -83,19 +83,19 @@ func run(name string) {
 		os.Exit(1)
 	}
 
-	socketRelayer.q = q
-	socketRelayer.drainDuration = socketConfig.Duration
-	if socketConfig.DryRun {
-		socketRelayer.c = sockerDryRunner
+	proxyRelayer.q = q
+	proxyRelayer.drainDuration = proxyConfig.Duration
+	if proxyConfig.DryRun {
+		proxyRelayer.c = proxyDryRunner
 	} else {
-		c, err := api.New(socketConfig.Server)
+		c, err := api.New(proxyConfig.Server)
 		if err != nil {
 			logger.Errorf("error setting up client %s", err)
 			os.Exit(2)
 		}
-		socketRelayer.c = c
+		proxyRelayer.c = c
 	}
-	logger.Infof("Running with %s", socketConfig)
+	logger.Infof("Running with %s", proxyConfig)
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan,
 		syscall.SIGHUP,
@@ -108,9 +108,9 @@ func run(name string) {
 			s := <-signalChan
 			switch s {
 			case syscall.SIGHUP:
-				socketRelayer.Drain()
+				proxyRelayer.Drain()
 			default:
-				socketRelayer.Drain()
+				proxyRelayer.Drain()
 				exitChan <- 0
 			}
 		}
@@ -119,17 +119,17 @@ func run(name string) {
 		code := <-exitChan
 		os.Exit(code)
 	}()
-	runSocketServer(socketRelayer)
+	runproxyServer(proxyRelayer)
 }
 
-var socketCmd = &cobra.Command{
-	Use:   "socket",
+var proxyCmd = &cobra.Command{
+	Use:   "proxy",
 	Short: "A brief description of your command",
 	Long:  "",
-	Run:   cobrearun,
+	Run:   proxyCobraRun,
 }
 
-func (s *socketRelay) start() {
+func (s *proxyRelay) start() {
 	for {
 		time.Sleep(s.drainDuration)
 		s.Drain()
@@ -137,7 +137,7 @@ func (s *socketRelay) start() {
 }
 
 // Drain - Send remaining logs
-func (s *socketRelay) Drain() {
+func (s *proxyRelay) Drain() {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 	var (
@@ -146,19 +146,19 @@ func (s *socketRelay) Drain() {
 		bufSize int
 		events  []api.Event
 	)
-	logger.Debugf("Draining socket buffer %d", s.q.Length())
+	logger.Debugf("Draining proxy buffer %d", s.q.Length())
 	if s.q.Length() <= 0 {
 		return
 	}
 	events = make([]api.Event, 0)
-	for bufSize < maxSize && err == nil {
+	for bufSize < maxBatchSize && err == nil {
 		item, _ = s.q.Dequeue()
 		if item == nil {
 			break
 		}
 		var e api.Event
 		bufSize += len(item.Value)
-		if bufSize > maxSize {
+		if bufSize > maxBatchSize {
 			break
 		}
 		err = json.Unmarshal(item.Value, &e)
@@ -181,7 +181,7 @@ func (s *socketRelay) Drain() {
 	}
 }
 
-func (s *socketRelay) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *proxyRelay) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	logger.Debugf("Got request %s %d", r.RemoteAddr, r.ContentLength)
 	var body = make([]byte, r.ContentLength)
 	n, err := r.Body.Read(body)
@@ -205,27 +205,28 @@ func (s *socketRelay) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *socketRelay) send(payload []byte) error {
+func (s *proxyRelay) send(payload []byte) error {
 	_, err := s.q.Enqueue(payload)
 	return err
 }
 
-func runSocketServer(sr *socketRelay) {
-	logger.Infof("Starting Socket server %s ", socketConfig.Socket)
-	l, err := net.Listen("unix", socketConfig.Socket)
+func runproxyServer(sr *proxyRelay) {
+	logger.Infof("Starting proxy server %s ", proxyConfig.bind)
+	l, err := net.Listen("tcp", proxyConfig.bind)
 	if err != nil {
 		logger.Errorf("listen error %s", err)
 		return
 	}
 	defer sr.Drain()
 	go sr.start()
+
 	logger.Infof("Server ended %s", http.Serve(l, sr))
 }
 
 func init() {
-	RootCmd.AddCommand(socketCmd)
-	socketCmd.PersistentFlags().StringVar(&socketConfig.Server, "server", "http://localhost:8080", "send events to this server")
-	socketCmd.PersistentFlags().StringVar(&socketConfig.Socket, "socket", "/tmp/pot.socket", "use this socket")
-	socketCmd.PersistentFlags().DurationVar(&socketConfig.Duration, "duration", time.Minute*10, "send events every X minutes (default 5 min)")
-	socketCmd.PersistentFlags().BoolVar(&socketConfig.DryRun, "dry-run", false, "don't send events")
+	RootCmd.AddCommand(proxyCmd)
+	proxyCmd.PersistentFlags().StringVar(&proxyConfig.Server, "server", "http://localhost:8080", "send events to this server")
+	proxyCmd.PersistentFlags().StringVar(&proxyConfig.bind, "bind", "localhost:8889", "address")
+	proxyCmd.PersistentFlags().DurationVar(&proxyConfig.Duration, "duration", time.Minute*10, "send events every X minutes (default 5 min)")
+	proxyCmd.PersistentFlags().BoolVar(&proxyConfig.DryRun, "dry-run", false, "don't send events")
 }
