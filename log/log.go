@@ -164,7 +164,7 @@ func (logger *Logger) Fatal(msg string) {
 }
 
 func (logger *Logger) Fatalf(format string, msg ...interface{}) {
-	logger.Errorf(format, msg)
+	logger.Errorf(format, msg...)
 }
 
 func (logger *Logger) Panic(msg string) {

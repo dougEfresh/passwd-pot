@@ -20,15 +20,12 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
-
-	"github.com/Sirupsen/logrus"
 )
 
 var requestBody = `{"id": 1, "time": 1487973301661, "user": "admin", "passwd": "12345678", "remoteAddr": "192.168.1.1", "remotePort": 63185, "remoteName": "badguy.bad.com", "remoteVersion": "SSH-2.0-JSCH-0.1.51" , "originAddr" : "10.0.0.1", "application": "OpenSSH" , "protocol": "ssh" }`
 
 var handler = func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
-	logrus.Infof("Got request %s %s", r.Method, r.URL.Path)
 	if r.Method == "POST" {
 		io.WriteString(w, requestBody)
 		w.WriteHeader(http.StatusAccepted)

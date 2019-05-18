@@ -26,7 +26,6 @@ import (
 	"go.uber.org/multierr"
 
 	"github.com/dougEfresh/passwd-pot/api"
-	"github.com/fiorix/freegeoip"
 )
 
 // EventResolver interface
@@ -49,14 +48,16 @@ type ResolveOptionFunc func(*ResolveClient) error
 
 func NewResolveClient(options ...ResolveOptionFunc) (*ResolveClient, error) {
 	rc := &ResolveClient{
-		geoClient: defaultGeoClient(),
+
 	}
 	for _, option := range options {
 		if err := option(rc); err != nil {
 			return nil, err
 		}
 	}
-
+	if rc.geoClient == nil {
+		return nil, errors.New("no geo client available")
+	}
 	return rc, nil
 }
 
@@ -67,6 +68,7 @@ func SetDb(db potdb.DB) ResolveOptionFunc {
 	}
 }
 
+/*
 func SetGeoDb(db string) ResolveOptionFunc {
 	return func(c *ResolveClient) error {
 		geodb, err := freegeoip.Open(db)
@@ -79,6 +81,7 @@ func SetGeoDb(db string) ResolveOptionFunc {
 		return nil
 	}
 }
+*/
 
 func SetGeoClient(gc GeoClientTransporter) ResolveOptionFunc {
 	return func(c *ResolveClient) error {

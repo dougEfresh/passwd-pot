@@ -11,20 +11,8 @@ Parameters:
   KeyName:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instance.
     Type: 'AWS::EC2::KeyPair::KeyName'
-    ConstraintDescription: must be the name of an existing EC2 KeyPair.
-  PasswdPotApiServer:
-    Description: EndPoint for PasswdPot
-    Type: String
-    ConstraintDescription: Valid URL to server
-  LogzKey:
-    Description: Logz.io API key
-    Type: String
-    Default: ''
-    ConstraintDescription: Valid API key
-  PasswdPotDockerImage:
-    Description: 'PasswdPot DockerImage '
-    Type: String
-    ConstraintDescription: 'e.g. dougefresh/docker-passwd-pot:9078670422cf2af9acf41d8ebdcd728c2ba97b6d'
+    ConstraintDescription: must be the name of an existing EC2 KeyPair
+    Default: passwdpot
 Mappings:
   AWSInstanceType2Arch:
     t2.nano:
@@ -33,17 +21,17 @@ Mappings:
     us-east-1:
       HVM64: ami-1ecae776
     ca-central-1:
-      HVM64: ami-03e86a67
+      HVM64: ami-03338e1f67dae0168
     us-east-2:
-      HVM64: ami-40142d25
+      HVM64: ami-02bcbb802e03574ba
     us-west-2:
-      HVM64: ami-0ad99772
+      HVM64: ami-061392db613a6357b
     us-west-1:
       HVM64: ami-d114f295
     eu-west-1:
       HVM64: ami-db1688a2
     eu-central-1:
-      HVM64: ami-a058674b
+      HVM64: ami-09def150731bdbcc2
     ap-northeast-1:
       HVM64: ami-cbf90ecb
     ap-southeast-1:
@@ -145,64 +133,16 @@ Resources:
           DeviceIndex: '0'
           DeleteOnTermination: 'true'
           SubnetId: !Ref PublicSubnet
-            UserData: !Base64
+      UserData: !Base64
         'Fn::Join':
-        - ''
-        - - |
-            #!/bin/bash -xe
+          - ''
+          - - |
+              #!/bin/bash -e
             - |
-            exec > >(tee /var/log/user-data.log|logger -t user-data ) 2>&1
-            - |
-            (
-            - |
-            yum update -y update
-            - |
-            yum install -y docker rsyslog
-            - |+
+              wget -O bootstrap.sh  https://s3.eu-central-1.amazonaws.com/passwd-pot/bootstrap.sh && /bin/bash -xe ./bootstrap.sh
 
             - |
-            echo 'OPTIONS="-p 2222"' > /etc/sysconfig/sshd
-            - |
-            service sshd restart
-            - |
-            service docker restart
-            - |
-            mkdir -p /var/log/passwd-pot
-            - |
-            - API_SERVER=
-            - !Ref PasswdPotApiServer
-            - |+
-
-            - >
-            export SSHD_OPTS="-o Audit=yes -o MaxAuthTries=200 -o AuditUrl=http://localhost:8889/v1/event"
-            - >-
-            export PASSWD_POT_OPTS="--all --bind 0.0.0.0
-            --server http://localhost:8889 --logz
-            - !Ref LogzKey
-            - >-
-            "
-
-            export PASSWD_POT_PROXY_OPTS="--bind localhost:8889 --server https://${API_SERVER} --logz
-            - !Ref LogzKey
-            - >
-            "
-
-            dh=`curl -s
-            http://169.254.169.254/latest/meta-data/public-hostname`
-            - >-
-            docker run --hostname=$dh -d -e SSHD_OPTS -e PASSWD_POT_OPTS -e
-            PASSWD_POT_PROXY_OPTS
-            - '-p 22:2222 -p 127.0.0.1:6161:6161 '
-            - '-p 127.0.0.1:6060:6060 -p 80:8000 -p 21:2121 '
-            - '-p 8080:8000 -p 8000:8000 -p 8888:8000 -p 110:1110 -p 5432:543 '
-            - '-v /var/log/passwd-pot:/var/log/passwd-pot '
-            - !Ref PasswdPotDockerImage
-            - |+
-
-            - |
-            )
-            - |
-            # Signal the status from cfn-init
+              # Signal the status from cfn-init
             - '/opt/aws/bin/cfn-signal -e $? '
             - '         --stack '
             - !Ref 'AWS::StackName'
@@ -213,7 +153,7 @@ Resources:
 
     CreationPolicy:
       ResourceSignal:
-        Timeout: PT9M
+        Timeout: PT1M
 Outputs:
   host:
     Value: !GetAtt 

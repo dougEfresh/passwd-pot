@@ -15,14 +15,10 @@
 package resolver
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"net"
-	"net/http"
 	"time"
 
 	"github.com/fiorix/freegeoip"
+	"github.com/qioalice/ipstack"
 )
 
 type GeoClientTransporter interface {
@@ -31,61 +27,42 @@ type GeoClientTransporter interface {
 
 //GeoClient for geo IP
 type GeoClient struct {
+	Token string
 	URL string
 }
 
-type GeoClientDB struct {
-	db *freegeoip.DB
-}
 
-func defaultGeoClient() *GeoClient {
-	return &GeoClient{
-		URL: "https://freegeoip.net/json",
+func DefaultGeoClient(token string) (*GeoClient,  error) {
+	err := ipstack.Init(token)
+	if err != nil {
+		return nil, err
 	}
+	return &GeoClient{
+		 Token: token,
+		 URL: "http://api.ipstack.com",
+	}, nil
 }
 
 func (c *GeoClient) GetLocationForAddr(ip string) (*Geo, error) {
-	res, err := http.Get(c.URL + "/" + ip)
+
+	res, err := ipstack.IP(ip)
 	if err != nil {
 		return &Geo{}, err
 	}
-
 	var loc Geo
-	decoder := json.NewDecoder(res.Body)
-	if err := decoder.Decode(&loc); err != nil {
-		return &Geo{}, err
-	}
+	loc.City = res.City
+	loc.CountryCode = res.CountryCode
+	loc.IP = ip
 	loc.LastUpdate = time.Now()
+	loc.Latitude = float64(res.Latitide)
+	loc.Longitude = float64(res.Longitude)
+	loc.MetroCode = 0
+	loc.RegionName = res.RegionName
+	loc.RegionCode = res.RegionCode
+	loc.TimeZone = res.Timezone.Code
 	return &loc, nil
 }
 
 type geoipQuery struct {
 	freegeoip.DefaultQuery
-}
-
-func (c *GeoClientDB) GetLocationForAddr(ip string) (*Geo, error) {
-	var q geoipQuery
-	ipaddr := net.ParseIP(ip)
-	if ipaddr == nil {
-		return nil, errors.New("Error parsing ip " + ip)
-	}
-	if err := c.db.Lookup(ipaddr, &q); err != nil {
-		return nil, err
-	}
-	g := Geo{
-		IP:          ip,
-		LastUpdate:  time.Now(),
-		CountryCode: q.Country.ISOCode,
-		City:        q.City.Names["en"],
-		TimeZone:    q.Location.TimeZone,
-		Latitude:    q.Location.Latitude,
-		Longitude:   q.Location.Longitude,
-		MetroCode:   q.Location.MetroCode,
-	}
-	if len(q.Region) > 0 {
-		g.RegionName = q.Region[0].Names["en"]
-		g.RegionCode = q.Region[0].ISOCode
-	}
-	fmt.Printf("Returning %s", g)
-	return &g, nil
 }

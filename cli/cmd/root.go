@@ -16,10 +16,10 @@ package cmd
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
+	"os"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"os"
 )
 
 var config struct {
@@ -55,10 +55,10 @@ func init() {
 
 	// Output to stdout instead of the default stderr
 	// Can be any io.Writer, see below for File example
-	log.SetOutput(os.Stdout)
+	//log.SetOutput(os.Stdout)
 
 	// Only log the warning severity or above.
-	log.SetLevel(log.InfoLevel)
+	//log.SetLevel(log.InfoLevel)
 }
 
 // initConfig reads in config file and ENV variables if set.

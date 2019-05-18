@@ -14,10 +14,11 @@
 
 package cmd
 
+/*
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"github.com/dougEfresh/passwd-pot/api"
+	"github.com/dougEfresh/passwd-pot/log"
 	"github.com/gorilla/websocket"
 	"github.com/spf13/cobra"
 	"os"
@@ -89,3 +90,5 @@ func init() {
 		fmt.Sprintf("ws://localhost:8080%s/random", api.StreamURL),
 		"server endpoint")
 }
+
+ */

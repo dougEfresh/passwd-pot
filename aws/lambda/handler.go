@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -15,7 +16,6 @@ import (
 	"github.com/dougEfresh/passwd-pot/event"
 	"github.com/dougEfresh/passwd-pot/potdb"
 	"github.com/dougEfresh/passwd-pot/resolver"
-	"github.com/dougEfresh/zapz"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
@@ -28,7 +28,7 @@ var (
 	eventResolver *resolver.ResolveClient
 	eventClient   *event.Client
 	dsn           = os.Getenv("PASSWDPOT_DSN")
-	logz          = os.Getenv("LOGZ")
+	geoToken      = os.Getenv("IPSTACK_TOKEN")
 	setupError    error
 	db            potdb.DB
 )
@@ -58,22 +58,30 @@ func setup() {
 }
 
 func init() {
-	var err error
 	logger, _ = zap.NewProduction()
-	if logz != "" {
-		logger, err = zapz.New(logz)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading logz %s", err)
-		}
-	}
 	eventClient, _ = event.New()
-	eventResolver, _ = resolver.NewResolveClient(resolver.UseCache())
+	var geoClient resolver.GeoClientTransporter
+	if geoToken == "" {
+		geoClient = &noopGeoClient{}
+	} else {
+		geoClient, _ = resolver.DefaultGeoClient(geoToken)
+	}
+	eventResolver, _ = resolver.NewResolveClient(resolver.UseCache(), resolver.SetGeoClient(geoClient))
 	setup()
 }
 
 // APIError Custom error msg
 type APIError struct {
 	GatewayError awsevents.APIGatewayProxyResponse
+}
+
+type noopGeoClient struct {
+
+
+}
+
+func (c *noopGeoClient) GetLocationForAddr(ip string) (*resolver.Geo, error) {
+	return nil, errors.New("NOT IMPLEMENTED")
 }
 
 func (e APIError) Error() string {

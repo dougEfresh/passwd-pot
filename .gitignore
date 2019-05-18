@@ -52,3 +52,6 @@ lambda/lambda
 passwdpot.zip
 .vscode/
 docker/passwd-pot
+*.rpm
+handler
+passwd-pot
