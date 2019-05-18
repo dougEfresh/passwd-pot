@@ -61,10 +61,14 @@ func init() {
 	logger, _ = zap.NewProduction()
 	eventClient, _ = event.New()
 	var geoClient resolver.GeoClientTransporter
+	var err error
 	if geoToken == "" {
 		geoClient = &noopGeoClient{}
 	} else {
-		geoClient, _ = resolver.DefaultGeoClient(geoToken)
+		geoClient, err = resolver.DefaultGeoClient(geoToken)
+		if err != nil {
+			logger.Error(fmt.Sprintf("error setting up client %s", err))
+		}
 	}
 	eventResolver, _ = resolver.NewResolveClient(resolver.UseCache(), resolver.SetGeoClient(geoClient))
 	setup()

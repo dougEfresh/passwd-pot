@@ -1,15 +1,30 @@
 #!/bin/bash
 
-OP=${1:?}
-REGION=${2:?}
-PASS=${3:?}
-DBHOST=${4:?}
-LOGZ=${5:?}
+while getopts ":o:p:d:t:" opt; do
+  case ${opt} in
+    t )
+      TOKEN=$OPTARG
+      ;;
+    d)
+     DSN=$OPTARG
+     ;;
+    \? )
+      echo "Invalid option: $OPTARG" 1>&2
+      ;;
+    : )
+      echo "Invalid option: $OPTARG requires an argument" 1>&2
+      ;;
+  esac
+done
+
+shift $((OPTIND -1))
+
+REGION=us-east-2
+
 stackName=passwdpot-app
 awsRun="aws --region $REGION cloudformation"
 
-$awsRun ${OP}-stack --stack-name $stackName --template-body file://passwdpot-template.yaml --capabilities CAPABILITY_IAM \
---parameters ParameterKey=PasswdPotDBHost,ParameterValue=$DBHOST  ParameterKey=PasswdPotDBPassword,ParameterValue=$PASS ParameterKey=LogzApi,ParameterValue="$LOGZ" \
-ParameterKey=PasswdPotDBOptions,ParameterValue="sslmode=require&connect_timeout=5" && \
-$awsRun wait stack-${OP}-complete  --stack-name $stackName && \
+$awsRun update-stack --stack-name $stackName --template-body file://passwdpot-template.yaml --capabilities CAPABILITY_IAM \
+--parameters "ParameterKey=PasswdPotDsn,ParameterValue=$DSN" "ParameterKey=PasswdPotIpStackToken,ParameterValue=$TOKEN"
+$awsRun wait stack-update-complete  --stack-name $stackName && \
 $awsRun describe-stacks --stack-name $stackName  --query 'Stacks[*].Outputs' 

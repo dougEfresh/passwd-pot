@@ -5,10 +5,6 @@ Parameters:
     Description: "Alerts"
     Type: String
     Default: passwd-pot-alerts
-  LogzApi:
-    Description: logz.io api key
-    Type: String
-    Default: ''
   S3Key:
     Type: String
     Default: passwdpot.zip
@@ -22,20 +18,12 @@ Parameters:
     Description: API Gateway App Id. E.g. 1yc6td9zjj
     Type: String
     Default: ''
-  PasswdPotDBHost:
+  PasswdPotDsn:
     Description: DB username
     Type: String
-  PasswdPotDBUsername:
-    Description: DB username
+  PasswdPotIpStackToken:
+    Description: ip stack
     Type: String
-    Default: passwdpot
-  PasswdPotDBPassword:
-    Description: DB password
-    Type: String
-  PasswdPotDBOptions:
-    Description: golang driver options
-    Type: String
-    Default: sslmod=require&connect_timeout=1
 Resources:
   PasswdPotLambdaRole:
     Type: 'AWS::IAM::Role'
@@ -69,14 +57,8 @@ Resources:
       MemorySize: 128
       Environment:
         Variables:
-          PASSWDPOT_DSN: !Join 
-            - ''
-            - - 'postgres://passwdpot:'
-              - !Ref PasswdPotDBPassword
-              - '@'
-              - !Ref PasswdPotDBHost
-              - /passwdpot?
-              - !Ref PasswdPotDBOptions
+          PASSWDPOT_DSN: !Ref PasswdPotDsn
+          IPSTACK_TOKEN: !Ref PasswdPotIpStackToken
           PASSWDPOT_DEBUG: !Ref Debug
       Code:
         S3Bucket: !Join 
@@ -98,14 +80,8 @@ Resources:
        MemorySize: 128
        Environment:
          Variables:
-           PASSWDPOT_DSN: !Join
-             - ''
-             - - 'postgres://passwdpot:'
-               - !Ref PasswdPotDBPassword
-               - '@'
-               - !Ref PasswdPotDBHost
-               - /passwdpot?
-               - !Ref PasswdPotDBOptions
+           PASSWDPOT_DSN: !Ref PasswdPotDsn
+           IPSTACK_TOKEN: !Ref PasswdPotIpStackToken
            PASSWDPOT_DEBUG: !Ref Debug
        Code:
          S3Bucket: !Join
@@ -604,7 +580,7 @@ Resources:
       Threshold: 1000
       ComparisonOperator: "GreaterThanThreshold"
 
-  PasswdPotCreateThrottleAlarm:
+  PasswdPotCreateThrottleBatchAlarm:
     Type: "AWS::CloudWatch::Alarm"
     Properties:
       AlarmDescription: "Trigger an alarm if a throttle is recorded"
@@ -633,7 +609,7 @@ Resources:
       Threshold: 0
       ComparisonOperator: "GreaterThanThreshold"
 
-  PasswdPotCreateErrorLambdaAlarm:
+  PasswdPotCreateErrorLambdaBatchAlarm:
     Type: 'AWS::CloudWatch::Alarm'
     Properties:
       AlarmDescription: "Error Count"

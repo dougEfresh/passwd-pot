@@ -146,7 +146,7 @@ func (s *proxyRelay) Drain() {
 		bufSize int
 		events  []api.Event
 	)
-	logger.Debugf("Draining proxy buffer %d", s.q.Length())
+	logger.Infof("Draining proxy buffer %d", s.q.Length())
 	if s.q.Length() <= 0 {
 		return
 	}
@@ -177,12 +177,12 @@ func (s *proxyRelay) Drain() {
 	if resp, err := s.c.RecordBatchEvents(events); err != nil {
 		logger.Errorf("error sending batch %s", err)
 	} else {
-		logger.Debugf("Sent %d events %s", len(events), resp)
+		logger.Infof("Sent %d events %s", len(events), resp)
 	}
 }
 
 func (s *proxyRelay) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	logger.Debugf("Got request %s %d", r.RemoteAddr, r.ContentLength)
+	logger.Infof("Got request %s %d", r.RemoteAddr, r.ContentLength)
 	var body = make([]byte, r.ContentLength)
 	n, err := r.Body.Read(body)
 

@@ -17,7 +17,6 @@ package resolver
 import (
 	"time"
 
-	"github.com/fiorix/freegeoip"
 	"github.com/qioalice/ipstack"
 )
 
@@ -33,7 +32,7 @@ type GeoClient struct {
 
 
 func DefaultGeoClient(token string) (*GeoClient,  error) {
-	err := ipstack.Init(token)
+	err := ipstack.Init(ipstack.ParamToken(token), ipstack.ParamDisableFirstMeCall(), ipstack.ParamUseHTTPS(false))
 	if err != nil {
 		return nil, err
 	}
@@ -59,10 +58,8 @@ func (c *GeoClient) GetLocationForAddr(ip string) (*Geo, error) {
 	loc.MetroCode = 0
 	loc.RegionName = res.RegionName
 	loc.RegionCode = res.RegionCode
-	loc.TimeZone = res.Timezone.Code
+	if res.Timezone != nil {
+		loc.TimeZone = res.Timezone.Code
+	}
 	return &loc, nil
-}
-
-type geoipQuery struct {
-	freegeoip.DefaultQuery
 }
