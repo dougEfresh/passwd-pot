@@ -171,6 +171,7 @@ func HandleBatch(ctx context.Context, events BatchEvent) (api.BatchEventResponse
 	if err != nil {
 		return api.BatchEventResponse{}, APIError{GatewayError: awsevents.APIGatewayProxyResponse{StatusCode: 500, Headers: header, Body: fmt.Sprintf("Error with batch insert %s", err)}}
 	}
+	logger.Info("result", zap.Int64("duration", resp.Duration.Nanoseconds()), zap.Int64("rows", resp.Rows))
 	logThis(ctx, zapcore.InfoLevel, "batchDuration:%d rows:%d", resp.Duration, resp.Rows)
 	return resp, nil
 }

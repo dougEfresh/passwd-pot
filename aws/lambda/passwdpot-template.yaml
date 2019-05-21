@@ -758,6 +758,18 @@ Resources:
           MetricNamespace: passwdpot-create-batch-events
           MetricName: "MemorySizeMB"
 
+  PasswdPotInsertBatchSize:
+    Type: "AWS::Logs::MetricFilter"
+    DependsOn: CreateEventPostLambda
+    Properties:
+      LogGroupName: /aws/lambda/passwdpot-create-batch-events
+      FilterPattern: "{$.rows >= 0}"
+      MetricTransformations:
+        -
+          MetricValue: "$.rows"
+          DefaultValue: 0
+          MetricNamespace: passwdpot-create-batch-events
+          MetricName: "InsertBatchSize"
 
 Outputs:
   LambdaArn:
