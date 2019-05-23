@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -28,7 +27,7 @@ var (
 	eventResolver *resolver.ResolveClient
 	eventClient   *event.Client
 	dsn           = os.Getenv("PASSWDPOT_DSN")
-	geoToken      = os.Getenv("IPSTACK_TOKEN")
+	geoServer     = os.Getenv("PASSWDPOT_GEO_SERVER")
 	setupError    error
 	db            potdb.DB
 )
@@ -60,15 +59,11 @@ func setup() {
 func init() {
 	logger, _ = zap.NewProduction()
 	eventClient, _ = event.New()
-	var geoClient resolver.GeoClientTransporter
-	var err error
-	if geoToken == "" {
-		geoClient = &noopGeoClient{}
-	} else {
-		geoClient, err = resolver.DefaultGeoClient(geoToken)
-		if err != nil {
-			logger.Error(fmt.Sprintf("error setting up client %s", err))
-		}
+	geoClient := &resolver.GeoClient {
+		URL:"http://localhost:8080",
+	}
+	if geoServer != "" {
+		geoClient.URL = geoServer
 	}
 	eventResolver, _ = resolver.NewResolveClient(resolver.UseCache(), resolver.SetGeoClient(geoClient))
 	setup()
@@ -77,15 +72,6 @@ func init() {
 // APIError Custom error msg
 type APIError struct {
 	GatewayError awsevents.APIGatewayProxyResponse
-}
-
-type noopGeoClient struct {
-
-
-}
-
-func (c *noopGeoClient) GetLocationForAddr(ip string) (*resolver.Geo, error) {
-	return nil, errors.New("NOT IMPLEMENTED")
 }
 
 func (e APIError) Error() string {
@@ -205,7 +191,7 @@ func Handle(ctx context.Context, e api.Event) (EventResponse, error) {
 	e.ID = id
 	_, err = eventResolver.ResolveEvent(e)
 	if err != nil {
-		logThis(ctx, zapcore.WarnLevel, "Error resolving %s %s %s", e.RemoteAddr, e.OriginAddr, err)
+		logThis(ctx, zapcore.WarnLevel, "Error resolving %s or %s %s", e.RemoteAddr, e.OriginAddr, err)
 	}
 	return EventResponse{id}, nil
 }

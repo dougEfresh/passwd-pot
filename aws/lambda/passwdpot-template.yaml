@@ -21,7 +21,7 @@ Parameters:
   PasswdPotDsn:
     Description: DB username
     Type: String
-  PasswdPotIpStackToken:
+  PasswdPotGeoServer:
     Description: ip stack
     Type: String
 Resources:
@@ -46,6 +46,8 @@ Resources:
                 Action:
                   - 'logs:*'
                 Resource: 'arn:aws:logs:*:*:*'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
   CreateEventPostLambda:
     Type: 'AWS::Lambda::Function'
     Properties:
@@ -58,7 +60,7 @@ Resources:
       Environment:
         Variables:
           PASSWDPOT_DSN: !Ref PasswdPotDsn
-          IPSTACK_TOKEN: !Ref PasswdPotIpStackToken
+          PASSWDPOT_GEO_SERVER: !Ref PasswdPotGeoServer
           PASSWDPOT_DEBUG: !Ref Debug
       Code:
         S3Bucket: !Join 
@@ -68,6 +70,11 @@ Resources:
         S3Key: !Ref S3Key
       Runtime: go1.x
       Timeout: 6
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-ab98e4c0
+        SubnetIds:
+          - subnet-0a35cb70
 
   CreateBatchEventsPostLambda:
      Type: 'AWS::Lambda::Function'
@@ -81,7 +88,7 @@ Resources:
        Environment:
          Variables:
            PASSWDPOT_DSN: !Ref PasswdPotDsn
-           IPSTACK_TOKEN: !Ref PasswdPotIpStackToken
+           PASSWDPOT_GEO_SERVER: !Ref PasswdPotGeoServer
            PASSWDPOT_DEBUG: !Ref Debug
        Code:
          S3Bucket: !Join

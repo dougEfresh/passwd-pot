@@ -68,21 +68,6 @@ func SetDb(db potdb.DB) ResolveOptionFunc {
 	}
 }
 
-/*
-func SetGeoDb(db string) ResolveOptionFunc {
-	return func(c *ResolveClient) error {
-		geodb, err := freegeoip.Open(db)
-		if err != nil {
-			return err
-		}
-		c.geoClient = &GeoClientDB{
-			db: geodb,
-		}
-		return nil
-	}
-}
-*/
-
 func SetGeoClient(gc GeoClientTransporter) ResolveOptionFunc {
 	return func(c *ResolveClient) error {
 		c.geoClient = gc

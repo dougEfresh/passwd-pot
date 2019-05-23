@@ -15,9 +15,9 @@
 package resolver
 
 import (
+	"encoding/json"
+	"net/http"
 	"time"
-
-	"github.com/qioalice/ipstack"
 )
 
 type GeoClientTransporter interface {
@@ -26,40 +26,20 @@ type GeoClientTransporter interface {
 
 //GeoClient for geo IP
 type GeoClient struct {
-	Token string
 	URL string
 }
 
-
-func DefaultGeoClient(token string) (*GeoClient,  error) {
-	err := ipstack.Init(ipstack.ParamToken(token), ipstack.ParamDisableFirstMeCall(), ipstack.ParamUseHTTPS(false))
-	if err != nil {
-		return nil, err
-	}
-	return &GeoClient{
-		 Token: token,
-		 URL: "http://api.ipstack.com",
-	}, nil
-}
-
 func (c *GeoClient) GetLocationForAddr(ip string) (*Geo, error) {
-
-	res, err := ipstack.IP(ip)
+	res, err := http.Get(c.URL + "/json/" + ip)
 	if err != nil {
 		return &Geo{}, err
 	}
+
 	var loc Geo
-	loc.City = res.City
-	loc.CountryCode = res.CountryCode
-	loc.IP = ip
-	loc.LastUpdate = time.Now()
-	loc.Latitude = float64(res.Latitide)
-	loc.Longitude = float64(res.Longitude)
-	loc.MetroCode = 0
-	loc.RegionName = res.RegionName
-	loc.RegionCode = res.RegionCode
-	if res.Timezone != nil {
-		loc.TimeZone = res.Timezone.Code
+	decoder := json.NewDecoder(res.Body)
+	if err := decoder.Decode(&loc); err != nil {
+		return &Geo{}, err
 	}
+	loc.LastUpdate = time.Now()
 	return &loc, nil
 }

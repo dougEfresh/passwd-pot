@@ -24,7 +24,7 @@ import (
 	"github.com/dougEfresh/passwd-pot/api"
 )
 
-var body = `{"originAddr": "127.0.0.1", "time": 1148797330161, "user": "admin", "passwd": "12345678", "remoteAddr": "4.2.2.2", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-", "application": "OpenSSH", "protocol": "ssh"}`
+var body = `{"originAddr": "127.0.0.1", "time": 1148797330161, "user": "admin", "passwd": "12345678", "remoteAddr": "212.13.2.14", "remotePort": 63185, "remoteName": "203.116.142.113", "remoteVersion": "SSH-2.0-JSCH-", "application": "OpenSSH", "protocol": "ssh"}`
 
 func TestHandler(t *testing.T) {
 	var e api.Event
@@ -76,7 +76,7 @@ func TestHandlerBatch(t *testing.T) {
 }
 
 func TestBadSetup(t *testing.T) {
-	setupError = fmt.Errorf("Oh no %s", "bad bad ")
+	setupError = fmt.Errorf("oh no %s", "bad bad ")
 	var e api.Event
 	err := json.Unmarshal([]byte(body), &e)
 	if err != nil {
