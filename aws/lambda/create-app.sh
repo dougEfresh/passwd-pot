@@ -22,6 +22,6 @@ stackName=passwdpot-app
 awsRun="aws --region $REGION cloudformation"
 
 $awsRun update-stack --stack-name $stackName --template-body file://passwdpot-template.yaml --capabilities CAPABILITY_IAM \
---parameters "ParameterKey=PasswdPotDsn,ParameterValue=$DSN" "ParameterKey=PasswdPotGeoServer,ParameterValue=http://172.31.23.244:8080"
+--parameters "ParameterKey=PasswdPotDsn,ParameterValue=$DSN" "ParameterKey=PasswdPotGeoServer,ParameterValue=http://geo.passwd-pot.io:8080"
 $awsRun wait stack-update-complete  --stack-name $stackName && \
 $awsRun describe-stacks --stack-name $stackName  --query 'Stacks[*].Outputs' 

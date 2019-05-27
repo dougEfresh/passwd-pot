@@ -131,6 +131,10 @@ func HandleBatch(ctx context.Context, events BatchEvent) (api.BatchEventResponse
 		events.OriginAddr = "127.0.0.1"
 	}
 	var id int64
+	if setupError != nil {
+		setup()
+		return api.BatchEventResponse{}, APIError{GatewayError: awsevents.APIGatewayProxyResponse{StatusCode: 500, Headers: header, Body: fmt.Sprintf("SetupError %s", setupError)}}
+	}
 	gid, err := resolveAddr(ctx, events.OriginAddr)
 	if err != nil {
 		return api.BatchEventResponse{}, err

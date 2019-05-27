@@ -98,7 +98,11 @@ Resources:
          S3Key: !Ref S3Key
        Runtime: go1.x
        Timeout: 15
-
+       VpcConfig:
+         SecurityGroupIds:
+           - sg-ab98e4c0
+         SubnetIds:
+           - subnet-0a35cb70
 
   CreateEventPostLambdaStg:
     Type: 'AWS::Lambda::Alias'

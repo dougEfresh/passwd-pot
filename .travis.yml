@@ -4,11 +4,13 @@ go:
 - 1.12.x
 services:
 - postgresl
+- docker
 before_install:
 - go get github.com/mattn/goveralls
 - go get golang.org/x/tools/cmd/cover
 - psql -U postgres < schema/psql/schema_psql.sql
 - sudo apt-get -y install musl-tools
+- docker run -d 
 os:
 - linux
 script:
