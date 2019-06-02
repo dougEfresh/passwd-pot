@@ -9,7 +9,6 @@ EnvironmentFile=/etc/sysconfig/passwd-pot
 TimeoutStartSec=0
 Restart=always
 ExecStart=/usr/bin/passwd-pot potter $PASSWD_POT_OPTIONS
-Restart=on-abort
 
 [Install]
 WantedBy=multi-user.target

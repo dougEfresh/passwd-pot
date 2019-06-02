@@ -9,7 +9,6 @@ EnvironmentFile=/etc/sysconfig/passwd-pot
 TimeoutStartSec=0
 Restart=always
 ExecStart=/usr/bin/passwd-pot proxy $PASSWD_POT_PROXY_OPTIONS
-Restart=on-abort
 
 [Install]
 WantedBy=multi-user.target

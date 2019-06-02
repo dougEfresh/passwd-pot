@@ -52,7 +52,7 @@ Resources:
     Type: 'AWS::Lambda::Function'
     Properties:
       FunctionName: passwdpot-create-event
-      Handler: handler
+      Handler: events
       Role: !GetAtt 
         - PasswdPotLambdaRole
         - Arn
@@ -69,7 +69,7 @@ Resources:
             - !Ref 'AWS::Region'
         S3Key: !Ref S3Key
       Runtime: go1.x
-      Timeout: 6
+      Timeout: 5
       VpcConfig:
         SecurityGroupIds:
           - sg-ab98e4c0
@@ -80,7 +80,7 @@ Resources:
      Type: 'AWS::Lambda::Function'
      Properties:
        FunctionName: passwdpot-create-batch-events
-       Handler: handler
+       Handler: events
        Role: !GetAtt
          - PasswdPotLambdaRole
          - Arn
@@ -97,7 +97,34 @@ Resources:
              - !Ref 'AWS::Region'
          S3Key: !Ref S3Key
        Runtime: go1.x
-       Timeout: 15
+       Timeout: 10
+       VpcConfig:
+         SecurityGroupIds:
+           - sg-ab98e4c0
+         SubnetIds:
+           - subnet-0a35cb70
+
+  GeoLambda:
+     Type: 'AWS::Lambda::Function'
+     Properties:
+       FunctionName: passwdpot-geoloopup
+       Handler: geolookup
+       Role: !GetAtt
+         - PasswdPotLambdaRole
+         - Arn
+       MemorySize: 128
+       Environment:
+         Variables:
+           PASSWDPOT_GEO_SERVER: !Ref PasswdPotGeoServer
+           PASSWDPOT_DEBUG: !Ref Debug
+       Code:
+         S3Bucket: !Join
+           - ''
+           - - passwdpot-
+             - !Ref 'AWS::Region'
+         S3Key: !Ref S3Key
+       Runtime: go1.x
+       Timeout: 5
        VpcConfig:
          SecurityGroupIds:
            - sg-ab98e4c0

@@ -30,6 +30,7 @@ var (
 	geoServer     = os.Getenv("PASSWDPOT_GEO_SERVER")
 	setupError    error
 	db            potdb.DB
+	geoClient *resolver.GeoClient
 )
 
 var header = map[string]string{
@@ -59,8 +60,8 @@ func setup() {
 func init() {
 	logger, _ = zap.NewProduction()
 	eventClient, _ = event.New()
-	geoClient := &resolver.GeoClient {
-		URL:"http://localhost:8080",
+	geoClient = &resolver.GeoClient {
+		URL:"http://geo.passwd-pot.io:8080",
 	}
 	if geoServer != "" {
 		geoClient.URL = geoServer
@@ -203,6 +204,8 @@ func Handle(ctx context.Context, e api.Event) (EventResponse, error) {
 func main() {
 	if strings.Contains(lambdacontext.FunctionName, "batch") {
 		lambda.Start(HandleBatch)
+	} else if strings.Contains(lambdacontext.FunctionName, "geolookup") {
+		lambda.Start(HandleGeoLookup)
 	} else {
 		lambda.Start(Handle)
 	}
